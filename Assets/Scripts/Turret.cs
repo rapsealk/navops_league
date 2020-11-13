@@ -8,6 +8,7 @@ public class Turret : MonoBehaviour
     public GameObject m_BattleShip;
     public GameObject m_DirectionIndicator;
     public Transform m_Muzzle;
+    public ParticleSystem m_MuzzleFlash;
 
     private float m_InitialRotation;
     private float m_RotationLimit = 30f;
@@ -21,6 +22,7 @@ public class Turret : MonoBehaviour
     void Start()
     {
         m_InitialRotation = transform.rotation.eulerAngles.y;
+        m_MuzzleFlash = m_Muzzle.GetComponentInChildren<ParticleSystem>();
     }
 
     // Update is called once per frame
@@ -123,8 +125,9 @@ public class Turret : MonoBehaviour
                 GameObject bullet = Instantiate(m_Projectile, m_Muzzle.position, m_Muzzle.rotation);
                 //bullet.GetComponent<Renderer>().material.SetColor("_Color", Color.red);
                 bullet.GetComponent<Rigidbody>().AddForce(m_Muzzle.forward * 3000);
+                m_MuzzleFlash.Play();
 
-                m_IsLoaded = false;
+                //m_IsLoaded = false;
                 m_CurrentCooldownTime = 0f;
             }
         }
