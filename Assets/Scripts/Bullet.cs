@@ -21,19 +21,26 @@ public class Bullet : MonoBehaviour
         }
     }
 
-    /*
     void OnCollisionEnter(Collision collision)
     {
+        Debug.Log($"[OnCollisionEnter] {collision.collider.gameObject.name}");
+        /*
         if (collision.collider.tag == "Battleship")
         {
             Physics.IgnoreCollision(GetComponent<Collider>(), collision.collider);
+            Destroy(gameObject);
         }
-        Destroy(gameObject);
+        */
+        if (collision.collider.name == "Collider")
+        {
+            GetComponent<Rigidbody>().mass = 0f;
+            Destroy(gameObject);
+        }
     }
-    */
 
     void OnTriggerEnter(Collider collider)
     {
+        //Debug.Log($"[Bullet.OnTriggerEnter] {collider}");
         Destroy(gameObject);
     }
 }

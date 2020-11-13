@@ -57,7 +57,7 @@ public class CameraController : MonoBehaviour
 
         //Debug.Log($"CameraController.Update({horizontal}, {vertical})");
 
-        transform.position = m_Target.position + new Vector3(0, 5, -5);
+        transform.position = m_Target.position + new Vector3(0, 5, 0);
         //transform.Rotate(m_Target.rotation.eulerAngles, relativeTo: Space.Self);
     }
 }

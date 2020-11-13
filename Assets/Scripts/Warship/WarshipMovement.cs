@@ -6,8 +6,10 @@ using UnityEngine.UI;
 public class WarshipMovement : MonoBehaviour
 {
     public int m_PlayerNumber = 1;
-    public Text m_VelocityTextField;
+    public float m_Health = 1000f;
+    //public Text m_VelocityTextField;
     public float m_DragInWaterForward = 100f;
+    public ParticleSystem m_ExplosionAnimation;
 
     [SerializeField] float m_Thrust;
     [SerializeField] float m_TurningSpeed;
@@ -26,6 +28,7 @@ public class WarshipMovement : MonoBehaviour
     private void Awake()
     {
         m_Rigidbody = GetComponent<Rigidbody>();
+        //m_ExplosionAnimation = GetComponent<ParticleSystem>();
     }
 
     // Start is called before the first frame update
@@ -112,5 +115,15 @@ public class WarshipMovement : MonoBehaviour
         */
 
         m_CurrentVelocity = targetVelocity;
+    }
+
+    void OnTriggerEnter(Collider collider)
+    {
+        Debug.Log($"[WarshipMovement.OnTriggerEnter] {collider}");
+        //m_ExplosionAnimation.transform.position = new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), Random.Range(-1f, 1f));
+        m_ExplosionAnimation.Play();
+
+        m_Health -= 100;
+        Debug.Log($"Health: {m_Health}");
     }
 }
