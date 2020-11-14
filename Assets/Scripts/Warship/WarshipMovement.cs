@@ -6,7 +6,7 @@ using UnityEngine.UI;
 public class WarshipMovement : MonoBehaviour
 {
     public int m_PlayerNumber = 1;
-    public float m_Health = 1000f;
+    //public float m_Health = 1000f;
     public float m_DragInWaterForward = 100f;
     public ParticleSystem m_ExplosionAnimation;
     public bool m_IsHumanPlayer = false;
@@ -20,6 +20,7 @@ public class WarshipMovement : MonoBehaviour
     public float m_RudderPower = 0.1f;
 
     private Rigidbody m_Rigidbody;
+    private WarshipHealth m_Health;
     private int m_VelocityLevel = 0;
     private int m_MinVelocityLevel = -2;
     private int m_MaxVelocityLevel = 4;
@@ -30,6 +31,7 @@ public class WarshipMovement : MonoBehaviour
     private void Awake()
     {
         m_Rigidbody = GetComponent<Rigidbody>();
+        m_Health = GetComponent<WarshipHealth>();
     }
 
     // Start is called before the first frame update
@@ -78,11 +80,19 @@ public class WarshipMovement : MonoBehaviour
 
     void OnTriggerEnter(Collider collider)
     {
-        Debug.Log($"[WarshipMovement.OnTriggerEnter] {collider}");
+        Debug.Log($"ID #{m_PlayerNumber} [WarshipMovement.OnTriggerEnter] {collider} {collider.tag}");
         //m_ExplosionAnimation.transform.position = new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), Random.Range(-1f, 1f));
         m_ExplosionAnimation.Play();
 
-        m_Health -= 100;
-        Debug.Log($"[WarShip:{m_PlayerNumber}] Health: {m_Health}");
+        //m_Health -= 100;
+        //Debug.Log($"[WarShip:{m_PlayerNumber}] Health: {m_Health}");
+        if (collider.tag == "Battleship")
+        {
+            m_Health.TakeDamage(WarshipHealth.StartingHealth);
+        }
+        else
+        {
+            m_Health.TakeDamage(WarshipHealth.DefaultDamage);
+        }
     }
 }
