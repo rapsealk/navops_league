@@ -7,9 +7,13 @@ public class WarshipHealth : MonoBehaviour
 {
     public Slider m_Slider;
     public Color m_FullHealthColor = Color.green;
+    public ParticleSystem m_ExplosionAnimation;
 
     public const float StartingHealth = 100f;
     public const float DefaultDamage = 10f;
+
+    [HideInInspector]
+    public int m_PlayerNumber;
 
     private float m_CurrentHealth;
     private bool m_IsDestroyed;
@@ -26,8 +30,28 @@ public class WarshipHealth : MonoBehaviour
         
     }
 
+    void OnTriggerEnter(Collider collider)
+    {
+        Debug.Log($"ID #{m_PlayerNumber} [WarshipHealth.OnTriggerEnter] {collider} {collider.tag}");
+        //m_ExplosionAnimation.transform.position = new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), Random.Range(-1f, 1f));
+        m_ExplosionAnimation.Play();
+
+        //m_Health -= 100;
+        //Debug.Log($"[WarShip:{m_PlayerNumber}] Health: {m_Health}");
+        if (collider.tag == "Battleship")
+        {
+            TakeDamage(WarshipHealth.StartingHealth);
+        }
+        else if (collider.tag.StartsWith("Bullet") && !collider.tag.EndsWith(m_PlayerNumber.ToString()))
+        {
+            TakeDamage(WarshipHealth.DefaultDamage);
+        }
+    }
+
     private void OnEnable()
     {
+        Debug.Log($"[WarshipHealth#{m_PlayerNumber}] OnEnable");
+
         m_CurrentHealth = StartingHealth;
         m_IsDestroyed = false;
 
@@ -48,7 +72,10 @@ public class WarshipHealth : MonoBehaviour
 
     private void SetHealthUI()
     {
-        m_Slider.value = m_CurrentHealth;
+        if (m_Slider != null)
+        {
+            m_Slider.value = m_CurrentHealth;
+        }
         // m_Slider.value = Mathf.Lerp(m_Slider.value, m_CurrentHealth, Time.deltaTime);
     }
 

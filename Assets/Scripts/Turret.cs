@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class Turret : MonoBehaviour
 {
+    [HideInInspector] public int m_PlayerNumber;
     public GameObject m_Projectile;
     public GameObject m_BattleShip;
     //public GameObject m_DirectionIndicator;
@@ -113,7 +114,7 @@ public class Turret : MonoBehaviour
 
         // transform.rotation = Quaternion.Euler(rotation);
 
-        int layerMask = ~(1 << 8);
+        int layerMask = 1 << 8;
         RaycastHit hit;
         bool isLocked = Physics.Raycast(m_Muzzle.position, m_Muzzle.forward, out hit, Mathf.Infinity, layerMask);
 
@@ -131,9 +132,10 @@ public class Turret : MonoBehaviour
             if (isLocked && m_IsLoaded)
             {
                 GameObject bullet = Instantiate(m_Projectile, m_Muzzle.position, m_Muzzle.rotation);
+                bullet.tag = "Bullet" + m_PlayerNumber.ToString();
                 //bullet.GetComponent<Renderer>().material.SetColor("_Color", Color.red);
                 bullet.GetComponent<Rigidbody>().AddForce(m_Muzzle.forward * 1000 + m_Muzzle.up * 10);
-                Physics.IgnoreCollision(bullet.GetComponent<Collider>(), GetComponent<Collider>());
+                //Physics.IgnoreCollision(bullet.GetComponent<Collider>(), GetComponent<Collider>());
                 m_MuzzleFlash.Play();
 
                 //m_IsLoaded = false;

@@ -5,6 +5,8 @@ TagManager:
   serializedVersion: 2
   tags:
   - Battleship
+  - Bullet1
+  - Bullet2
   layers:
   - Default
   - TransparentFX
