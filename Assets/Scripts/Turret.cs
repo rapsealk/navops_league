@@ -1,10 +1,13 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class Turret : MonoBehaviour
 {
     [HideInInspector] public int m_PlayerNumber;
+    // [HideInInspector] public int m_TurretId;
+    [HideInInspector] public Slider m_CooldownIndicator;
     public GameObject m_Projectile;
     public GameObject m_BattleShip;
     //public GameObject m_DirectionIndicator;
@@ -17,7 +20,8 @@ public class Turret : MonoBehaviour
     //private bool m_IsLocked = false;
     private float m_CooldownTime = 6f;
     private float m_CurrentCooldownTime = 6f;
-    private bool m_IsLoaded = true;
+    private bool m_IsLoaded = false;
+    private Color ColorOrange = new Color(255 / 255f, 135 / 255f, 0f);
 
     // Start is called before the first frame update
     void Start()
@@ -35,6 +39,7 @@ public class Turret : MonoBehaviour
         if (!m_IsLoaded)
         {
             m_CurrentCooldownTime += Time.deltaTime;
+            UpdateUI();
             m_IsLoaded = (m_CurrentCooldownTime >= m_CooldownTime);
         }
 
@@ -121,10 +126,18 @@ public class Turret : MonoBehaviour
         if (isLocked)
         {
             Debug.DrawRay(m_Muzzle.position, m_Muzzle.forward * hit.distance, Color.green);
+            if (m_CooldownIndicator != null)
+            {
+                m_CooldownIndicator.GetComponentsInChildren<Image>()[1].color = Color.green;
+            }
         }
         else
         {
             Debug.DrawRay(m_Muzzle.position, m_Muzzle.forward * 1000, Color.red);
+            if (m_CooldownIndicator != null)
+            {
+                m_CooldownIndicator.GetComponentsInChildren<Image>()[1].color = ColorOrange;
+            }
         }
 
         if (Input.GetKeyDown(KeyCode.Mouse0))
@@ -138,9 +151,20 @@ public class Turret : MonoBehaviour
                 //Physics.IgnoreCollision(bullet.GetComponent<Collider>(), GetComponent<Collider>());
                 m_MuzzleFlash.Play();
 
-                //m_IsLoaded = false;
+                m_IsLoaded = false;
                 m_CurrentCooldownTime = 0f;
             }
         }
+    }
+
+    private void UpdateUI()
+    {
+        var indicator = m_CooldownIndicator;
+        if (indicator == null)
+        {
+            return;
+        }
+
+        indicator.value = m_CurrentCooldownTime / m_CooldownTime;
     }
 }

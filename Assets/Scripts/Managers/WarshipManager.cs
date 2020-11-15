@@ -9,6 +9,7 @@ public class WarshipManager
     public Slider m_HealthSlider;
     public Text m_VelocityText;
     public Text m_RudderText;
+    public Slider[] m_TurretCooldownIndicators;
 
     [HideInInspector] public int m_PlayerNumber;
     //[HideInInspector] public string m_ColoredPlayerText;
@@ -54,6 +55,11 @@ public class WarshipManager
         for (int i = 0; i < turrets.Length; i++)
         {
             turrets[i].m_PlayerNumber = m_PlayerNumber;
+            // turrets[i].m_TurretId = i + 1;
+            if (m_TurretCooldownIndicators.Length > i)
+            {
+                turrets[i].m_CooldownIndicator = m_TurretCooldownIndicators[i];
+            }
         }
     }
 
