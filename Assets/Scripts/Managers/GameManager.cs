@@ -12,6 +12,9 @@ public class GameManager : MonoBehaviour
     public ParticleSystem m_ExplosionAnimation;
     public WarshipManager[] m_Warships;
 
+    [Header("Managers")]
+    public DominationManager m_Domination;
+
     private WaitForSeconds m_StartWait;
     private WaitForSeconds m_EndWait;
     // private WarshipManager m_GameWinner;
@@ -78,6 +81,8 @@ public class GameManager : MonoBehaviour
         ResetAllWarships();
         DisableWarshipControl();
 
+        m_Domination.Init(m_Warships);
+
         m_CameraController.m_Target = m_Warships.First(warship => warship.m_IsHumanPlayer).m_Instance.transform;
         //m_CameraControl.SetStartPositionAndSize();
 
@@ -105,7 +110,7 @@ public class GameManager : MonoBehaviour
 
     private bool IsGameFinished()
     {
-        return m_Warships.Any(warship => !warship.m_Instance.activeSelf);
+        return m_Warships.Any(warship => !warship.m_Instance.activeSelf) || m_Domination.IsDominated;
     }
 
     private void ResetAllWarships()
