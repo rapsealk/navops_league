@@ -44,7 +44,8 @@ public class GameManager : MonoBehaviour
             m_Warships[i].m_Instance =
                 Instantiate(m_WarshipPrefab, m_Warships[i].m_SpawnPoint.position, m_Warships[i].m_SpawnPoint.rotation) as GameObject;
             m_Warships[i].m_PlayerNumber = i + 1;
-            m_Warships[i].m_ExplosionAnimation = m_ExplosionAnimation;
+            //m_Warships[i].m_ExplosionAnimation = m_ExplosionAnimation;
+            m_Warships[i].m_ExplosionAnimation = Instantiate<ParticleSystem>(m_ExplosionAnimation, m_Warships[i].m_Instance.transform);
             m_Warships[i].Setup();
         }
     }

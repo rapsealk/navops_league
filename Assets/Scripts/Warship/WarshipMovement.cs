@@ -25,9 +25,13 @@ public class WarshipMovement : MonoBehaviour
     private int m_MinSteerLevel = -2;
     private int m_MaxSteerLevel = 2;
 
+    private RandomAgent m_RandomAgent;
+
     private void Awake()
     {
         m_Rigidbody = GetComponent<Rigidbody>();
+
+        m_RandomAgent = new RandomAgent();
     }
 
     // Start is called before the first frame update
@@ -39,28 +43,56 @@ public class WarshipMovement : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.W))
-        {
-            m_VelocityLevel = Mathf.Min(m_VelocityLevel + 1, m_MaxVelocityLevel);
-        }
-        else if (Input.GetKeyDown(KeyCode.S))
-        {
-            m_VelocityLevel = Mathf.Max(m_VelocityLevel - 1, m_MinVelocityLevel);
-        }
-
-        if (Input.GetKeyDown(KeyCode.A))
-        {
-            m_SteerLevel = Mathf.Max(m_SteerLevel - 1, m_MinSteerLevel);
-        }
-        else if (Input.GetKeyDown(KeyCode.D))
-        {
-            m_SteerLevel = Mathf.Min(m_SteerLevel + 1, m_MaxSteerLevel);
-        }
-
         if (m_IsHumanPlayer)
         {
+            if (Input.GetKeyDown(KeyCode.W))
+            {
+                Accelerate(Direction.up);
+            }
+            else if (Input.GetKeyDown(KeyCode.S))
+            {
+                Accelerate(Direction.down);
+            }
+
+            if (Input.GetKeyDown(KeyCode.A))
+            {
+                Steer(Direction.left);
+            }
+            else if (Input.GetKeyDown(KeyCode.D))
+            {
+                Steer(Direction.right);
+            }
+
             m_VelocityTextField.text = $"Velocity: {m_VelocityLevel}";
             m_RudderTextField.text = $"Steer: {m_SteerLevel}";
+        }
+        else
+        {
+            int action = m_RandomAgent.GetAction();
+            if (action == 0)
+            {
+                // pass
+            }
+            else if (action == 1)
+            {
+                Accelerate(Direction.up);
+            }
+            else if (action == 2)
+            {
+                Accelerate(Direction.down);
+            }
+            else if (action == 3)
+            {
+                Steer(Direction.left);
+            }
+            else if (action == 4)
+            {
+                Steer(Direction.right);
+            }
+            else if (action == 5)
+            {
+                // Fire
+            }
         }
     }
 
@@ -72,6 +104,30 @@ public class WarshipMovement : MonoBehaviour
         transform.rotation = Quaternion.Euler(0, transform.rotation.eulerAngles.y + m_RudderPower * m_SteerLevel, 0);
 
         // UnityEngine.Profiling.Profiler.EndSample();
+    }
+
+    public void Accelerate(Direction direction)
+    {
+        if (direction == Direction.up)
+        {
+            m_VelocityLevel = Mathf.Min(m_VelocityLevel + 1, m_MaxVelocityLevel);
+        }
+        else if (direction == Direction.down)
+        {
+            m_VelocityLevel = Mathf.Max(m_VelocityLevel - 1, m_MinVelocityLevel);
+        }
+    }
+
+    public void Steer(Direction direction)
+    {
+        if (direction == Direction.left)
+        {
+            m_SteerLevel = Mathf.Max(m_SteerLevel - 1, m_MinSteerLevel);
+        }
+        else if (direction == Direction.right)
+        {
+            m_SteerLevel = Mathf.Min(m_SteerLevel + 1, m_MaxSteerLevel);
+        }
     }
 
     private void OnDisable()
