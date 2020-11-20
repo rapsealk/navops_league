@@ -18,8 +18,9 @@ public class Turret : MonoBehaviour
     //private float m_RotationLimit = 30f;
     // private float m_RotationDistanceLimit = (Mathf.Sqrt(3) + 1) / Mathf.Sqrt(2);   // theta = 30'
     //private bool m_IsLocked = false;
-    private float m_CooldownTime = 6f;
+    public const float m_CooldownTime = 6f;
     private float m_CurrentCooldownTime = 6f;
+    public float CurrentCooldownTime { get => m_CurrentCooldownTime; }
     private bool m_IsLoaded = false;
     private Color ColorOrange = new Color(255 / 255f, 135 / 255f, 0f);
 
@@ -39,9 +40,11 @@ public class Turret : MonoBehaviour
         if (!m_IsLoaded)
         {
             m_CurrentCooldownTime += Time.deltaTime;
-            UpdateUI();
+            // UpdateUI();
             m_IsLoaded = (m_CurrentCooldownTime >= m_CooldownTime);
         }
+
+        return;
 
         /*
         Vector3 rotation = m_DirectionIndicator.transform.rotation.eulerAngles - m_BattleShip.transform.rotation.eulerAngles;
@@ -144,19 +147,37 @@ public class Turret : MonoBehaviour
         {
             if (isLocked && m_IsLoaded)
             {
-                GameObject bullet = Instantiate(m_Projectile, m_Muzzle.position, m_Muzzle.rotation);
-                bullet.tag = "Bullet" + m_PlayerNumber.ToString();
-                //bullet.GetComponent<Renderer>().material.SetColor("_Color", Color.red);
-                bullet.GetComponent<Rigidbody>().AddForce(m_Muzzle.forward * 4000 + m_Muzzle.up * 10);
-                //Physics.IgnoreCollision(bullet.GetComponent<Collider>(), GetComponent<Collider>());
-                m_MuzzleFlash.Play();
-
-                m_IsLoaded = false;
-                m_CurrentCooldownTime = 0f;
+                Fire();
             }
         }
     }
 
+    public void Fire()
+    {
+        if (!m_IsLoaded)
+        {
+            return;
+        }
+
+        int layerMask = 1 << 8;
+        RaycastHit hit;
+        if (!Physics.Raycast(m_Muzzle.position, m_Muzzle.forward, out hit, Mathf.Infinity, layerMask))
+        {
+            return;
+        }
+
+        GameObject bullet = Instantiate(m_Projectile, m_Muzzle.position, m_Muzzle.rotation);
+        bullet.tag = "Bullet" + m_PlayerNumber.ToString();
+        //bullet.GetComponent<Renderer>().material.SetColor("_Color", Color.red);
+        bullet.GetComponent<Rigidbody>().AddForce(m_Muzzle.forward * 4000 + m_Muzzle.up * 10);
+        //Physics.IgnoreCollision(bullet.GetComponent<Collider>(), GetComponent<Collider>());
+        m_MuzzleFlash.Play();
+
+        m_IsLoaded = false;
+        m_CurrentCooldownTime = 0f;
+    }
+
+    /*
     private void UpdateUI()
     {
         var indicator = m_CooldownIndicator;
@@ -167,4 +188,5 @@ public class Turret : MonoBehaviour
 
         indicator.value = m_CurrentCooldownTime / m_CooldownTime;
     }
+    */
 }

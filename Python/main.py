@@ -37,7 +37,7 @@ def main():
     filename = "BlackWhale" # "3DBall"
     env = UnityEnvironment(file_name=filename, seed=1, side_channels=[channel])
 
-    channel.set_configuration_parameters(time_scale=10.0)
+    # channel.set_configuration_parameters(time_scale=10.0)
 
     env.reset()
     behavior_names = env.behavior_specs.keys()
@@ -81,20 +81,20 @@ def main():
                 action = np.zeros(shape=(1, 6))
                 action[0, np.random.randint(0, 6)] = 1
                 env.set_action_for_agent(behavior_name="Warship?team={}".format(team_id), agent_id=i, action=action)
-        print('[%s] step' % datetime.now().isoformat())
+        #print('[%s] step' % datetime.now().isoformat())
         env.step()
 
         # decision_steps, terminal_steps = env.get_steps(behavior_name="Warship?team=0")
         obs1 = Observation(*env.get_steps(behavior_name=behavior_names[0]))
         obs2 = Observation(*env.get_steps(behavior_name=behavior_names[1]))
-        #print('DecisionSteps')
-        #print('- reward:', decision_steps.reward)
-        # print('- decision.agent_id:', decision_steps.agent_id)
-        #print('- action_mask:', decision_steps.action_mask)
-        #print('TerminalSteps')
-        #print('- reward:', terminal_steps.reward)
-        # print('- terminal.agent_id:', terminal_steps.agent_id)
-        #print('- interrupted:', terminal_steps.interrupted)
+
+        # for observation in [obs1, obs2]:
+        #     print('reward:', observation.reward)
+        if obs1.terminal_steps.reward or obs2.terminal_steps.reward:
+            print('Decision Reward:', obs1.decision_steps.reward, obs2.decision_steps.reward)
+            print('Terminal Reward:', obs1.terminal_steps.reward, obs2.terminal_steps.reward)
+            print('Agents:', obs1.decision_steps.agent_id, obs2.decision_steps.agent_id)
+            print('Terminal:', obs1.terminal_steps.agent_id, obs2.terminal_steps.agent_id)
 
         #if len(terminal_steps.interrupted) > 0:
         #    env.reset()

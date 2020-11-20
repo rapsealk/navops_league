@@ -3,56 +3,57 @@ using UnityEngine.UI;
 
 public class DominationManager : MonoBehaviour
 {
-    public Slider m_DominationSlider;
-    public const float RequiredDominationTime = 10f;
-    [HideInInspector] public WarshipManager[] m_Warships = null;
+    //public Slider m_DominationSlider;
+    public const float RequiredDominationTime = 20f;
+    public WarshipAgent m_BlueWarship;
+    public WarshipAgent m_RedWarship;
 
-    private bool IsBlueDominating = false;
-    private bool IsRedDominating = false;
+    public bool IsBlueDominating { get => m_IsBlueDominating && !m_IsRedDominating; }
+    public bool IsRedDominating { get => m_IsRedDominating && !m_IsBlueDominating; }
+    private bool m_IsBlueDominating = false;
+    private bool m_IsRedDominating = false;
     public bool IsDominated
     {
-        get { return DominationTime >= RequiredDominationTime; }
+        get { return m_DominationTime >= RequiredDominationTime; }
     }
-    private float DominationTime = 0f;
-    private float ControlAreaScale = 16f;
+    private float m_DominationTime = 0f;
+    public float DiminationTime { get => m_DominationTime; }
+    private float ControlAreaScale = 10f;
 
     // Start is called before the first frame update
     void Start()
     {
-        
+
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (m_Warships != null)
+        // FIXME: Trigger
+        float blueDistance = Mathf.Sqrt(Mathf.Pow(m_BlueWarship.transform.position.x, 2f)
+                                        + Mathf.Pow(m_BlueWarship.transform.position.z, 2f));
+        m_IsBlueDominating = (blueDistance < ControlAreaScale);
+
+        float redDistance = Mathf.Sqrt(Mathf.Pow(m_RedWarship.transform.position.x, 2f)
+                                        + Mathf.Pow(m_RedWarship.transform.position.z, 2f));
+        m_IsRedDominating = (redDistance < ControlAreaScale);
+
+        /*
+        Debug.Log($"[DominationManager]" +
+            $" Warship#{m_BlueWarship.m_PlayerId}: {m_BlueWarship.transform.position} ({m_IsBlueDominating}) /" +
+            $" Warship#{m_RedWarship.m_PlayerId}: {m_RedWarship.transform.position} ({m_IsRedDominating})");
+        */
+
+        if (m_IsBlueDominating ^ m_IsRedDominating)
         {
-            // FIXME: Trigger
-            WarshipManager blueManager = m_Warships[0];
-            float blueDistance = Mathf.Sqrt(Mathf.Pow(blueManager.m_Instance.transform.position.x, 2f)
-                                            + Mathf.Pow(blueManager.m_Instance.transform.position.z, 2f));
-            IsBlueDominating = (blueDistance < ControlAreaScale);
+            m_DominationTime += Time.deltaTime;
 
-            WarshipManager redManager = m_Warships[1];
-            float redDistance = Mathf.Sqrt(Mathf.Pow(redManager.m_Instance.transform.position.x, 2f)
-                                            + Mathf.Pow(redManager.m_Instance.transform.position.z, 2f));
-            IsRedDominating = (redDistance < ControlAreaScale);
-
-            Debug.Log($"[DominationManager]" +
-                $" Warship#{m_Warships[0].m_PlayerNumber}: {m_Warships[0].m_Instance.transform.position} ({IsBlueDominating}) /" +
-                $" Warship#{m_Warships[1].m_PlayerNumber}: {m_Warships[1].m_Instance.transform.position} ({IsRedDominating})");
-        }
-
-        if (IsBlueDominating ^ IsRedDominating)
-        {
-            DominationTime += Time.deltaTime;
-
-            if (DominationTime >= RequiredDominationTime)
+            if (m_DominationTime >= RequiredDominationTime)
             {
                 // TODO
             }
 
-            UpdateUI();
+            //UpdateUI();
         }
         else
         {
@@ -65,18 +66,20 @@ public class DominationManager : MonoBehaviour
 
     }
 
+    /*
     public void Init(WarshipManager[] warships)
     {
         m_Warships = (WarshipManager[]) warships.Clone();
-    }
+    }*/
 
     public void Reset()
     {
-        DominationTime = 0f;
+        m_DominationTime = 0f;
 
-        UpdateUI();
+        // UpdateUI();
     }
 
+    /*
     private void UpdateUI()
     {
         m_DominationSlider.value = DominationTime / RequiredDominationTime;
@@ -90,4 +93,5 @@ public class DominationManager : MonoBehaviour
             m_DominationSlider.GetComponentsInChildren<Image>()[1].color = Color.red;
         }
     }
+    */
 }

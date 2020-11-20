@@ -11,6 +11,9 @@ public class WarshipAgent : Agent
     public Transform m_StartingPoint;
     public ParticleSystem m_ExplosionAnimation;
     public WarshipAgent m_Opponent;
+    public DominationManager m_DominationManager;
+    //[HideInInsepctor]
+    public bool m_ShouldEnd = false;
 
     public const float StartingHealth = 100f;
     public const float DefaultDamage = 10f;
@@ -19,6 +22,9 @@ public class WarshipAgent : Agent
     private Rigidbody m_Rigidbody;
     private float m_CurrentHealth;
     private Transform m_OpponentTransform;
+    private Turret[] m_Turrets;
+
+    private float m_OpponentHealth;
 
     // Velocity
     private int m_VelocityLevel = 0;
@@ -28,8 +34,8 @@ public class WarshipAgent : Agent
     private const int minSteerLevel = -2;
     private const int maxSteerLevel = 2;
 
-    private const float m_EnginePower = 0.25f;
-    private const float m_RudderPower = 0.1f;
+    private const float m_EnginePower = 2.5f;
+    private const float m_RudderPower = 1.0f;
 
     private const float winReward = 1.0f;
     private const float damageReward = -0.01f;
@@ -38,6 +44,13 @@ public class WarshipAgent : Agent
     {
         m_Transform = GetComponent<Transform>();
         m_Rigidbody = GetComponent<Rigidbody>();
+
+        m_Turrets = GetComponentsInChildren<Turret>();
+        for (int i = 0; i < m_Turrets.Length; i++)
+        {
+            m_Turrets[i].m_PlayerNumber = m_PlayerId;
+        }
+        Debug.Log($"[WarshipAgent-{m_PlayerId}] Initialize: {m_Turrets.Length} turrets.");
 
         MeshRenderer[] renderers = GetComponentsInChildren<MeshRenderer>();
         for (int i = 0; i < renderers.Length; i++)
@@ -58,6 +71,7 @@ public class WarshipAgent : Agent
         m_CurrentHealth = StartingHealth;
 
         m_OpponentTransform = m_Opponent.GetComponent<Transform>();
+        m_OpponentHealth = m_Opponent.m_CurrentHealth;
 
         m_VelocityLevel = 0;
         m_SteerLevel = 0;
@@ -81,6 +95,12 @@ public class WarshipAgent : Agent
 
     public override void OnActionReceived(float[] vectorAction)
     {
+        if (m_ShouldEnd)
+        {
+            m_ShouldEnd = false;
+            EndEpisode();
+        }
+
         for (int i = 0; i < vectorAction.Length; i++)
         {
             if (vectorAction[i] == 1.0f)
@@ -112,15 +132,60 @@ public class WarshipAgent : Agent
                 else if (i == 5)
                 {
                     // FIRE
+                    Fire();
                 }
             }
         }
         // ...
 
         // Reward
-        if (m_Opponent.m_CurrentHealth <= 0f && m_CurrentHealth > 0f)
+        if (m_OpponentHealth - m_Opponent.m_CurrentHealth > 0f)
         {
-            SetReward(winReward);
+            SetReward((m_OpponentHealth - m_Opponent.m_CurrentHealth) * damageReward);
+            m_OpponentHealth = m_Opponent.m_CurrentHealth;
+        }
+
+        if (m_PlayerId == 1 && m_DominationManager.IsBlueDominating)
+        {
+            SetReward(0.01f);
+
+            if (m_DominationManager.IsDominated)
+            {
+                SetReward(winReward);
+                m_Opponent.m_ShouldEnd = true;
+                EndEpisode();
+            }
+        }
+        else if (m_PlayerId == 2 && m_DominationManager.IsRedDominating)
+        {
+            SetReward(0.01f);
+
+            if (m_DominationManager.IsDominated)
+            {
+                SetReward(winReward);
+                m_Opponent.m_ShouldEnd = true;
+                EndEpisode();
+            }
+        }
+
+        if (m_Transform.position.y <= 0.0f)
+        {
+            TakeDamage(StartingHealth);
+        }
+
+        if (m_Opponent.m_CurrentHealth <= 0f)
+        {
+            if (m_CurrentHealth > 0f)
+            {
+                SetReward(winReward);
+            }
+            m_Opponent.m_ShouldEnd = true;
+            EndEpisode();
+        }
+        else if (m_CurrentHealth <= 0f)
+        {
+            m_Opponent.m_ShouldEnd = true;
+            EndEpisode();
         }
         else
         {
@@ -131,6 +196,10 @@ public class WarshipAgent : Agent
     public override void Heuristic(float[] actionsOut)
     {
         // ...
+        //Accelerate(Direction.up);
+        //if (m_PlayerId == 2)
+        Steer(Direction.right);
+        Fire();
     }
 
     private void FixedUpdate()
@@ -167,11 +236,6 @@ public class WarshipAgent : Agent
         m_CurrentHealth -= damage;
 
         SetReward(damage * damageReward);
-
-        if (m_CurrentHealth <= 0f)
-        {
-            EndEpisode();
-        }
     }
 
     public void Accelerate(Direction direction)
@@ -195,6 +259,14 @@ public class WarshipAgent : Agent
         else if (direction == Direction.right)
         {
             m_SteerLevel = Mathf.Min(m_SteerLevel + 1, maxSteerLevel);
+        }
+    }
+
+    public void Fire()
+    {
+        for (int j = 0; j < m_Turrets.Length; j++)
+        {
+            m_Turrets[j].Fire();
         }
     }
 }

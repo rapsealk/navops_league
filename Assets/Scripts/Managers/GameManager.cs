@@ -3,7 +3,8 @@ using System.Linq;
 using UnityEngine;
 
 public class GameManager : MonoBehaviour
-{
+{ 
+    /*
     public float m_StartDelay = 0.1f;
     public float m_EndDelay = 0.1f;
     // public CameraControl m_CameraControl;
@@ -33,12 +34,11 @@ public class GameManager : MonoBehaviour
         StartCoroutine(Loop());
     }
 
-    /* Update is called once per frame
+    // Update is called once per frame
     void Update()
     {
         
     }
-    */
 
     private void SpawnAllWarships()
     {
@@ -55,19 +55,17 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    /*
     private void SetCameraTargets()
     {
-        Transform[] targets = new Transform[m_Warships.Length];
-
-        for (int i = 0; i < targets.Length; i++)
-        {
-            targets[i] = m_Warships[i].m_Instance.transform;
-        }
-
-        m_CameraControl.m_Targets = targets;
+        //Transform[] targets = new Transform[m_Warships.Length];
+        //
+        //for (int i = 0; i < targets.Length; i++)
+        //{
+        //    targets[i] = m_Warships[i].m_Instance.transform;
+        //}
+        //
+        //m_CameraControl.m_Targets = targets;
     }
-    */
 
     private IEnumerator Loop()
     {
@@ -83,7 +81,7 @@ public class GameManager : MonoBehaviour
         ResetAllWarships();
         DisableWarshipControl();
 
-        m_Domination.Init(m_Warships);
+        //m_Domination.Init(m_Warships);
 
         //m_CameraController.m_Target = m_Warships.First(warship => warship.m_IsHumanPlayer).m_Instance.transform;
         //m_CameraControl.SetStartPositionAndSize();
@@ -140,6 +138,7 @@ public class GameManager : MonoBehaviour
             m_Warships[i].DisableControl();
         }
     }
+    */
 
     /*
     private IEnumerator OnBattleStart()
