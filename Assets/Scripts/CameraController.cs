@@ -5,7 +5,7 @@ using UnityEngine;
 
 public class CameraController : MonoBehaviour
 {
-    public Transform m_Target;
+    //public Transform m_Target;
     public float m_MaxTiltAngle = 30f;
 
     private float m_RotationAngle = 0f;
@@ -16,13 +16,14 @@ public class CameraController : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        Cursor.visible = false;
-        Cursor.lockState = CursorLockMode.Locked;
+        //Cursor.visible = false;
+        //Cursor.lockState = CursorLockMode.Locked;
     }
 
     // Update is called once per frame
     void Update()
     {
+        /*
         float horizontal = Input.GetAxis("Mouse X") * Time.deltaTime;
         float vertical = -Input.GetAxis("Mouse Y") * Time.deltaTime;
 
@@ -42,22 +43,10 @@ public class CameraController : MonoBehaviour
 
         // Debug.Log($"Rotation: {radians} ({x}, {y})");
 
-        /*
-        if (horizontal != 0 || vertical != 0)
-        {
-            transform.Rotate(vertical, horizontal, 0);
-        }
-        */
-
-        /*
-        if (Input.GetAxis("Mouse ScrollWheel") != 0)
-        {
-            transform.position += scrollSpeed * new Vector3(0, -Input.GetAxis("Mouse ScrollWheel"), 0) * Time.deltaTime;
-        }*/
-
         //Debug.Log($"CameraController.Update({horizontal}, {vertical})");
 
         transform.position = m_Target.position + new Vector3(0, 5, 0);
         //transform.Rotate(m_Target.rotation.eulerAngles, relativeTo: Space.Self);
+        */
     }
 }

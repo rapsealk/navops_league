@@ -15,8 +15,10 @@ public class WarshipHealth : MonoBehaviour
     [HideInInspector]
     public int m_PlayerNumber;
 
-    private float m_CurrentHealth;
-    private bool m_IsDestroyed;
+    [HideInInspector]
+    public float m_CurrentHealth;
+    [HideInInspector]
+    public bool m_IsDestroyed;
 
     // Start is called before the first frame update
     void Start()

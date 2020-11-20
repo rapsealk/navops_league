@@ -53210,6 +53210,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_PlayerNumber: 0
+  m_CooldownIndicator: {fileID: 0}
   m_Projectile: {fileID: 8767120018942817592, guid: eb978559e6aff5a4f8e14256635a7e6e,
     type: 3}
   m_BattleShip: {fileID: 5198190345967887371}
@@ -53512,6 +53513,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_PlayerNumber: 0
+  m_CooldownIndicator: {fileID: 0}
   m_Projectile: {fileID: 8767120018942817592, guid: eb978559e6aff5a4f8e14256635a7e6e,
     type: 3}
   m_BattleShip: {fileID: 5198190345967887371}
@@ -53662,6 +53664,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_PlayerNumber: 0
+  m_CooldownIndicator: {fileID: 0}
   m_Projectile: {fileID: 8767120018942817592, guid: eb978559e6aff5a4f8e14256635a7e6e,
     type: 3}
   m_BattleShip: {fileID: 5198190345967887371}
@@ -53870,6 +53873,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_PlayerNumber: 0
+  m_CooldownIndicator: {fileID: 0}
   m_Projectile: {fileID: 8767120018942817592, guid: eb978559e6aff5a4f8e14256635a7e6e,
     type: 3}
   m_BattleShip: {fileID: 5198190345967887371}
@@ -54196,6 +54200,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_PlayerNumber: 0
+  m_CooldownIndicator: {fileID: 0}
   m_Projectile: {fileID: 8767120018942817592, guid: eb978559e6aff5a4f8e14256635a7e6e,
     type: 3}
   m_BattleShip: {fileID: 5198190345967887371}
@@ -54217,6 +54222,8 @@ GameObject:
   - component: {fileID: 5198807301050421771}
   - component: {fileID: 5198807301618138071}
   - component: {fileID: 5198807301618138088}
+  - component: {fileID: 1080296845}
+  - component: {fileID: 1080296844}
   m_Layer: 8
   m_Name: Battleship
   m_TagString: Battleship
@@ -54231,7 +54238,7 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5198190345967887371}
-  m_LocalRotation: {x: 0.000000021855694, y: 0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 0.1, y: 0.1, z: 0.1}
   m_Children:
@@ -54358,6 +54365,53 @@ MonoBehaviour:
   m_ExplosionAnimation: {fileID: 198917022394846920, guid: e1b08032bec16ba4eb1ae23cbd572664,
     type: 3}
   m_PlayerNumber: 0
+  m_CurrentHealth: 0
+  m_IsDestroyed: 0
+--- !u!114 &1080296845
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5198190345967887371}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d1c4e0b1822b495aa52bc52839ecb30, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_BrainParameters:
+    VectorObservationSize: 1
+    NumStackedVectorObservations: 1
+    VectorActionSize: 01000000
+    VectorActionDescriptions: []
+    VectorActionSpaceType: 0
+  m_Model: {fileID: 0}
+  m_InferenceDevice: 0
+  m_BehaviorType: 0
+  m_BehaviorName: My Behavior
+  TeamId: 0
+  m_UseChildSensors: 1
+--- !u!114 &1080296844
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5198190345967887371}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5b4ac237def69f43b592fc5c15f67c6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  agentParameters:
+    maxStep: 0
+  hasUpgradedFromAgentParameters: 1
+  MaxStep: 0
+  m_AgentId: 0
+  m_RendererColor: {r: 0, g: 0, b: 0, a: 0}
+  m_Opponent: {fileID: 0}
+  m_OpponentTransform: {fileID: 0}
+  m_OpponentHealth: {fileID: 0}
 --- !u!1 &5198807300948963865
 GameObject:
   m_ObjectHideFlags: 0
@@ -54825,6 +54879,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_PlayerNumber: 0
+  m_CooldownIndicator: {fileID: 0}
   m_Projectile: {fileID: 8767120018942817592, guid: eb978559e6aff5a4f8e14256635a7e6e,
     type: 3}
   m_BattleShip: {fileID: 5198190345967887371}

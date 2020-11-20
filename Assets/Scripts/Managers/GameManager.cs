@@ -22,6 +22,8 @@ public class GameManager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        Debug.Log("[GameManager] Start()");
+
         m_StartWait = new WaitForSeconds(m_StartDelay);
         m_EndWait = new WaitForSeconds(m_EndDelay);
 
@@ -83,7 +85,7 @@ public class GameManager : MonoBehaviour
 
         m_Domination.Init(m_Warships);
 
-        m_CameraController.m_Target = m_Warships.First(warship => warship.m_IsHumanPlayer).m_Instance.transform;
+        //m_CameraController.m_Target = m_Warships.First(warship => warship.m_IsHumanPlayer).m_Instance.transform;
         //m_CameraControl.SetStartPositionAndSize();
 
         yield return m_StartWait;
