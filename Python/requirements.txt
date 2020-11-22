@@ -1,1 +1,2 @@
-mlagents_envs
+tensorflow-gpu==2.2.1
+mlagents_envs==0.22.0

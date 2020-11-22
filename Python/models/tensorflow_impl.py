@@ -1,9 +1,7 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
 import os
-import sys
 
-import gym
 import tensorflow as tf
 import numpy as np
 
@@ -11,6 +9,8 @@ physical_devices = tf.config.experimental.list_physical_devices("GPU")
 for physical_device in physical_devices:
     tf.config.experimental.set_memory_growth(physical_device, True)
 tf.keras.backend.set_floatx('float32')
+# os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = "true"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 
 gamma = 0.98
@@ -96,8 +96,7 @@ class ActorCriticLSTM(tf.keras.Model):
         self.recurrent = tf.keras.layers.LSTM(1024, input_shape=(4, inputs),
                                               recurrent_initializer='he_uniform',
                                               stateful=False,
-                                              return_sequences=False,
-                                              name='rnn')
+                                              return_sequences=False)
         self.dense1 = tf.keras.layers.Dense(512, activation='relu')
         self.dropout1 = tf.keras.layers.Dropout(0.2)
         self.dense2 = tf.keras.layers.Dense(256, activation='relu')
@@ -184,22 +183,12 @@ class ActorCriticLSTM(tf.keras.Model):
             v = self.get_value(s)
             delta = td_target - v
 
-            print('train:', s.shape, s_.shape, pi.shape, a.shape)
-
-            # pi = self.get_pi(s)
-            # pi_a = tf.gather(pi, a, axis=1)
-            pi_a = np.zeros((pi.shape[0]))
-            for i in range(pi.shape[0]):
-                pi_a[i] = pi[i, np.argmax(a[i])]
-            # pi_a = pi_a.astype(np.float64)
-            pi_a = pi_a.astype(np.float32)
+            pi = self.get_pi(s)
+            # pi_a = tf.gather(pi, tf.cast(a, dtype=tf.int32), axis=1)
+            pi_a = tf.gather(pi, np.argmax(a), axis=1)
             delta = tf.cast(delta, dtype=tf.float32)
             td_target = tf.cast(td_target, dtype=tf.float32)
             v = tf.cast(v, dtype=tf.float32)
-            print('pi_a:', pi_a)
-            print('delta:', delta)
-            print('td_target:', td_target)
-            print('v:', v)
             loss = -tf.math.log(pi_a) * delta + tf.losses.Huber()(td_target, v)
 
             grads = tape.gradient(loss, self.trainable_variables)

@@ -59,13 +59,13 @@ def main():
         blue_pi, _ = blue_model(blue_observation)
         blue_pi = np.squeeze(blue_pi[0])
         blue_pi = np.random.choice(blue_pi.shape[-1], 1, p=blue_pi)[0]
-        blue_action = np.zeros(shape=(6,))
-        blue_action[blue_pi] = 1
+        blue_action = np.zeros(shape=(1, 6))
+        blue_action[0, blue_pi] = 1
         red_pi, _ = red_model(red_observation)
         red_pi = np.squeeze(red_pi[0])
         red_pi = np.random.choice(red_pi.shape[-1], 1, p=red_pi)[0]
-        red_action = np.zeros(shape=(6,))
-        red_action[red_pi] = 1
+        red_action = np.zeros(shape=(1, 6))
+        red_action[0, red_pi] = 1
 
         observation, reward, done = env.step([blue_action, red_action])
 
