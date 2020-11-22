@@ -48001,7 +48001,7 @@ GameObject:
   - component: {fileID: 4241543867179403724}
   m_Layer: 8
   m_Name: Medium Turret
-  m_TagString: Untagged
+  m_TagString: Battleship
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -48076,7 +48076,7 @@ BoxCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4240153756724500121}
   m_Material: {fileID: 0}
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_Enabled: 1
   serializedVersion: 2
   m_Size: {x: 6.75, y: 2, z: 8}
@@ -48152,7 +48152,7 @@ GameObject:
   - component: {fileID: 4241543867742418128}
   m_Layer: 8
   m_Name: Medium Turret
-  m_TagString: Untagged
+  m_TagString: Battleship
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -48227,7 +48227,7 @@ BoxCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4240291623896512171}
   m_Material: {fileID: 0}
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_Enabled: 1
   serializedVersion: 2
   m_Size: {x: 6.75, y: 2, z: 8}
@@ -48455,7 +48455,7 @@ GameObject:
   - component: {fileID: 4241543867055921093}
   m_Layer: 8
   m_Name: Medium Turret
-  m_TagString: Untagged
+  m_TagString: Battleship
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -48530,7 +48530,7 @@ BoxCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4240490327200221977}
   m_Material: {fileID: 0}
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_Enabled: 1
   serializedVersion: 2
   m_Size: {x: 6.75, y: 2, z: 8}
@@ -48758,7 +48758,7 @@ GameObject:
   - component: {fileID: 4241543866527737204}
   m_Layer: 8
   m_Name: Backward Large Turret
-  m_TagString: Untagged
+  m_TagString: Battleship
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -48833,7 +48833,7 @@ BoxCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4240715035695144983}
   m_Material: {fileID: 0}
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_Enabled: 1
   serializedVersion: 2
   m_Size: {x: 9, y: 3, z: 11}
@@ -48882,7 +48882,7 @@ GameObject:
   - component: {fileID: 4194477109467987341}
   m_Layer: 8
   m_Name: Collider
-  m_TagString: Untagged
+  m_TagString: Battleship
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -48909,7 +48909,7 @@ BoxCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4240719385564690413}
   m_Material: {fileID: 0}
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_Enabled: 1
   serializedVersion: 2
   m_Size: {x: 10.8, y: 3.0084248, z: 78.58466}
@@ -48922,7 +48922,7 @@ BoxCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4240719385564690413}
   m_Material: {fileID: 0}
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_Enabled: 1
   serializedVersion: 2
   m_Size: {x: 20.1, y: 2.8620586, z: 7.5480957}
@@ -48935,7 +48935,7 @@ BoxCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4240719385564690413}
   m_Material: {fileID: 0}
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_Enabled: 1
   serializedVersion: 2
   m_Size: {x: 20.1, y: 3.1422253, z: 15.546038}
@@ -48948,7 +48948,7 @@ BoxCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4240719385564690413}
   m_Material: {fileID: 0}
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_Enabled: 1
   serializedVersion: 2
   m_Size: {x: 20.6, y: 3.1422253, z: 5.8283234}
@@ -48961,7 +48961,7 @@ BoxCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4240719385564690413}
   m_Material: {fileID: 0}
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_Enabled: 1
   serializedVersion: 2
   m_Size: {x: 16.3, y: 3.1422253, z: 8.790365}
@@ -48974,7 +48974,7 @@ BoxCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4240719385564690413}
   m_Material: {fileID: 0}
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_Enabled: 1
   serializedVersion: 2
   m_Size: {x: 10.36, y: 6.1658, z: 19.651134}
@@ -48987,7 +48987,7 @@ BoxCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4240719385564690413}
   m_Material: {fileID: 0}
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_Enabled: 1
   serializedVersion: 2
   m_Size: {x: 7.5, y: 12.608585, z: 10.255124}
@@ -49000,7 +49000,7 @@ BoxCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4240719385564690413}
   m_Material: {fileID: 0}
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_Enabled: 1
   serializedVersion: 2
   m_Size: {x: 7.13, y: 9.574671, z: 9.93446}
@@ -49013,7 +49013,7 @@ BoxCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4240719385564690413}
   m_Material: {fileID: 0}
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_Enabled: 1
   serializedVersion: 2
   m_Size: {x: 8.79, y: 3.9271736, z: 19.305098}
@@ -49026,7 +49026,7 @@ BoxCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4240719385564690413}
   m_Material: {fileID: 0}
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_Enabled: 1
   serializedVersion: 2
   m_Size: {x: 12.84, y: 3.9271736, z: 7.6079235}
@@ -49039,7 +49039,7 @@ BoxCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4240719385564690413}
   m_Material: {fileID: 0}
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_Enabled: 1
   serializedVersion: 2
   m_Size: {x: 5.9, y: 3.0984802, z: 9.598343}
@@ -49052,7 +49052,7 @@ BoxCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4240719385564690413}
   m_Material: {fileID: 0}
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_Enabled: 1
   serializedVersion: 2
   m_Size: {x: 5.9, y: 10.15793, z: 6.550041}
@@ -49065,7 +49065,7 @@ BoxCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4240719385564690413}
   m_Material: {fileID: 0}
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_Enabled: 0
   serializedVersion: 2
   m_Size: {x: 4, y: 10.60667, z: 4.169607}
@@ -49179,7 +49179,7 @@ GameObject:
   - component: {fileID: 4241543866589537062}
   m_Layer: 8
   m_Name: Medium Turret
-  m_TagString: Untagged
+  m_TagString: Battleship
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -49254,7 +49254,7 @@ BoxCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4240830087816099543}
   m_Material: {fileID: 0}
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_Enabled: 1
   serializedVersion: 2
   m_Size: {x: 6.75, y: 2, z: 8}
@@ -49440,12 +49440,14 @@ MonoBehaviour:
     maxStep: 0
   hasUpgradedFromAgentParameters: 1
   MaxStep: 0
-  m_AgentId: 1
+  m_PlayerId: 0
   m_RendererColor: {r: 0, g: 0.3462386, b: 1, a: 0}
   m_StartingPoint: {fileID: 0}
   m_ExplosionAnimation: {fileID: 198917022394846920, guid: e1b08032bec16ba4eb1ae23cbd572664,
     type: 3}
   m_Opponent: {fileID: 0}
+  m_DominationManager: {fileID: 0}
+  m_ShouldEnd: 0
 --- !u!114 &-2599700968420310420
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -49740,7 +49742,7 @@ GameObject:
   - component: {fileID: 4241543868139157249}
   m_Layer: 8
   m_Name: Frontal Large Turret
-  m_TagString: Untagged
+  m_TagString: Battleship
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -49815,7 +49817,7 @@ BoxCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4242142219141158485}
   m_Material: {fileID: 0}
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_Enabled: 1
   serializedVersion: 2
   m_Size: {x: 9, y: 3, z: 11}
@@ -64316,7 +64318,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4952855453689058706}
   m_LocalRotation: {x: -0.7071068, y: -0, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: 6.15, y: 1.88, z: -32.5}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 9001876202188258422}

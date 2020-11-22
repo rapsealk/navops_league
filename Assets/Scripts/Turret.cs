@@ -20,7 +20,7 @@ public class Turret : MonoBehaviour
     //private bool m_IsLocked = false;
     public const float m_CooldownTime = 6f;
     private float m_CurrentCooldownTime = 6f;
-    public float CurrentCooldownTime { get => m_CurrentCooldownTime; }
+    public float CurrentCooldownTime { get => Mathf.Min(m_CooldownTime, m_CurrentCooldownTime) / m_CooldownTime; }
     private bool m_IsLoaded = false;
     private Color ColorOrange = new Color(255 / 255f, 135 / 255f, 0f);
 

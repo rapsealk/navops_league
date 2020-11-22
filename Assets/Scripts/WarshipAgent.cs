@@ -12,8 +12,9 @@ public class WarshipAgent : Agent
     public ParticleSystem m_ExplosionAnimation;
     public WarshipAgent m_Opponent;
     public DominationManager m_DominationManager;
-    //[HideInInsepctor]
-    public bool m_ShouldEnd = false;
+    [Header("Maneuver Parameters")]
+    public const float m_EnginePower = 8f;
+    public const float m_RudderPower = 0.1f;
 
     public const float StartingHealth = 100f;
     public const float DefaultDamage = 10f;
@@ -33,9 +34,6 @@ public class WarshipAgent : Agent
     private int m_SteerLevel = 0;
     private const int minSteerLevel = -2;
     private const int maxSteerLevel = 2;
-
-    private const float m_EnginePower = 2.5f;
-    private const float m_RudderPower = 1.0f;
 
     private const float winReward = 1.0f;
     private const float damageReward = -0.01f;
@@ -63,6 +61,14 @@ public class WarshipAgent : Agent
 
     public override void OnEpisodeBegin()
     {
+        Reset();
+        m_Opponent.Reset();
+
+        m_DominationManager.Reset();
+    }
+
+    public void Reset()
+    {
         m_Rigidbody.velocity = Vector3.zero;
         m_Rigidbody.angularVelocity = Vector3.zero;
 
@@ -75,32 +81,29 @@ public class WarshipAgent : Agent
 
         m_VelocityLevel = 0;
         m_SteerLevel = 0;
-
-        // StartCoroutine(ResetMaterial());
     }
 
     public override void CollectObservations(VectorSensor sensor)
     {
-        sensor.AddObservation(m_Transform.localPosition);   // 3 (x, y, z)
+        sensor.AddObservation(m_Transform.localPosition / 50f);   // 3 (x, y, z)
         sensor.AddObservation(m_Transform.rotation);        // 3 (x, y, z)
-        sensor.AddObservation(m_CurrentHealth);             // 1
+        sensor.AddObservation(m_CurrentHealth / StartingHealth);             // 1
         //sensor.AddObservation(m_Health.m_IsDestroyed);      // 1
 
-        sensor.AddObservation(m_OpponentTransform.localPosition);
+        for (int i = 0; i < m_Turrets.Length; i++)
+        {
+            sensor.AddObservation(m_Turrets[i].CurrentCooldownTime);    // 6
+        }
+
+        sensor.AddObservation(m_OpponentTransform.localPosition / 50f);
         sensor.AddObservation(m_OpponentTransform.rotation);
-        sensor.AddObservation(m_Opponent.m_CurrentHealth);
+        sensor.AddObservation(m_Opponent.m_CurrentHealth / StartingHealth);
         //sensor.AddObservation(m_OpponentHealth.m_IsDestroyed);
         // ...
     }
 
     public override void OnActionReceived(float[] vectorAction)
     {
-        if (m_ShouldEnd)
-        {
-            m_ShouldEnd = false;
-            EndEpisode();
-        }
-
         for (int i = 0; i < vectorAction.Length; i++)
         {
             if (vectorAction[i] == 1.0f)
@@ -141,36 +144,41 @@ public class WarshipAgent : Agent
         // Reward
         if (m_OpponentHealth - m_Opponent.m_CurrentHealth > 0f)
         {
-            SetReward((m_OpponentHealth - m_Opponent.m_CurrentHealth) * damageReward);
+            AddReward((m_OpponentHealth - m_Opponent.m_CurrentHealth) * damageReward);
             m_OpponentHealth = m_Opponent.m_CurrentHealth;
         }
 
         if (m_PlayerId == 1 && m_DominationManager.IsBlueDominating)
         {
-            SetReward(0.01f);
+            AddReward(0.01f);
 
             if (m_DominationManager.IsDominated)
             {
                 SetReward(winReward);
-                m_Opponent.m_ShouldEnd = true;
                 EndEpisode();
+                m_Opponent.SetReward(-winReward);
+                m_Opponent.EndEpisode();
             }
         }
         else if (m_PlayerId == 2 && m_DominationManager.IsRedDominating)
         {
-            SetReward(0.01f);
+            AddReward(0.01f);
 
             if (m_DominationManager.IsDominated)
             {
                 SetReward(winReward);
-                m_Opponent.m_ShouldEnd = true;
                 EndEpisode();
+                m_Opponent.SetReward(-winReward);
+                m_Opponent.EndEpisode();
             }
         }
 
         if (m_Transform.position.y <= 0.0f)
         {
-            TakeDamage(StartingHealth);
+            Vector3 position = transform.position;
+            position.y = 0f;
+            transform.position = position;
+            // TakeDamage(StartingHealth);
         }
 
         if (m_Opponent.m_CurrentHealth <= 0f)
@@ -179,17 +187,13 @@ public class WarshipAgent : Agent
             {
                 SetReward(winReward);
             }
-            m_Opponent.m_ShouldEnd = true;
+            else
+            {
+                SetReward(-winReward);
+            }
             EndEpisode();
-        }
-        else if (m_CurrentHealth <= 0f)
-        {
-            m_Opponent.m_ShouldEnd = true;
-            EndEpisode();
-        }
-        else
-        {
-            SetReward(0f);
+            m_Opponent.SetReward(-winReward);
+            m_Opponent.EndEpisode();
         }
     }
 
@@ -198,34 +202,61 @@ public class WarshipAgent : Agent
         // ...
         //Accelerate(Direction.up);
         //if (m_PlayerId == 2)
-        Steer(Direction.right);
-        Fire();
+        //Steer(Direction.right);
+        //Fire();
+        Debug.Log($"Heuristic - {actionsOut.Length}");
+
+        if (Input.GetKeyDown(KeyCode.W))
+        {
+            Accelerate(Direction.up);
+        }
+        else if (Input.GetKeyDown(KeyCode.S))
+        {
+            Accelerate(Direction.down);
+        }
+        
+        if (Input.GetKeyDown(KeyCode.A))
+        {
+            Steer(Direction.left);
+        }
+        else if (Input.GetKeyDown(KeyCode.D))
+        {
+            Steer(Direction.right);
+        }
+
+        if (Input.GetKeyDown(KeyCode.Mouse0))
+        {
+            Fire();
+        }
     }
 
     private void FixedUpdate()
     {
-        m_Rigidbody.AddRelativeForce(Vector3.forward * m_EnginePower * m_VelocityLevel);
+        m_Rigidbody.AddRelativeForce(Vector3.forward * m_EnginePower * m_VelocityLevel, ForceMode.Acceleration);
+        //m_Rigidbody.AddRelativeTorque(Vector3.up * m_RudderPower * m_SteerLevel, ForceMode.Force);
         transform.rotation = Quaternion.Euler(0, transform.rotation.eulerAngles.y + m_RudderPower * m_SteerLevel, 0);
+
+        Debug.Log($"[Warship#{m_PlayerId}] transform.position.y: {transform.position.y}");
     }
 
-    /*
     void OnCollisionEnter(Collision collision)
     {
-        // SetReward(-1.0f);
-        // EndEpisode();
+        if (collision.collider.tag == "Wall")
+        {
+            TakeDamage(DefaultDamage);
+        }
     }
-    */
 
     void OnTriggerEnter(Collider collider)
     {
         Debug.Log($"ID #{m_PlayerId} [WarshipHealth.OnTriggerEnter] {collider} {collider.tag}");
         m_ExplosionAnimation.Play();
 
-        if (collider.tag == "Battleship")
+        if (collider.CompareTag("Battleship"))
         {
             TakeDamage(WarshipHealth.StartingHealth);
         }
-        else if (collider.tag.StartsWith("Bullet") /*&& !collider.tag.EndsWith(m_PlayerId.ToString())*/)
+        else if (collider.CompareTag("Bullet") /*&& !collider.tag.EndsWith(m_PlayerId.ToString())*/)
         {
             TakeDamage(WarshipHealth.DefaultDamage);
         }
@@ -235,7 +266,7 @@ public class WarshipAgent : Agent
     {
         m_CurrentHealth -= damage;
 
-        SetReward(damage * damageReward);
+        AddReward(damage * damageReward);
     }
 
     public void Accelerate(Direction direction)

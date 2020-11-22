@@ -4,7 +4,7 @@ using UnityEngine.UI;
 public class DominationManager : MonoBehaviour
 {
     //public Slider m_DominationSlider;
-    public const float RequiredDominationTime = 20f;
+    public const float RequiredDominationTime = 4f;
     public WarshipAgent m_BlueWarship;
     public WarshipAgent m_RedWarship;
 
@@ -55,10 +55,12 @@ public class DominationManager : MonoBehaviour
 
             //UpdateUI();
         }
+        /*
         else
         {
             Reset();
         }
+        */
     }
 
     void FixedUpdate()
