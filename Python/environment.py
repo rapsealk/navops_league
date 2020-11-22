@@ -25,17 +25,16 @@ class UnityEnvironmentImpl:
 
         self.__observe()
 
-        print('env.reset.observation:', self.observation)
-
         observation = [obs.decision_steps.obs for obs in self.observation]
+        # print('np.array(observation).shape:', np.array(observation).shape)
 
-        return np.array(observation)
+        return np.squeeze(np.array(observation), axis=1)
 
     def step(self, action):
         done = False
         for team_id, (decision_steps, terminal_steps) in enumerate(self.steps):
             if terminal_steps.agent_id:
-                print('terminal_steps.agent_id:', terminal_steps.agent_id)
+                # print('terminal_steps.agent_id:', terminal_steps.agent_id)
                 done = True
             for i, id_ in enumerate(decision_steps.agent_id):
                 #if id_ in terminal_steps.agent_id:
@@ -48,17 +47,27 @@ class UnityEnvironmentImpl:
         self.env.step()
         self.__observe()
 
-        observation = [obs.decision_steps.obs for obs in self.observation]
-        reward = [obs.decision_steps.reward for obs in self.observation]
-        reward = np.array(reward)
-        terminal_reward = [obs.terminal_steps.reward for obs in self.observation]
-        terminal_reward = np.array(terminal_reward)
-        # print('terminal_reward:', terminal_reward)
-        if terminal_reward.shape[-1] > 0:
-            reward = terminal_reward
-        print('env.reward:', reward)
+        if done:
+            observation = [obs.terminal_steps.obs for obs in self.observation]
+            observation = np.array(observation)
+            if 0 in observation.shape:
+                observation = self.observation_cache
+            reward = [obs.terminal_steps.reward for obs in self.observation]
+            reward = np.array(reward)
+            if 0 in reward.shape:
+                reward = np.zeros((2, 1))
+        else:
+            observation = [obs.decision_steps.obs for obs in self.observation]
+            observation = np.array(observation)
+            if 0 in observation.shape:
+                observation = self.observation_cache
+            self.observation_cache = observation
+            reward = [obs.decision_steps.reward for obs in self.observation]
+            reward = np.array(reward)
+            if 0 in reward.shape:
+                reward = np.zeros((2, 1))
 
-        return np.array(observation), np.squeeze(reward), done
+        return np.squeeze(observation, axis=1), np.squeeze(reward), done
 
     def close(self):
         self.env.close()
