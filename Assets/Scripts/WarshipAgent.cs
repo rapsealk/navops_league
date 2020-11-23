@@ -13,7 +13,7 @@ public class WarshipAgent : Agent
     public WarshipAgent m_Opponent;
     public DominationManager m_DominationManager;
     [Header("Maneuver Parameters")]
-    public const float m_EnginePower = 8f;
+    public const float m_EnginePower = 4f;
     public const float m_RudderPower = 0.1f;
 
     public const float StartingHealth = 100f;
@@ -85,7 +85,7 @@ public class WarshipAgent : Agent
 
     public override void CollectObservations(VectorSensor sensor)
     {
-        sensor.AddObservation(m_Transform.localPosition / 50f);   // 3 (x, y, z)
+        sensor.AddObservation(m_Transform.localPosition / 100f);   // 3 (x, y, z)
         sensor.AddObservation(m_Transform.rotation);        // 3 (x, y, z)
         sensor.AddObservation(m_CurrentHealth / StartingHealth);             // 1
         //sensor.AddObservation(m_Health.m_IsDestroyed);      // 1
@@ -95,7 +95,7 @@ public class WarshipAgent : Agent
             sensor.AddObservation(m_Turrets[i].CurrentCooldownTime);    // 6
         }
 
-        sensor.AddObservation(m_OpponentTransform.localPosition / 50f);
+        sensor.AddObservation(m_OpponentTransform.localPosition / 100f);
         sensor.AddObservation(m_OpponentTransform.rotation);
         sensor.AddObservation(m_Opponent.m_CurrentHealth / StartingHealth);
         //sensor.AddObservation(m_OpponentHealth.m_IsDestroyed);
@@ -199,6 +199,8 @@ public class WarshipAgent : Agent
 
     public override void Heuristic(float[] actionsOut)
     {
+        // TODO: Bot
+
         // ...
         //Accelerate(Direction.up);
         //if (m_PlayerId == 2)

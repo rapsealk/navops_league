@@ -18,7 +18,7 @@ public class DominationManager : MonoBehaviour
     }
     private float m_DominationTime = 0f;
     public float DiminationTime { get => m_DominationTime; }
-    private float ControlAreaScale = 10f;
+    private float ControlAreaScale = 25f;
 
     // Start is called before the first frame update
     void Start()
