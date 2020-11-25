@@ -30,11 +30,11 @@ def main():
 
     env = UnityEnvironmentImpl()
 
-    epsilon = 10000
-    epsilon_discount = 1
+    epsilon = 1
+    epsilon_discount = 0.01
 
-    blue_model = ActorCriticLSTM()
-    red_model = ActorCriticLSTM()
+    blue_model = ActorCriticLSTM('actorcritic_lstm_blue')
+    red_model = ActorCriticLSTM('actorcritic_lstm_red')
 
     blue_observations = []
     blue_next_observations = []
@@ -53,72 +53,105 @@ def main():
                                axis=0)
 
     for episode in count(0):
-        blue_observations.append(blue_observation)
-        red_observations.append(red_observation)
+        blue_observations = []
+        blue_next_observations = []
+        blue_actions = []
+        blue_rewards = []
+        red_observations = []
+        red_next_observations = []
+        red_actions = []
+        red_rewards = []
+        dones = []
 
-        blue_pi, _ = blue_model(blue_observation)
-        blue_pi = np.squeeze(blue_pi[0])
-        blue_pi = np.random.choice(blue_pi.shape[-1], 1, p=blue_pi)[0]
-        blue_action = np.zeros(shape=(1, 6))
-        blue_action[0, blue_pi] = 1
-        red_pi, _ = red_model(red_observation)
-        red_pi = np.squeeze(red_pi[0])
-        red_pi = np.random.choice(red_pi.shape[-1], 1, p=red_pi)[0]
-        red_action = np.zeros(shape=(1, 6))
-        red_action[0, red_pi] = 1
+        observation = env.reset()
+        blue_observation = np.stack([observation[0], observation[0], observation[0], observation[0]],
+                                    axis=0)
+        red_observation = np.stack([observation[1], observation[1], observation[1], observation[1]],
+                                   axis=0)
 
-        observation, reward, done = env.step([blue_action, red_action])
+        while True:
+            blue_observations.append(blue_observation)
+            red_observations.append(red_observation)
 
-        blue_observation = np.append([observation[0]], blue_observation[:3]).reshape((4, 1, -1))
-        red_observation = np.append([observation[1]], red_observation[:3]).reshape((4, 1, -1))
-        blue_next_observations.append(blue_observation)
-        red_next_observations.append(red_observation)
-        blue_rewards.append(reward[0])
-        red_rewards.append(reward[1])
-        blue_actions.append(blue_action)
-        red_actions.append(red_action)
-        dones.append(not done)
+            if np.random.uniform(0, 1) > epsilon:
+                try:
+                    blue_pi, _ = blue_model(blue_observation)
+                    blue_pi = np.squeeze(blue_pi[0])
+                    blue_pi = np.random.choice(blue_pi.shape[-1], 1, p=blue_pi)[0]
+                    blue_action = np.zeros(shape=(1, 6))
+                    blue_action[0, blue_pi] = 1
+                    red_pi, _ = red_model(red_observation)
+                    red_pi = np.squeeze(red_pi[0])
+                    red_pi = np.random.choice(red_pi.shape[-1], 1, p=red_pi)[0]
+                    red_action = np.zeros(shape=(1, 6))
+                    red_action[0, red_pi] = 1
+                except:
+                    blue_action = np.zeros(shape=(1, 6))
+                    blue_action[0, np.random.randint(0, 6)] = 1
+                    red_action = np.zeros(shape=(1, 6))
+                    red_action[0, np.random.randint(0, 6)] = 1
+            else:
+                blue_action = np.zeros(shape=(1, 6))
+                blue_action[0, np.random.randint(0, 6)] = 1
+                red_action = np.zeros(shape=(1, 6))
+                red_action[0, np.random.randint(0, 6)] = 1
 
-        if done:
-            blue_returns = discount_rewards(blue_rewards, dones)
-            red_returns = discount_rewards(red_rewards, dones)
-            with writer.as_default():
-                tf.summary.scalar('Blue Reward', np.sum(blue_returns), episode)
-                tf.summary.scalar('Red Reward', np.sum(red_returns), episode)
+            observation, reward, done = env.step([blue_action, red_action])
 
-            # blue_model.reset()
-            # red_model.reset()
+            blue_observation = np.append([observation[0]], blue_observation[:3]).reshape((4, 1, -1))
+            red_observation = np.append([observation[1]], red_observation[:3]).reshape((4, 1, -1))
+            blue_next_observations.append(blue_observation)
+            red_next_observations.append(red_observation)
+            blue_rewards.append(reward[0])
+            red_rewards.append(reward[1])
+            blue_actions.append(blue_action)
+            red_actions.append(red_action)
+            dones.append(not done)
 
-            blue_loss = blue_model.train(np.array(blue_observations),
-                                         np.array(blue_actions),
-                                         np.array(blue_returns),
-                                         np.array(blue_next_observations),
-                                         np.array(dones))
-            red_loss = red_model.train(np.array(red_observations),
-                                       np.array(red_actions),
-                                       np.array(red_returns),
-                                       np.array(red_next_observations),
-                                       np.array(dones))
-            with writer.as_default():
-                tf.summary.scalar('Blue Loss', np.sum(blue_loss), episode)
-                tf.summary.scalar('Red Loss', np.sum(red_loss), episode)
+            if done:
+                blue_returns = discount_rewards(blue_rewards, dones)
+                red_returns = discount_rewards(red_rewards, dones)
+                with writer.as_default():
+                    tf.summary.scalar('Blue Reward', np.sum(blue_returns), episode)
+                    tf.summary.scalar('Red Reward', np.sum(red_returns), episode)
 
-            # Reset
-            blue_observations = []
-            blue_next_observations = []
-            blue_actions = []
-            blue_rewards = []
-            red_observations = []
-            red_next_observations = []
-            red_actions = []
-            red_rewards = []
-            dones = []
+                # blue_model.reset()
+                # red_model.reset()
 
-            observation = env.reset()
-            blue_observation = np.stack([observation[0], observation[0], observation[0], observation[0]],
+                blue_loss = blue_model.train(np.array(blue_observations),
+                                             np.array(blue_actions),
+                                             np.array(blue_returns),
+                                             np.array(blue_next_observations),
+                                             np.array(dones))
+                red_loss = red_model.train(np.array(red_observations),
+                                           np.array(red_actions),
+                                           np.array(red_returns),
+                                           np.array(red_next_observations),
+                                           np.array(dones))
+                with writer.as_default():
+                    tf.summary.scalar('Blue Loss', np.sum(blue_loss), episode)
+                    tf.summary.scalar('Red Loss', np.sum(red_loss), episode)
+
+                epsilon = max(epsilon - epsilon_discount, 0.01)
+
+                break
+
+                # Reset
+                blue_observations = []
+                blue_next_observations = []
+                blue_actions = []
+                blue_rewards = []
+                red_observations = []
+                red_next_observations = []
+                red_actions = []
+                red_rewards = []
+                dones = []
+
+                observation = env.reset()
+                blue_observation = np.stack([observation[0], observation[0], observation[0], observation[0]],
+                                            axis=0)
+                red_observation = np.stack([observation[1], observation[1], observation[1], observation[1]],
                                         axis=0)
-            red_observation = np.stack([observation[1], observation[1], observation[1], observation[1]],
-                                       axis=0)
 
     env.close()
 

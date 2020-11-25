@@ -3,6 +3,8 @@ using UnityEngine.UI;
 
 public class DominationManager : MonoBehaviour
 {
+    public bool m_IsEnabled = false;
+
     //public Slider m_DominationSlider;
     public const float RequiredDominationTime = 4f;
     public WarshipAgent m_BlueWarship;
@@ -29,6 +31,11 @@ public class DominationManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (!m_IsEnabled)
+        {
+            return;
+        }
+
         // FIXME: Trigger
         float blueDistance = Mathf.Sqrt(Mathf.Pow(m_BlueWarship.transform.position.x, 2f)
                                         + Mathf.Pow(m_BlueWarship.transform.position.z, 2f));

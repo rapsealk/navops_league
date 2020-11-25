@@ -16,6 +16,8 @@ public class Bullet : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        //Debug.Log($"[Bullet::Update] transform.position: ({transform.position.x}, {transform.position.y}, {transform.position.z})");
+
         if (transform.position.y < 0)
         {
             Destroy(gameObject);
@@ -24,7 +26,7 @@ public class Bullet : MonoBehaviour
 
     void OnCollisionEnter(Collision collision)
     {
-        Debug.Log($"[OnCollisionEnter] {collision.collider.gameObject.name}");
+        //Debug.Log($"[Bullet::OnCollisionEnter] {collision.collider.gameObject.name} {collision.collider.name} {collision.collider.tag}");
         /*
         if (collision.collider.tag == "Battleship")
         {

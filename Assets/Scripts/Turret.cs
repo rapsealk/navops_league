@@ -166,10 +166,11 @@ public class Turret : MonoBehaviour
             return;
         }
 
-        GameObject bullet = Instantiate(m_Projectile, m_Muzzle.position, m_Muzzle.rotation);
+        GameObject bullet = Instantiate(m_Projectile, m_Muzzle.position + m_Muzzle.forward * 3, m_Muzzle.rotation);
         bullet.tag = "Bullet" + m_PlayerNumber.ToString();
         //bullet.GetComponent<Renderer>().material.SetColor("_Color", Color.red);
-        bullet.GetComponent<Rigidbody>().AddForce(m_Muzzle.forward * 4000 + m_Muzzle.up * 10);
+        //bullet.GetComponent<Rigidbody>().AddForce(m_Muzzle.forward * 4000 + m_Muzzle.up * 10);
+        bullet.GetComponent<Rigidbody>().AddForce(m_Muzzle.forward * 6000 + m_Muzzle.up * 20);
         //Physics.IgnoreCollision(bullet.GetComponent<Collider>(), GetComponent<Collider>());
         m_MuzzleFlash.Play();
 
