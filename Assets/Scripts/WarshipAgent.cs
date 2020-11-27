@@ -81,6 +81,64 @@ public class WarshipAgent : Agent
         sensor.AddObservation(m_OpponentTransform.localPosition / 100f);
         sensor.AddObservation(m_OpponentTransform.rotation);
         sensor.AddObservation(m_Opponent.m_CurrentHealth / Warship.StartingHealth);
+
+        // Reward
+        #region RewardShaping
+
+        if (m_OpponentHealth > m_Opponent.m_CurrentHealth)
+        {
+            AddReward((m_OpponentHealth - m_Opponent.m_CurrentHealth) * damageReward);
+            m_OpponentHealth = m_Opponent.m_CurrentHealth;
+        }
+
+        /*
+        if (m_PlayerId == 1 && m_DominationManager.IsBlueDominating)
+        {
+            AddReward(0.01f);
+
+            if (m_DominationManager.IsDominated)
+            {
+                SetReward(winReward);
+                EndEpisode();
+                //m_Opponent.SetReward(-winReward);
+                //m_Opponent.EndEpisode();
+            }
+        }
+        else if (m_PlayerId == 2 && m_DominationManager.IsRedDominating)
+        {
+            AddReward(0.01f);
+
+            if (m_DominationManager.IsDominated)
+            {
+                SetReward(winReward);
+                EndEpisode();
+                //m_Opponent.SetReward(-winReward);
+                //m_Opponent.EndEpisode();
+            }
+        }
+        */
+
+        if (m_Warship.m_Transform.position.y <= 0.0f)
+        {
+            Vector3 position = transform.position;
+            position.y = 0f;
+            transform.position = position;
+        }
+
+        if (m_Opponent.m_CurrentHealth <= 0f)
+        {
+            SetReward(winReward);
+            EndEpisode();
+            //m_Opponent.SetReward(-winReward);
+            //m_Opponent.EndEpisode();
+        }
+        else if (m_Warship.m_CurrentHealth <= 0f)
+        {
+            SetReward(-winReward);
+            EndEpisode();
+        }
+
+        #endregion
     }
 
     public override void OnActionReceived(float[] vectorAction)
@@ -115,105 +173,37 @@ public class WarshipAgent : Agent
                 }
             }
         }
-
-        PerformRewardShaping();
     }
 
     public override void Heuristic(float[] actionsOut)
     {
         // TODO: Bot
-
-        m_Warship.SetEngineLevel(Warship.EngineLevel.FORWARD_HALF);
-        //m_Warship.Accelerate(Direction.up);
-        m_Warship.Steer(Direction.right);
-
-        /*
         if (Input.GetKeyDown(KeyCode.W))
         {
-            m_Warship.Accelerate(Direction.up);
+            actionsOut[(int)ActionId.FORWARD] = 1;
         }
         else if (Input.GetKeyDown(KeyCode.S))
         {
-            m_Warship.Accelerate(Direction.down);
+            actionsOut[(int)ActionId.BACKWARD] = 1;
         }
-
-        if (Input.GetKeyDown(KeyCode.A))
+        else if (Input.GetKeyDown(KeyCode.A))
         {
-            m_Warship.Steer(Direction.left);
+            actionsOut[(int)ActionId.LEFT] = 1;
         }
         else if (Input.GetKeyDown(KeyCode.D))
         {
-            m_Warship.Steer(Direction.right);
+            actionsOut[(int)ActionId.RIGHT] = 1;
         }
-
-        if (Input.GetKeyDown(KeyCode.Mouse0))
+        else if (Input.GetKeyDown(KeyCode.Mouse0))
         {
-            m_Warship.Fire();
+            actionsOut[(int)ActionId.FIRE] = 1;
         }
-        */
     }
 
     private void TakeDamage(float damage)
     {
         m_Warship.TakeDamage(damage);
         AddReward(damage * damageReward);
-    }
-
-    private void PerformRewardShaping()
-    {
-        // Reward
-        if (m_OpponentHealth - m_Opponent.m_CurrentHealth > 0f)
-        {
-            AddReward((m_OpponentHealth - m_Opponent.m_CurrentHealth) * damageReward);
-            m_OpponentHealth = m_Opponent.m_CurrentHealth;
-        }
-
-        if (m_PlayerId == 1 && m_DominationManager.IsBlueDominating)
-        {
-            AddReward(0.01f);
-
-            if (m_DominationManager.IsDominated)
-            {
-                SetReward(winReward);
-                EndEpisode();
-                //m_Opponent.SetReward(-winReward);
-                //m_Opponent.EndEpisode();
-            }
-        }
-        else if (m_PlayerId == 2 && m_DominationManager.IsRedDominating)
-        {
-            AddReward(0.01f);
-
-            if (m_DominationManager.IsDominated)
-            {
-                SetReward(winReward);
-                EndEpisode();
-                //m_Opponent.SetReward(-winReward);
-                //m_Opponent.EndEpisode();
-            }
-        }
-
-        if (m_Warship.m_Transform.position.y <= 0.0f)
-        {
-            Vector3 position = transform.position;
-            position.y = 0f;
-            transform.position = position;
-        }
-
-        if (m_Opponent.m_CurrentHealth <= 0f)
-        {
-            if (m_Warship.m_CurrentHealth > 0f)
-            {
-                SetReward(winReward);
-            }
-            else
-            {
-                SetReward(-winReward);
-            }
-            EndEpisode();
-            //m_Opponent.SetReward(-winReward);
-            //m_Opponent.EndEpisode();
-        }
     }
 
     void OnCollisionEnter(Collision collision)
@@ -229,12 +219,14 @@ public class WarshipAgent : Agent
         //Debug.Log($"ID #{m_PlayerId} [WarshipHealth.OnTriggerEnter] {collider} {collider.tag}");
         m_Warship.m_ExplosionAnimation.Play();
 
+        /*
         if (collider.CompareTag("Battleship"))
         {
             TakeDamage(WarshipHealth.StartingHealth);
             Debug.Log($"ID#{m_PlayerId} - {collider.tag} -> {m_Warship.m_CurrentHealth}");
         }
-        else if (collider.tag.Contains("Bullet") && !collider.tag.EndsWith(m_PlayerId.ToString()))
+        else*/
+        if (collider.tag.Contains("Bullet") && !collider.tag.EndsWith(m_PlayerId.ToString()))
         {
             TakeDamage(WarshipHealth.DefaultDamage);
             Debug.Log($"ID#{m_PlayerId} - {collider.tag} -> {m_Warship.m_CurrentHealth}");

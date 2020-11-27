@@ -8,8 +8,8 @@ public class CameraController : MonoBehaviour
     //public Transform m_Target;
     public float m_MaxTiltAngle = 30f;
 
-    private float m_RotationAngle = 0f;
-    private float m_TiltAngle = 0f;
+    //private float m_RotationAngle = 0f;
+    //private float m_TiltAngle = 0f;
     //private float moveSpeed = 0.5f;
     //private float scrollSpeed = 10f;
 

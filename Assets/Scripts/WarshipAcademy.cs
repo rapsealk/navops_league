@@ -2,9 +2,13 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Unity.MLAgents;
-/*
-public class WarshipAcademy : Academy
+
+public class WarshipAcademyBehaviour : MonoBehaviour
 {
+    private void Awake()
+    {
+        Academy.Instance.OnEnvironmentReset += EnvironmentReset;
+    }
     // Start is called before the first frame update
     void Start()
     {
@@ -17,9 +21,8 @@ public class WarshipAcademy : Academy
         
     }
 
-    public new delegate void OnEnvironmentReset()
+    private void EnvironmentReset()
     {
-
+        Debug.Log("Academy.EnvironmentReset");
     }
 }
-*/

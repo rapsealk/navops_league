@@ -122,6 +122,7 @@ public class Turret : MonoBehaviour
 
         // transform.rotation = Quaternion.Euler(rotation);
 
+        /*
         int layerMask = 1 << 8;
         RaycastHit hit;
         bool isLocked = Physics.Raycast(m_Muzzle.position, m_Muzzle.forward, out hit, Mathf.Infinity, layerMask);
@@ -150,6 +151,7 @@ public class Turret : MonoBehaviour
                 Fire();
             }
         }
+        */
     }
 
     public void Fire()

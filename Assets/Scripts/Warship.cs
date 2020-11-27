@@ -12,7 +12,7 @@ public class Warship : MonoBehaviour
     public ParticleSystem m_ExplosionAnimation;
 
     [Header("Maneuver Parameters")]
-    public const float m_EnginePower = 4f;
+    public const float m_EnginePower = 2f;
     public const float m_RudderPower = 0.1f;
 
     [Header("Combat Parameters")]
