@@ -15,9 +15,8 @@ BEHAVIOR_NAME = "Warship?team={team}"
 
 class UnityEnvironmentImpl:
 
-    def __init__(self, n=9, worker_id=20800, name="BlackWhale"):
+    def __init__(self, worker_id=20800, name="Build/BlackWhale"):
         self.env = UnityEnvironment(file_name=name, seed=1, worker_id=worker_id, side_channels=[EngineConfigurationChannel()])
-        self.n = n
 
     def reset(self):
         self.env.reset()
@@ -35,15 +34,11 @@ class UnityEnvironmentImpl:
     def step(self, action):
         # https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Python-API.md
         done = False
-        # print('step.action:', action, len(action), len(action[0]))
         for team_id, (decision_steps, terminal_steps) in enumerate(self.steps):
-            # print('team_id:', team_id, decision_steps.agent_id, terminal_steps.agent_id, type(terminal_steps.agent_id))
-            # print('decision_teps:', decision_steps.agent_id)
-            # print('terminal_steps:', terminal_steps.agent_id)
-            if terminal_steps.agent_id.shape[0] > 0:
-                print('terminal_steps.agent_id:', terminal_steps.agent_id)
-                done = True
+            if decision_steps.reward.shape[0] == 0:
                 action = np.zeros((0, 6))
+            if terminal_steps.reward.shape[0] > 0:
+                done = True
             """
             for i, id_ in enumerate(decision_steps.agent_id):
                 print('team_id: %d, enumerate(i:%d, id_: %d)' % (team_id, i, id_))
@@ -51,8 +46,6 @@ class UnityEnvironmentImpl:
                 self.env.set_action_for_agent(behavior_name=BEHAVIOR_NAME.format(team=team_id), agent_id=id_, action=action[id_, :])
             """
             self.env.set_actions(behavior_name=BEHAVIOR_NAME.format(team=team_id), action=action)
-        self.env.step()
-        self.__observe()
 
         if done:
             observation = [obs.terminal_steps.obs for obs in self.observation]
@@ -62,8 +55,10 @@ class UnityEnvironmentImpl:
             reward = [obs.terminal_steps.reward for obs in self.observation]
             reward = np.array(reward)
             if 0 in reward.shape:
-                reward = np.zeros((self.n, 1))
+                reward = np.zeros((1,))
         else:
+            self.env.step()
+            self.__observe()
             observation = [obs.decision_steps.obs for obs in self.observation]
             observation = np.array(observation)
             if 0 in observation.shape:
@@ -72,7 +67,7 @@ class UnityEnvironmentImpl:
             reward = [obs.decision_steps.reward for obs in self.observation]
             reward = np.array(reward)
             if 0 in reward.shape:
-                reward = np.zeros((self.n, 1))
+                reward = np.zeros((1,))
 
         return np.squeeze(observation, axis=1), np.squeeze(reward), done
 

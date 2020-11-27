@@ -7,6 +7,7 @@ public class WarshipControllerFSM : MonoBehaviour
     public int m_PlayerId;
     public Warship m_Warship;
     public Warship m_Opponent;
+    private WarshipAgent m_OpponentAgent;
 
     private BaseState m_CurrentState;
 
@@ -18,6 +19,7 @@ public class WarshipControllerFSM : MonoBehaviour
     void Start()
     {
         TransitionToState(m_IdleState);
+        m_OpponentAgent = m_Opponent.GetComponent<WarshipAgent>();
     }
 
     // Update is called once per frame
@@ -25,13 +27,6 @@ public class WarshipControllerFSM : MonoBehaviour
     {
         // Debug.Log($"WarshipControllerFSM -> Update {m_CurrentState}");
         m_CurrentState.Update(this);
-
-        if (transform.position.y <= 0.0f)
-        {
-            Vector3 position = transform.position;
-            position.y = 0f;
-            transform.position = position;
-        }
     }
 
     public void TransitionToState(BaseState state)
@@ -53,6 +48,15 @@ public class WarshipControllerFSM : MonoBehaviour
         {
             m_Warship.TakeDamage(WarshipHealth.DefaultDamage);
             Debug.Log($"ID#{m_PlayerId} - {collider.tag} -> {m_Warship.m_CurrentHealth}");
+
+            // Reward
+            m_OpponentAgent.AddReward(-WarshipAgent.damageReward);
+
+            if (m_Warship.m_CurrentHealth <= 0f)
+            {
+                m_OpponentAgent.SetReward(WarshipAgent.winReward);
+                m_OpponentAgent.EndEpisode();
+            }
         }
     }
 }

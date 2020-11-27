@@ -78,7 +78,12 @@ public class Warship : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        
+        if (transform.position.y <= 0.0f)
+        {
+            Vector3 position = transform.position;
+            position.y = 0f;
+            transform.position = position;
+        }
     }
 
     private void FixedUpdate()

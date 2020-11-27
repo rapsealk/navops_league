@@ -2,7 +2,7 @@
 
 public class StalkingState : BaseState
 {
-    public readonly float safeDistance = 16f;
+    public readonly float safeDistance = 28f;
 
     public override void EnterState(WarshipControllerFSM warship)
     {

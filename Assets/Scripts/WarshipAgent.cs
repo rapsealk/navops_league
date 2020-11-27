@@ -27,10 +27,8 @@ public class WarshipAgent : Agent
 
     private Transform m_OpponentTransform;
 
-    private float m_OpponentHealth;
-
-    private const float winReward = 1.0f;
-    private const float damageReward = -0.01f;
+    public const float winReward = 1.0f;
+    public const float damageReward = -0.1f;
 
     public override void Initialize()
     {
@@ -49,7 +47,6 @@ public class WarshipAgent : Agent
     public override void OnEpisodeBegin()
     {
         Reset();
-        m_Opponent.Reset();
 
         m_DominationManager.Reset();
     }
@@ -58,8 +55,8 @@ public class WarshipAgent : Agent
     {
         m_Warship.Reset();
 
+        m_Opponent.Reset();
         m_OpponentTransform = m_Opponent.GetComponent<Transform>();
-        m_OpponentHealth = m_Opponent.m_CurrentHealth;
 
         if (m_FiniteStateMachine != null)
         {
@@ -85,11 +82,7 @@ public class WarshipAgent : Agent
         // Reward
         #region RewardShaping
 
-        if (m_OpponentHealth > m_Opponent.m_CurrentHealth)
-        {
-            AddReward((m_OpponentHealth - m_Opponent.m_CurrentHealth) * damageReward);
-            m_OpponentHealth = m_Opponent.m_CurrentHealth;
-        }
+        AddReward(-0.0001f);
 
         /*
         if (m_PlayerId == 1 && m_DominationManager.IsBlueDominating)
@@ -117,26 +110,6 @@ public class WarshipAgent : Agent
             }
         }
         */
-
-        if (m_Warship.m_Transform.position.y <= 0.0f)
-        {
-            Vector3 position = transform.position;
-            position.y = 0f;
-            transform.position = position;
-        }
-
-        if (m_Opponent.m_CurrentHealth <= 0f)
-        {
-            SetReward(winReward);
-            EndEpisode();
-            //m_Opponent.SetReward(-winReward);
-            //m_Opponent.EndEpisode();
-        }
-        else if (m_Warship.m_CurrentHealth <= 0f)
-        {
-            SetReward(-winReward);
-            EndEpisode();
-        }
 
         #endregion
     }
@@ -203,7 +176,6 @@ public class WarshipAgent : Agent
     private void TakeDamage(float damage)
     {
         m_Warship.TakeDamage(damage);
-        AddReward(damage * damageReward);
     }
 
     void OnCollisionEnter(Collision collision)
@@ -211,25 +183,40 @@ public class WarshipAgent : Agent
         if (collision.collider.tag == "Wall")
         {
             TakeDamage(Warship.DefaultDamage);
+            Debug.Log($"ID#{m_PlayerId} - {collision.collider.tag} -> {m_Warship.m_CurrentHealth}");
+
+            AddReward(damageReward);
+
+            if (m_Warship.m_CurrentHealth <= 0f)
+            {
+                SetReward(-winReward);
+                EndEpisode();
+            }
         }
     }
 
     void OnTriggerEnter(Collider collider)
     {
-        //Debug.Log($"ID #{m_PlayerId} [WarshipHealth.OnTriggerEnter] {collider} {collider.tag}");
         m_Warship.m_ExplosionAnimation.Play();
 
-        /*
-        if (collider.CompareTag("Battleship"))
-        {
-            TakeDamage(WarshipHealth.StartingHealth);
-            Debug.Log($"ID#{m_PlayerId} - {collider.tag} -> {m_Warship.m_CurrentHealth}");
-        }
-        else*/
         if (collider.tag.Contains("Bullet") && !collider.tag.EndsWith(m_PlayerId.ToString()))
         {
             TakeDamage(WarshipHealth.DefaultDamage);
             Debug.Log($"ID#{m_PlayerId} - {collider.tag} -> {m_Warship.m_CurrentHealth}");
+
+            AddReward(damageReward);
+
+            if (m_Warship.m_CurrentHealth <= 0f)
+            {
+                SetReward(-winReward);
+                EndEpisode();
+            }
+        }
+        else if (collider.CompareTag("Battleship"))
+        {
+            Debug.Log($"ID#{m_PlayerId} - Collision with battleship");
+            SetReward(-winReward);
+            EndEpisode();
         }
     }
 }
