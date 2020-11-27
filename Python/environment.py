@@ -15,13 +15,15 @@ BEHAVIOR_NAME = "Warship?team={team}"
 
 class UnityEnvironmentImpl:
 
-    def __init__(self, name="BlackWhale"):
-        self.env = UnityEnvironment(file_name=name, seed=1, side_channels=[EngineConfigurationChannel()])
+    def __init__(self, n=9, worker_id=20800, name="BlackWhale"):
+        self.env = UnityEnvironment(file_name=name, seed=1, worker_id=worker_id, side_channels=[EngineConfigurationChannel()])
+        self.n = n
 
     def reset(self):
         self.env.reset()
 
         self.behavior_names = [name for name in self.env.behavior_specs.keys()]
+        print('behavior_names:', self.behavior_names)
 
         self.__observe()
 
@@ -31,19 +33,24 @@ class UnityEnvironmentImpl:
         return np.squeeze(np.array(observation), axis=1)
 
     def step(self, action):
+        # https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Python-API.md
         done = False
+        # print('step.action:', action, len(action), len(action[0]))
         for team_id, (decision_steps, terminal_steps) in enumerate(self.steps):
-            if terminal_steps.agent_id:
-                # print('terminal_steps.agent_id:', terminal_steps.agent_id)
+            # print('team_id:', team_id, decision_steps.agent_id, terminal_steps.agent_id, type(terminal_steps.agent_id))
+            # print('decision_teps:', decision_steps.agent_id)
+            # print('terminal_steps:', terminal_steps.agent_id)
+            if terminal_steps.agent_id.shape[0] > 0:
+                print('terminal_steps.agent_id:', terminal_steps.agent_id)
                 done = True
+                action = np.zeros((0, 6))
+            """
             for i, id_ in enumerate(decision_steps.agent_id):
-                #if id_ in terminal_steps.agent_id:
-                #    # dones[i // 9, i % 9] = 1.0
-                #    dones[team_id, i] = 1.0
-                #    continue    # TODO: train
-                # dones[i // 9, i % 9] = 0.0
-                #dones[team_id, i] = 0.0
-                self.env.set_action_for_agent(behavior_name=BEHAVIOR_NAME.format(team=team_id), agent_id=id_, action=action[id_-1])
+                print('team_id: %d, enumerate(i:%d, id_: %d)' % (team_id, i, id_))
+                # self.env.set_action_for_agent(behavior_name=BEHAVIOR_NAME.format(team=team_id), agent_id=id_, action=action[id_-1])
+                self.env.set_action_for_agent(behavior_name=BEHAVIOR_NAME.format(team=team_id), agent_id=id_, action=action[id_, :])
+            """
+            self.env.set_actions(behavior_name=BEHAVIOR_NAME.format(team=team_id), action=action)
         self.env.step()
         self.__observe()
 
@@ -55,7 +62,7 @@ class UnityEnvironmentImpl:
             reward = [obs.terminal_steps.reward for obs in self.observation]
             reward = np.array(reward)
             if 0 in reward.shape:
-                reward = np.zeros((2, 1))
+                reward = np.zeros((self.n, 1))
         else:
             observation = [obs.decision_steps.obs for obs in self.observation]
             observation = np.array(observation)
@@ -65,7 +72,7 @@ class UnityEnvironmentImpl:
             reward = [obs.decision_steps.reward for obs in self.observation]
             reward = np.array(reward)
             if 0 in reward.shape:
-                reward = np.zeros((2, 1))
+                reward = np.zeros((self.n, 1))
 
         return np.squeeze(observation, axis=1), np.squeeze(reward), done
 
