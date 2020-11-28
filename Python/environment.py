@@ -17,6 +17,7 @@ class UnityEnvironmentImpl:
 
     def __init__(self, worker_id=20800, name="Build/BlackWhale"):
         self.env = UnityEnvironment(file_name=name, seed=1, worker_id=worker_id, side_channels=[EngineConfigurationChannel()])
+        self.action_space = 6
 
     def reset(self):
         self.env.reset()
@@ -34,11 +35,14 @@ class UnityEnvironmentImpl:
     def step(self, action):
         # https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Python-API.md
         done = False
+        info = {}
         for team_id, (decision_steps, terminal_steps) in enumerate(self.steps):
             if decision_steps.reward.shape[0] == 0:
                 action = np.zeros((0, 6))
             if terminal_steps.reward.shape[0] > 0:
                 done = True
+                print('terminal_steps.reward:', terminal_steps.reward)
+                info['win'] = int(terminal_steps.reward[0] == 1.0)
             """
             for i, id_ in enumerate(decision_steps.agent_id):
                 print('team_id: %d, enumerate(i:%d, id_: %d)' % (team_id, i, id_))
@@ -69,7 +73,7 @@ class UnityEnvironmentImpl:
             if 0 in reward.shape:
                 reward = np.zeros((1,))
 
-        return np.squeeze(observation, axis=1), np.squeeze(reward), done
+        return np.squeeze(observation, axis=1), np.squeeze(reward), done, info
 
     def close(self):
         self.env.close()
