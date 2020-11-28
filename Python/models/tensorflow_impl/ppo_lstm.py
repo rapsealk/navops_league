@@ -35,12 +35,12 @@ class ProximalPolicyOptimizationLSTM(tf.keras.Model):
 
 class Agent:
 
-    def __init__(self, n, gamma=0.99, lambda_=0.95, learning_rate=1e-3):
+    def __init__(self, n, model=None, gamma=0.99, lambda_=0.95, learning_rate=1e-3):
         self.gamma = gamma
         self.lambda_ = lambda_
 
         self.n = n
-        self.model = ProximalPolicyOptimizationLSTM(n)
+        self.model = model or ProximalPolicyOptimizationLSTM(n)
         self.optimizer = tf.keras.optimizers.RMSprop(learning_rate=learning_rate)
 
         self.batch_size = 128
@@ -136,6 +136,12 @@ class Agent:
     def save(self, path=os.path.join(os.path.dirname(__file__), 'model.h5')):
         self.model.save_weights(path)
         print('Model saved at', path)
+
+    def get_weights(self):
+        return self.model.get_weights()
+
+    def set_weights(self, weights):
+        self.model.set_weights(weights)
 
 
 if __name__ == "__main__":
