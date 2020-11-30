@@ -52,7 +52,7 @@ class Learner:
 class Worker(Thread):
 
     def __init__(self, worker_id, global_agent, max_episodes, gamma=0.99):
-        Thread.__init__(self)
+        Thread.__init__(self, daemon=True)
 
         self.lock = Lock()
         self.env = UnityEnvironmentImpl(worker_id=worker_id)
@@ -137,7 +137,7 @@ class Worker(Thread):
 if __name__ == "__main__":
     global TENSORBOARD_WRITER
 
-    TENSORBOARD_WRITER = tf.summary.create_file_writer(os.path.join(os.path.dirname(__file__), 'summary'))
+    TENSORBOARD_WRITER = tf.summary.create_file_writer(os.path.join(os.path.dirname(__file__), 'summary', 'distributed'))
 
     agent = Learner()
     agent.train()

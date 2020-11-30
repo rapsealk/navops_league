@@ -11,14 +11,15 @@ class ProximalPolicyOptimizationLSTM(tf.keras.Model):
     def __init__(self, n):
         super(ProximalPolicyOptimizationLSTM, self).__init__()
 
-        self.recurrent = tf.keras.layers.LSTM(1024, input_shape=(4, 22),
+        self.recurrent = tf.keras.layers.LSTM(512, input_shape=(4, 22),
                                               recurrent_initializer='he_uniform',
                                               stateful=False,
-                                              return_sequences=False)
+                                              return_sequences=True)
+        self.recurrent2 = tf.keras.layers.LSTM(512, recurrent_initializer='he_uniform', return_sequences=False)
         self.dense1 = tf.keras.layers.Dense(512, activation='relu', kernel_initializer='he_uniform')
-        self.dropout1 = tf.keras.layers.Dropout(0.2)
+        # self.dropout1 = tf.keras.layers.Dropout(0.2)
         self.dense2 = tf.keras.layers.Dense(512, activation='relu', kernel_initializer='he_uniform')
-        self.dropout2 = tf.keras.layers.Dropout(0.2)
+        # self.dropout2 = tf.keras.layers.Dropout(0.2)
         self.dense_policy = tf.keras.layers.Dense(256, activation='relu', kernel_initializer='he_uniform')
         self.policy = tf.keras.layers.Dense(n, activation='softmax')
         self.dense_value = tf.keras.layers.Dense(128, activation='relu', kernel_initializer='he_uniform')
@@ -26,8 +27,9 @@ class ProximalPolicyOptimizationLSTM(tf.keras.Model):
 
     def call(self, inputs):
         x = self.recurrent(inputs)
-        x = self.dropout1(self.dense1(x))
-        x = self.dropout2(self.dense2(x))
+        x = self.recurrent2(x)
+        x = self.dense1(x)
+        x = self.dense2(x)
         p = self.policy(self.dense_policy(x))
         v = self.value(self.dense_value(x))
         return p, v
