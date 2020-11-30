@@ -13,6 +13,7 @@ from environment import UnityEnvironmentImpl
 from models.tensorflow_impl.ppo_lstm import Agent
 
 CURRENT_EPISODE = 0
+RESULTS = deque([0] * 99, maxlen=100)
 
 
 def get_available_port():
@@ -66,12 +67,11 @@ class Worker(Thread):
 
     def run(self):
         global CURRENT_EPISODE
+        global RESULTS
 
         epsilon = 1
         epsilon_discount = 0.01
         epsilon_minimum = 0.01
-
-        results = deque([0] * 99, maxlen=100)
 
         while True:
             observations = []
@@ -113,7 +113,7 @@ class Worker(Thread):
                     observations = np.squeeze(np.array(observations), axis=1)
                     next_observations = np.squeeze(np.array(next_observations), axis=1)
 
-                    results.append(info['win'])
+                    RESULTS.append(info['win'])
                     returns = discount_rewards(rewards, dones)
 
                     with self.lock:
@@ -124,7 +124,7 @@ class Worker(Thread):
                     with TENSORBOARD_WRITER.as_default():
                         tf.summary.scalar('Reward', np.sum(returns), CURRENT_EPISODE)
                         tf.summary.scalar('Loss', loss, CURRENT_EPISODE)
-                        tf.summary.scalar('Rate', np.mean(results), CURRENT_EPISODE)
+                        tf.summary.scalar('Rate', np.mean(RESULTS), CURRENT_EPISODE)
                     CURRENT_EPISODE += 1
 
                     epsilon = max(epsilon - epsilon_discount, epsilon_minimum)
