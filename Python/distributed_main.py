@@ -89,7 +89,8 @@ class Worker(Thread):
 
                 if np.random.uniform(0, 1) > epsilon:
                     try:
-                        policy = agent.get_action(observation)
+                        with tf.device('/CPU:0'):
+                            policy = agent.get_action(observation)
                         policy = np.squeeze(policy[0])
                         policy = np.random.choice(policy.shape[-1], 1, p=policy)[0]
                         action = np.zeros(shape=(1, self.env.action_space))
@@ -117,7 +118,8 @@ class Worker(Thread):
                     returns = discount_rewards(rewards, dones)
 
                     with self.lock:
-                        loss = self.global_agent.update(observations, actions, next_observations, rewards, dones)
+                        with tf.device('/GPU:0'):
+                            loss = self.global_agent.update(observations, actions, next_observations, rewards, dones)
                         print('Episode %d: Loss: %f' % (CURRENT_EPISODE, loss))
                         self.global_agent.save()
 
