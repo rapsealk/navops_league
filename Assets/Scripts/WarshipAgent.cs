@@ -82,7 +82,7 @@ public class WarshipAgent : Agent
         // Reward
         #region RewardShaping
 
-        AddReward(-0.0001f);
+        //AddReward(-0.0001f);
 
         /*
         if (m_PlayerId == 1 && m_DominationManager.IsBlueDominating)
@@ -180,6 +180,7 @@ public class WarshipAgent : Agent
 
     void OnCollisionEnter(Collision collision)
     {
+        /*
         if (collision.collider.tag == "Wall")
         {
             TakeDamage(Warship.DefaultDamage);
@@ -193,6 +194,7 @@ public class WarshipAgent : Agent
                 EndEpisode();
             }
         }
+        */
     }
 
     void OnTriggerEnter(Collider collider)
