@@ -15,8 +15,8 @@ BEHAVIOR_NAME = "Warship?team={team}"
 
 class UnityEnvironmentImpl:
 
-    def __init__(self, worker_id=20800, name="Build/BlackWhale"):
-        self.env = UnityEnvironment(file_name=name, seed=1, worker_id=worker_id, side_channels=[EngineConfigurationChannel()])
+    def __init__(self, worker_id=0, base_port=None, name="Build/BlackWhale"):
+        self.env = UnityEnvironment(file_name=name, seed=1, worker_id=worker_id, base_port=base_port, side_channels=[EngineConfigurationChannel()])
         self.action_space = 6
 
     def reset(self):

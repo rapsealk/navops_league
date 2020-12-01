@@ -1,6 +1,7 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
 import os
+import time
 import socket
 from collections import deque
 from threading import Thread, Lock
@@ -34,14 +35,14 @@ def discount_rewards(rewards, dones, gamma=0.99):
 class Learner:
 
     def __init__(self):
-        env = UnityEnvironmentImpl()
-        self.global_agent = Agent(n=env.action_space)
+        self.global_agent = Agent(n=6)
+        self.global_agent.load()
         self.num_workers = cpu_count()
 
     def train(self, max_episodes=1000000):
         workers = []
         for i in range(self.num_workers):
-            workers.append(Worker(get_available_port(), self.global_agent, max_episodes))
+            workers.append(Worker(i, get_available_port(), self.global_agent, max_episodes))
 
         for worker in workers:
             worker.start()
@@ -52,11 +53,11 @@ class Learner:
 
 class Worker(Thread):
 
-    def __init__(self, worker_id, global_agent, max_episodes, gamma=0.99):
+    def __init__(self, worker_id, base_port, global_agent, max_episodes, gamma=0.99):
         Thread.__init__(self, daemon=True)
 
         self.lock = Lock()
-        self.env = UnityEnvironmentImpl(worker_id=worker_id)
+        self.env = UnityEnvironmentImpl(worker_id=worker_id, base_port=base_port)
 
         self.global_agent = global_agent
         self.max_episodes = max_episodes
@@ -139,7 +140,7 @@ class Worker(Thread):
 if __name__ == "__main__":
     global TENSORBOARD_WRITER
 
-    TENSORBOARD_WRITER = tf.summary.create_file_writer(os.path.join(os.path.dirname(__file__), 'summary', 'distributed'))
+    TENSORBOARD_WRITER = tf.summary.create_file_writer(os.path.join(os.path.dirname(__file__), 'summary', 'distributed', str(int(time.time() * 1000))))
 
     agent = Learner()
     agent.train()

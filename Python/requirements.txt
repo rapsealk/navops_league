@@ -1,2 +1,4 @@
 tensorflow-gpu==2.2.1
 mlagents_envs==0.22.0
+grpcio==1.33.2
+grpcio-tools==1.33.2

@@ -1,6 +1,7 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
 import os
+import sys
 
 import numpy as np
 import tensorflow as tf
@@ -144,6 +145,12 @@ class Agent:
 
     def set_weights(self, weights):
         self.model.set_weights(weights)
+
+    def load(self, path=os.path.join(os.path.dirname(__file__), 'model.h5')):
+        try:
+            self.model.load_weights(path)
+        except:
+            sys.stderr.write('Failed to load: %s\n' % path)
 
 
 if __name__ == "__main__":
