@@ -10,6 +10,9 @@ public class WarshipAgent : Agent
     public Warship m_Opponent;
     public DominationManager m_DominationManager;
 
+    public float m_AggressiveFactor = 1.0f;
+    public float m_DefensiveFactor = 0.5f;
+
     public enum ActionId
     {
         NOOP = 0,
@@ -28,10 +31,14 @@ public class WarshipAgent : Agent
     private Transform m_OpponentTransform;
 
     public const float winReward = 1.0f;
-    public const float damageReward = -0.1f;
+    public const float damageReward = 0.1f;
+    public const float damagePenalty = -0.1f;
 
     public override void Initialize()
     {
+        Academy.Instance.DisableAutomaticStepping();
+        // Academy.Instance.EnvironmentStep();
+
         m_Warship = GetComponent<Warship>();
         m_Warship.m_PlayerId = m_PlayerId;
 
@@ -206,7 +213,7 @@ public class WarshipAgent : Agent
             TakeDamage(WarshipHealth.DefaultDamage);
             Debug.Log($"ID#{m_PlayerId} - {collider.tag} -> {m_Warship.m_CurrentHealth}");
 
-            AddReward(damageReward);
+            AddReward(damagePenalty * m_DefensiveFactor);
 
             if (m_Warship.m_CurrentHealth <= 0f)
             {

@@ -50,7 +50,7 @@ public class WarshipControllerFSM : MonoBehaviour
             Debug.Log($"ID#{m_PlayerId} - {collider.tag} -> {m_Warship.m_CurrentHealth}");
 
             // Reward
-            m_OpponentAgent.AddReward(-WarshipAgent.damageReward);
+            m_OpponentAgent.AddReward(WarshipAgent.damageReward * WarshipAgent.m_AggressiveFactor);
 
             if (m_Warship.m_CurrentHealth <= 0f)
             {
