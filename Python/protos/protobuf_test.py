@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 import tensorflow as tf
 
-from protobuf_utils import encode_weights, decode_weights
+from protobuf_utils import encode_tensors, decode_tensors
 
 tf.config.experimental.set_visible_devices([], 'GPU')
 
@@ -25,8 +25,8 @@ class ProtobufTestCase(unittest.TestCase):
         output = self.model(inputs)
 
         weights = self.model.get_weights()
-        weights_proto = encode_weights(weights)
-        new_weights = decode_weights(weights_proto)
+        weights_proto = encode_tensors(weights)
+        new_weights = decode_tensors(weights_proto)
         self.assertTrue(all([np.all(x == y)
                              for x, y in zip(weights, new_weights)]))
 

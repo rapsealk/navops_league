@@ -44,7 +44,7 @@ class Agent:
 
         self.n = n
         self.model = model or ProximalPolicyOptimizationLSTM(n)
-        self.optimizer = tf.keras.optimizers.RMSprop(learning_rate=learning_rate)
+        self.optimizer = tf.keras.optimizers.RMSprop(learning_rate=learning_rate)   # Adam
 
         self.batch_size = 128
         self.epsilon = 0.2

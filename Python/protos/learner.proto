@@ -5,13 +5,15 @@ package distf;
 import "google/protobuf/empty.proto";
 
 service LearnerService {
-    rpc Enqueue(Trajectory) returns (google.protobuf.Empty) {}
+    rpc Enqueue(Episode) returns (google.protobuf.Empty) {}
     rpc Load(google.protobuf.Empty) returns (stream Bytes) {}
 }
 
-message Trajectory {
+message Episode {
     repeated Observation observations = 1;
     repeated uint32 actions = 2;
+    repeated float rewards = 3;
+    bool result = 4;
 }
 
 message Observation {
@@ -22,7 +24,7 @@ message Bytes {
     bytes data = 1;
 }
 
-message Weights {
+message TensorArray {
     repeated Tensor data = 1;
 }
 

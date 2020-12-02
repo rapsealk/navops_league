@@ -2,15 +2,15 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 
-from learner_pb2 import Tensor, Weights
+from learner_pb2 import Tensor, TensorArray
 
 
-def encode_weights(weights):
+def encode_tensors(tensors):
     """
     Args:
-        weights: [np.array(dtype=np.float32), ...]
+        tensors: [np.array(dtype=np.float32), ...]
     """
-    assert type(weights) is list
+    assert type(tensors) is list
 
     type_mapper = {
         np.dtype('float32'): 0,
@@ -21,20 +21,20 @@ def encode_weights(weights):
         np.dtype('uint64'): 5
     }
 
-    tensors = [Tensor(data=weight.tobytes(),
-                      shape=weight.shape,
-                      dtype=type_mapper[weight.dtype])
-               for weight in weights]
+    tensors = [Tensor(data=tensor.tobytes(),
+                      shape=tensor.shape,
+                      dtype=type_mapper[tensor.dtype])
+               for tensor in tensors]
 
-    return Weights(data=tensors)
+    return TensorArray(data=tensors)
 
 
-def decode_weights(weights):
+def decode_tensors(tensors):
     """
     Args:
-        weights: learner_pb2.Weights
+        tensors: learner_pb2.TensorArray
     """
-    assert type(weights) is Weights
+    assert type(tensors) is TensorArray
 
     type_mapper = [
         np.float32,
@@ -45,10 +45,10 @@ def decode_weights(weights):
         np.uint64
     ]
 
-    weights_np = [np.frombuffer(tensor.data, dtype=type_mapper[tensor.dtype]).reshape(tensor.shape)
-                  for tensor in weights.data]
+    tensors_np = [np.frombuffer(tensor.data, dtype=type_mapper[tensor.dtype]).reshape(tensor.shape)
+                  for tensor in tensors.data]
 
-    return weights_np
+    return tensors_np
 
 
 if __name__ == "__main__":
