@@ -13,8 +13,13 @@ import tensorflow as tf
 from environment import UnityEnvironmentImpl
 from models.tensorflow_impl.ppo_lstm import Agent
 
+gpu_devices = tf.config.experimental.list_physical_devices("GPU")
+for device in gpu_devices:
+    tf.config.experimental.set_memory_growth(device, True)
+
+SAMPLE_SIZE = 64
 CURRENT_EPISODE = 0
-RESULTS = deque([0] * 99, maxlen=100)
+RESULTS = deque([0, 1] * 50, maxlen=100)
 
 
 def get_available_port():
@@ -71,8 +76,8 @@ class Worker(Thread):
         global RESULTS
 
         epsilon = 1
-        epsilon_discount = 0.01
-        epsilon_minimum = 0.01
+        epsilon_discount = 0.001
+        epsilon_minimum = 0.005
 
         while True:
             observations = []
@@ -82,8 +87,7 @@ class Worker(Thread):
             dones = []
 
             observation = self.env.reset()
-            observation = np.stack([observation[0], observation[0], observation[0], observation[0]],
-                                   axis=1)
+            observation = np.stack([observation[0]] * SAMPLE_SIZE, axis=1)
 
             while True:
                 observations.append(observation)
@@ -92,6 +96,7 @@ class Worker(Thread):
                     try:
                         with tf.device('/CPU:0'):
                             policy = agent.get_action(observation)
+                        print('Policy:', np.squeeze(policy[0]), np.squeeze(policy[-1]))
                         policy = np.squeeze(policy[0])
                         policy = np.random.choice(policy.shape[-1], 1, p=policy)[0]
                         action = np.zeros(shape=(1, self.env.action_space))
@@ -105,7 +110,7 @@ class Worker(Thread):
 
                 next_observation, reward, done, info = self.env.step(action)
 
-                observation = np.append([next_observation[0, 0]], observation[0, :-1]).reshape((1, 4, -1))
+                observation = np.append([next_observation[0, 0]], observation[0, :-1]).reshape((1, SAMPLE_SIZE, -1))
                 next_observations.append(observation)
                 rewards.append(reward)
                 actions.append(action[0])

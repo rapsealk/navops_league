@@ -12,18 +12,18 @@ class ProximalPolicyOptimizationLSTM(tf.keras.Model):
     def __init__(self, n):
         super(ProximalPolicyOptimizationLSTM, self).__init__()
 
-        self.recurrent = tf.keras.layers.LSTM(512, input_shape=(4, 22),
+        self.recurrent = tf.keras.layers.LSTM(256, input_shape=(4, 22),
                                               recurrent_initializer='he_uniform',
                                               stateful=False,
                                               return_sequences=True)
-        self.recurrent2 = tf.keras.layers.LSTM(512, recurrent_initializer='he_uniform', return_sequences=False)
-        self.dense1 = tf.keras.layers.Dense(512, activation='relu', kernel_initializer='he_uniform')
+        self.recurrent2 = tf.keras.layers.LSTM(256, recurrent_initializer='he_uniform', return_sequences=False)
+        self.dense1 = tf.keras.layers.Dense(256, activation='relu', kernel_initializer='he_uniform')
         # self.dropout1 = tf.keras.layers.Dropout(0.2)
-        self.dense2 = tf.keras.layers.Dense(512, activation='relu', kernel_initializer='he_uniform')
+        self.dense2 = tf.keras.layers.Dense(128, activation='relu', kernel_initializer='he_uniform')
         # self.dropout2 = tf.keras.layers.Dropout(0.2)
-        self.dense_policy = tf.keras.layers.Dense(256, activation='relu', kernel_initializer='he_uniform')
+        self.dense_policy = tf.keras.layers.Dense(128, activation='relu', kernel_initializer='he_uniform')
         self.policy = tf.keras.layers.Dense(n, activation='softmax')
-        self.dense_value = tf.keras.layers.Dense(128, activation='relu', kernel_initializer='he_uniform')
+        self.dense_value = tf.keras.layers.Dense(64, activation='relu', kernel_initializer='he_uniform')
         self.value = tf.keras.layers.Dense(1)
 
     def call(self, inputs):
@@ -38,13 +38,14 @@ class ProximalPolicyOptimizationLSTM(tf.keras.Model):
 
 class Agent:
 
-    def __init__(self, n, model=None, gamma=0.99, lambda_=0.95, learning_rate=1e-3):
+    def __init__(self, n, model=None, gamma=0.99, lambda_=0.95, learning_rate=2e-4):
         self.gamma = gamma
         self.lambda_ = lambda_
 
         self.n = n
         self.model = model or ProximalPolicyOptimizationLSTM(n)
-        self.optimizer = tf.keras.optimizers.RMSprop(learning_rate=learning_rate)   # Adam
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+        # self.optimizer = tf.keras.optimizers.RMSprop(learning_rate=learning_rate)   # Adam
 
         self.batch_size = 128
         self.epsilon = 0.2
@@ -136,7 +137,7 @@ class Agent:
 
         return gaes, target_values
 
-    def save(self, path=os.path.join(os.path.dirname(__file__), 'model.h5')):
+    def save(self, path=os.path.join(os.path.dirname(__file__), 'model_slim.h5')):
         self.model.save_weights(path)
         print('Model saved at', path)
 

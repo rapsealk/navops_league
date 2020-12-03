@@ -1,8 +1,10 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
 import os
+import time
 import argparse
 from itertools import count
+from datetime import datetime
 
 import tensorflow as tf
 import numpy as np
@@ -14,6 +16,8 @@ from models.tensorflow_impl.ppo_lstm import Agent
 physical_devices = tf.config.experimental.list_physical_devices("GPU")
 for physical_device in physical_devices:
     tf.config.experimental.set_memory_growth(physical_device, True)
+
+SAMPLE_SIZE = 64
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--port', type=int, default=20800)
@@ -31,7 +35,7 @@ def discount_rewards(rewards, dones, gamma=0.99):
 
 def main():
     writer = tf.summary.create_file_writer(
-        os.path.join(os.path.dirname(__file__), 'summary')
+        os.path.join(os.path.dirname(__file__), 'summary', str(int(time.time() * 1000)))
     )
 
     env = UnityEnvironmentImpl(worker_id=args.port)
@@ -60,13 +64,14 @@ def main():
         dones = []
 
         observation = env.reset()
-        blue_observation = np.stack([observation[0], observation[0], observation[0], observation[0]],
-                                    axis=1)
+        blue_observation = np.stack([observation[0]] * SAMPLE_SIZE, axis=1)
         print('observation.shape:', blue_observation.shape)
         """
         red_observation = np.stack([observation[1], observation[1], observation[1], observation[1]],
                                    axis=0)
         """
+
+        ti = time.time()
 
         while True:
             blue_observations.append(blue_observation)
@@ -103,10 +108,12 @@ def main():
 
             # observation, reward, done = env.step([blue_action, red_action])
             observation, reward, done, info = env.step(blue_action)
+            print('[%s] step' % datetime.now().isoformat(), 1 / (time.time() - ti))
+            ti = time.time()
             # print('observation.shape:', observation.shape, blue_observation.shape)
             # print('observation:', observation[0, 0, 3:6], observation[0, 0, -4:-1])
 
-            blue_observation = np.append([observation[0, 0]], blue_observation[0, :-1]).reshape((1, 4, -1))
+            blue_observation = np.append([observation[0, 0]], blue_observation[0, :-1]).reshape((1, SAMPLE_SIZE, -1))
             # red_observation = np.append([observation[1]], red_observation[:3]).reshape((4, 1, -1))
             blue_next_observations.append(blue_observation)
             # red_next_observations.append(red_observation)

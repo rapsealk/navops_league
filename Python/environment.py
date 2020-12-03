@@ -5,7 +5,6 @@ from collections import namedtuple
 import numpy as np
 from mlagents_envs.environment import UnityEnvironment
 from mlagents_envs.side_channel.engine_configuration_channel import EngineConfigurationChannel
-# from mlagents_envs.side_channel.
 
 Observation = namedtuple('Observation',
                          ('decision_steps', 'terminal_steps'))
@@ -16,7 +15,9 @@ BEHAVIOR_NAME = "Warship?team={team}"
 class UnityEnvironmentImpl:
 
     def __init__(self, worker_id=0, base_port=None, name="Build/BlackWhale"):
-        self.env = UnityEnvironment(file_name=name, seed=1, worker_id=worker_id, base_port=base_port, side_channels=[EngineConfigurationChannel()])
+        channel = EngineConfigurationChannel()
+        # channel.set_configuration_parameters(target_frame_rate=30)  # time_scale=2.0
+        self.env = UnityEnvironment(file_name=name, seed=1, worker_id=worker_id, base_port=base_port, side_channels=[channel])
         self.action_space = 6
 
     def reset(self):

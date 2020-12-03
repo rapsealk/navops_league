@@ -45,7 +45,8 @@ def decode_tensors(tensors):
         np.uint64
     ]
 
-    tensors_np = [np.frombuffer(tensor.data, dtype=type_mapper[tensor.dtype]).reshape(tensor.shape)
+    tensors_np = [np.frombuffer(buffer=tensor.data,
+                                dtype=type_mapper[tensor.dtype]).reshape(tensor.shape)
                   for tensor in tensors.data]
 
     return tensors_np
