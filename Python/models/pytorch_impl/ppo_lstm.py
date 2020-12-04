@@ -9,8 +9,8 @@ import torch.optim as optim
 
 torch.autograd.set_detect_anomaly(True)
 
-# DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-DEVICE = torch.device("cpu")
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# DEVICE = torch.device("cpu")
 
 
 class ActorCriticLSTM(nn.Module):
@@ -68,6 +68,7 @@ class ProximalPolicyOptimizationAgent:
 
         self.n = n
         self.model = model or ActorCriticLSTM(n)
+        self.model.to(DEVICE)
         self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
 
         self.epsilon = 0.2
@@ -83,15 +84,14 @@ class ProximalPolicyOptimizationAgent:
         return action
 
     def update(self, states, actions, next_states, rewards, dones):
-        device = torch.device("cpu")
+        device = DEVICE # torch.device("cpu")
 
         self.model.to(device)
         policy, values = self.model(torch.from_numpy(states).float().to(device))
         _, next_values = self.model(torch.from_numpy(next_states).float().to(device))
 
-        policy = policy.detach().to(device).numpy()
-        values = values.detach().to(device).numpy()[:, -1]
-        next_values = next_values.detach().to(device).numpy()[:, -1]
+        values = values.detach().cpu().numpy()[:, -1]
+        next_values = next_values.detach().cpu().numpy()[:, -1]
 
         advantages, target_values = self.gae(values, next_values, rewards, dones,
                                              gamma=self.gamma, lambda_=self.lambda_,
@@ -109,7 +109,7 @@ class ProximalPolicyOptimizationAgent:
         advantages = torch.from_numpy(advantages).float().to(DEVICE)
         target_values = torch.from_numpy(target_values).float().to(DEVICE)
         actions = torch.from_numpy(actions).float().to(DEVICE)
-        old_policy = torch.from_numpy(policy).float().to(DEVICE)
+        old_policy = policy.to(DEVICE)     # torch.from_numpy(policy).float().to(DEVICE)
 
         train_policy = train_policy[:, -1]
         old_policy = old_policy[:, -1]
@@ -127,11 +127,11 @@ class ProximalPolicyOptimizationAgent:
         loss_value = torch.mean(torch.square(target_values - train_value))
         total_loss = loss_pi + loss_value
 
-        loss = total_loss.item()
+        # loss = total_loss.item()
         total_loss.backward()
         self.optimizer.step()
 
-        return loss
+        return total_loss.item()
 
     def gae(self, values, next_values, rewards, dones,
             gamma=0.99, lambda_=0.95, normalize=True):
