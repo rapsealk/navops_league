@@ -72,8 +72,14 @@ public class WarshipAgent : Agent
 
     public override void CollectObservations(VectorSensor sensor)
     {
-        sensor.AddObservation(m_Warship.m_Transform.localPosition / 100f);          // 3 (x, y, z)
-        sensor.AddObservation(m_Warship.m_Transform.rotation);                      // 3 (x, y, z)
+        Vector3 position = m_Warship.m_Transform.localPosition / 100f;
+        // sensor.AddObservation(m_Warship.m_Transform.localPosition / 100f);          // 3 (x, y, z)
+        sensor.AddObservation(position.x);
+        sensor.AddObservation(position.z);
+        float radian = m_Warship.m_Transform.rotation.eulerAngles.y / 180 * Mathf.PI;
+        // sensor.AddObservation(m_Warship.m_Transform.rotation.eulerAngles.y);        // 1 (x, y, z)
+        sensor.AddObservation(Mathf.Cos(radian));
+        sensor.AddObservation(Mathf.Sin(radian));
         sensor.AddObservation(m_Warship.m_CurrentHealth / Warship.StartingHealth);  // 1
 
         for (int i = 0; i < m_Warship.m_Turrets.Length; i++)
@@ -81,9 +87,17 @@ public class WarshipAgent : Agent
             sensor.AddObservation(m_Warship.m_Turrets[i].CurrentCooldownTime);      // 6
         }
 
-        sensor.AddObservation(m_OpponentTransform.localPosition / 100f);
-        sensor.AddObservation(m_OpponentTransform.rotation);
-        sensor.AddObservation(m_Opponent.m_CurrentHealth / Warship.StartingHealth);
+        Vector3 opponentPosition = m_OpponentTransform.localPosition / 100;
+        // sensor.AddObservation(m_OpponentTransform.localPosition / 100f);            // 3
+        sensor.AddObservation(opponentPosition.x);
+        sensor.AddObservation(opponentPosition.z);
+        float opponentRadian = m_OpponentTransform.rotation.eulerAngles.y / 180 * Mathf.PI;
+        // sensor.AddObservation(m_OpponentTransform.rotation.eulerAngles.y);          // 1
+        sensor.AddObservation(Mathf.Cos(opponentRadian));
+        sensor.AddObservation(Mathf.Sin(opponentRadian));
+        sensor.AddObservation(m_Opponent.m_CurrentHealth / Warship.StartingHealth); // 1
+
+                                                                                    // Total: 18
 
         // Reward
         #region RewardShaping

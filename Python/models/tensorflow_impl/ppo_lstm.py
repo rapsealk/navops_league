@@ -16,7 +16,7 @@ class ProximalPolicyOptimizationLSTM(tf.keras.Model):
     def __init__(self, n):
         super(ProximalPolicyOptimizationLSTM, self).__init__()
 
-        self.recurrent = tf.keras.layers.LSTM(256, input_shape=(4, 22),
+        self.recurrent = tf.keras.layers.LSTM(256, input_shape=(64, 16),
                                               recurrent_initializer='he_uniform',
                                               stateful=False,
                                               return_sequences=True)
