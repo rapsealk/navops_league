@@ -1,11 +1,16 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
+import os
+
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+torch.autograd.set_detect_anomaly(True)
+
+# DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device("cpu")
 
 
 class ActorCriticLSTM(nn.Module):
@@ -78,13 +83,15 @@ class ProximalPolicyOptimizationAgent:
         return action
 
     def update(self, states, actions, next_states, rewards, dones):
-        self.model.cpu()
-        policy, values = self.model(torch.from_numpy(states).float())
-        _, next_values = self.model(torch.from_numpy(next_states).float())
+        device = torch.device("cpu")
 
-        policy = policy.detach().cpu().numpy()
-        values = values.detach().cpu().numpy()[:, -1]
-        next_values = next_values.detach().cpu().numpy()[:, -1]
+        self.model.to(device)
+        policy, values = self.model(torch.from_numpy(states).float().to(device))
+        _, next_values = self.model(torch.from_numpy(next_states).float().to(device))
+
+        policy = policy.detach().to(device).numpy()
+        values = values.detach().to(device).numpy()[:, -1]
+        next_values = next_values.detach().to(device).numpy()[:, -1]
 
         advantages, target_values = self.gae(values, next_values, rewards, dones,
                                              gamma=self.gamma, lambda_=self.lambda_,
@@ -104,9 +111,8 @@ class ProximalPolicyOptimizationAgent:
         actions = torch.from_numpy(actions).float().to(DEVICE)
         old_policy = torch.from_numpy(policy).float().to(DEVICE)
 
-        train_policy = train_policy[-1]
-        old_policy = old_policy[-1]
-        print('train_policy.shape:', train_policy.shape)
+        train_policy = train_policy[:, -1]
+        old_policy = old_policy[:, -1]
 
         entropy = torch.mean(-train_policy * torch.log(train_policy + 1e-8)) * 0.1
         prob = torch.sum(train_policy * actions, axis=1)
@@ -116,9 +122,6 @@ class ProximalPolicyOptimizationAgent:
 
         ratio = torch.exp(log_pi - log_old_pi)
         clipped_ratio = torch.clamp(ratio, min=1-self.epsilon, max=1+self.epsilon)
-        print('advantages.shape:', advantages.shape)
-        print('ratio.shape:', ratio.shape)
-        print('clipped.shape:', clipped_ratio.shape)
         minimum = torch.min(torch.mul(advantages, clipped_ratio), torch.mul(advantages, ratio))
         loss_pi = -torch.mean(minimum) + entropy
         loss_value = torch.mean(torch.square(target_values - train_value))
@@ -146,6 +149,28 @@ class ProximalPolicyOptimizationAgent:
 
         return gaes, target_values
 
+    def save(self, path=os.path.join(os.path.dirname(__file__), 'checkpoint.pth.tar')):
+        torch.save({
+            'state_dict': self.model.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict()
+        }, path)
+
+    def load(self, path=os.path.join(os.path.dirname(__file__), 'checkpoint.pth.tar')):
+        try:
+            checkpoint = torch.load(path)
+            self.model.load_state_dict(checkpoint['state_dict'])
+            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        except:
+            pass
+
+    def get_weights(self):
+        return self.model.state_dict()
+
+    def set_weights(self, weights):
+        try:
+            self.model.load_state_dict(weights)
+        except:
+            pass
 
 
 if __name__ == "__main__":

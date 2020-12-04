@@ -1,25 +1,38 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
 import os
-import time
 import socket
+import argparse
 from collections import deque
+from datetime import datetime
 from threading import Thread, Lock
 from multiprocessing import cpu_count
 
 import numpy as np
-import tensorflow as tf
 
 from environment import UnityEnvironmentImpl
-from models.tensorflow_impl.ppo_lstm import Agent
 
-gpu_devices = tf.config.experimental.list_physical_devices("GPU")
-for device in gpu_devices:
-    tf.config.experimental.set_memory_growth(device, True)
+parser = argparse.ArgumentParser()
+parser.add_argument('--tag', type=str, default=None)
+parser.add_argument('--tensorflow', action='store_true', default=False)
+parser.add_argument('--torch', action='store_true', default=False)
+args = parser.parse_args()
+
+if args.tensorflow:
+    import tensorflow as tf
+    from models.tensorflow_impl.ppo_lstm import Agent
+
+    gpu_devices = tf.config.experimental.list_physical_devices("GPU")
+    for device in gpu_devices:
+        tf.config.experimental.set_memory_growth(device, True)
+else:
+    from torch.utils.tensorboard import SummaryWriter
+    from models.pytorch_impl.ppo_lstm import ProximalPolicyOptimizationAgent as Agent
+
 
 SAMPLE_SIZE = 64
 CURRENT_EPISODE = 0
-RESULTS = deque([0, 1] * 50, maxlen=100)
+RESULTS = deque([], maxlen=100)
 
 
 def get_available_port():
@@ -94,9 +107,12 @@ class Worker(Thread):
 
                 if np.random.uniform(0, 1) > epsilon:
                     try:
+                        policy = agent.get_action(observation)
+                        """if args.tensorflow:
                         with tf.device('/CPU:0'):
                             policy = agent.get_action(observation)
-                        print('Policy:', np.squeeze(policy[0]), np.squeeze(policy[-1]))
+                        """
+                        # print('Policy:', np.squeeze(policy[0]), np.squeeze(policy[-1]))
                         policy = np.squeeze(policy[0])
                         policy = np.random.choice(policy.shape[-1], 1, p=policy)[0]
                         action = np.zeros(shape=(1, self.env.action_space))
@@ -119,20 +135,33 @@ class Worker(Thread):
                 if done:
                     observations = np.squeeze(np.array(observations), axis=1)
                     next_observations = np.squeeze(np.array(next_observations), axis=1)
+                    actions = np.array(actions)
+                    rewards = np.array(rewards)
+                    dones = np.array(dones)
 
                     RESULTS.append(info['win'])
                     returns = discount_rewards(rewards, dones)
 
                     with self.lock:
+                        loss = self.global_agent.update(observations, actions, next_observations, rewards, dones)
+                        """if args.tensorflow:
                         with tf.device('/GPU:0'):
                             loss = self.global_agent.update(observations, actions, next_observations, rewards, dones)
+                        """
                         print('Episode %d: Loss: %f' % (CURRENT_EPISODE, loss))
                         self.global_agent.save()
 
-                    with TENSORBOARD_WRITER.as_default():
-                        tf.summary.scalar('Reward', np.sum(returns), CURRENT_EPISODE)
-                        tf.summary.scalar('Loss', loss, CURRENT_EPISODE)
-                        tf.summary.scalar('Rate', np.mean(RESULTS), CURRENT_EPISODE)
+                    if args.tensorflow:
+                        with TENSORBOARD_WRITER.as_default():
+                            tf.summary.scalar('Reward', np.sum(returns), CURRENT_EPISODE)
+                            tf.summary.scalar('Loss', loss, CURRENT_EPISODE)
+                            if len(RESULTS) >= 100:
+                                tf.summary.scalar('Rate', np.mean(RESULTS), CURRENT_EPISODE)
+                    else:
+                        TENSORBOARD_WRITER.add_scalar('Reward', np.sum(returns), CURRENT_EPISODE)
+                        TENSORBOARD_WRITER.add_scalar('Loss', loss, CURRENT_EPISODE)
+                        if len(RESULTS) >= 100:
+                            TENSORBOARD_WRITER.add_scalar('Rate', np.mean(RESULTS), CURRENT_EPISODE)
                     CURRENT_EPISODE += 1
 
                     epsilon = max(epsilon - epsilon_discount, epsilon_minimum)
@@ -145,7 +174,11 @@ class Worker(Thread):
 if __name__ == "__main__":
     global TENSORBOARD_WRITER
 
-    TENSORBOARD_WRITER = tf.summary.create_file_writer(os.path.join(os.path.dirname(__file__), 'summary', 'distributed', str(int(time.time() * 1000))))
+    if args.tensorflow:
+        logdir = args.tag or datetime.now().isoformat().replace(':', '').split('.')[0]
+        TENSORBOARD_WRITER = tf.summary.create_file_writer(os.path.join(os.path.dirname(__file__), 'summary', 'distributed', logdir))
+    else:
+        TENSORBOARD_WRITER = SummaryWriter()
 
     agent = Learner()
     agent.train()

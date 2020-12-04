@@ -1,10 +1,14 @@
 __pycache__/
 summary/
+runs/
 Build/
 
 # prtobuf
 *_pb2.py
 *_pb2_grpc.py
+
+*.h5
+*.pth.tar
 
 # Created by https://www.toptal.com/developers/gitignore/api/unity
 # Edit at https://www.toptal.com/developers/gitignore?templates=unity
