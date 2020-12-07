@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class WarshipControllerFSM : MonoBehaviour
+public class WarshipControllerFSM : MonoBehaviour, IWarshipController
 {
     public int m_PlayerId;
     public Warship m_Warship;
@@ -58,5 +58,16 @@ public class WarshipControllerFSM : MonoBehaviour
                 m_OpponentAgent.EndEpisode();
             }
         }
+    }
+
+    // IWarshipController
+    public Transform GetTransform()
+    {
+        return transform;
+    }
+
+    public Warship GetOpponent()
+    {
+        return m_Opponent;
     }
 }

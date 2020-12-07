@@ -13,7 +13,7 @@ public class Turret : MonoBehaviour
     public Transform m_Muzzle;
     public ParticleSystem m_MuzzleFlash;
 
-    private WarshipAgent m_WarshipAgent;
+    private IWarshipController m_WarshipAgent;
     private float m_RotationSpeed = 15f;
     private float m_RotationMaximum = 60f;
     private float m_RotationOffset = 0f;
@@ -26,7 +26,7 @@ public class Turret : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        m_WarshipAgent = GetComponentInParent<WarshipAgent>();
+        m_WarshipAgent = GetComponentInParent<IWarshipController>();
 
         m_RotationOffset = GetComponent<Transform>().rotation.eulerAngles.y;
 
@@ -47,8 +47,8 @@ public class Turret : MonoBehaviour
             m_IsLoaded = (m_CurrentCooldownTime >= reloadTime);
         }
 
-        Vector3 rotation = m_WarshipAgent.m_Opponent.m_Transform.rotation.eulerAngles - m_WarshipAgent.transform.rotation.eulerAngles;
-        float rotation_y = Geometry.GetAngleBetween(m_WarshipAgent.transform.position, m_WarshipAgent.m_Opponent.m_Transform.position);
+        Vector3 rotation = m_WarshipAgent.GetOpponent().m_Transform.rotation.eulerAngles - m_WarshipAgent.GetTransform().rotation.eulerAngles;
+        float rotation_y = Geometry.GetAngleBetween(m_WarshipAgent.GetTransform().position, m_WarshipAgent.GetOpponent().m_Transform.position);
         if (rotation_y < 0)
         {
             rotation_y = 360 + rotation_y;

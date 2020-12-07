@@ -2,7 +2,7 @@
 using Unity.MLAgents;
 using Unity.MLAgents.Sensors;
 
-public class WarshipAgent : Agent
+public class WarshipAgent : Agent, IWarshipController
 {
     public int m_PlayerId;
     [HideInInspector]
@@ -240,5 +240,16 @@ public class WarshipAgent : Agent
             SetReward(-winReward);
             EndEpisode();
         }
+    }
+
+    // IWarshipController
+    public Transform GetTransform()
+    {
+        return transform;
+    }
+
+    public Warship GetOpponent()
+    {
+        return m_Opponent;
     }
 }
