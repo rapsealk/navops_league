@@ -125,11 +125,10 @@ class Worker(Thread):
 
                 if np.random.uniform(0, 1) > epsilon:
                     try:
-                        policy = agent.get_action(observation)
-                        """if not args.torch:
-                        with tf.device('/CPU:0'):
-                            policy = agent.get_action(observation)
-                        """
+                        # policy = agent.get_action(observation)
+                        if not args.torch:
+                            with tf.device('/CPU:0'):
+                                policy = agent.get_action(observation)
                         # print('Policy:', np.squeeze(policy[0]), np.squeeze(policy[-1]))
                         policy = np.squeeze(policy[0])
                         policy = np.random.choice(policy.shape[-1], 1, p=policy)[0]
@@ -164,10 +163,13 @@ class Worker(Thread):
                     # JOB_QUEUE.put(job)
 
                     with self.lock:
-                        loss = self.global_agent.update(observations, actions, next_observations, rewards, dones)
+                        # loss = self.global_agent.update(observations, actions, next_observations, rewards, dones)
                         if not args.torch:
-                            # with tf.device('/GPU:0'):
-                            loss = self.global_agent.update(observations, actions, next_observations, rewards, dones)
+                            try:
+                                with tf.device('/GPU:0'):
+                                    loss = self.global_agent.update(observations, actions, next_observations, rewards, dones)
+                            except:
+                                break
                         print('Episode %d: Loss: %f' % (CURRENT_EPISODE, loss))
 
                         if CURRENT_EPISODE % 100 == 0:
