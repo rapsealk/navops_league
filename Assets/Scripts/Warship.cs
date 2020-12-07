@@ -70,6 +70,7 @@ public class Warship : MonoBehaviour
         for (int i = 0; i < m_Turrets.Length; i++)
         {
             m_Turrets[i].m_PlayerNumber = m_PlayerId;
+            m_Turrets[i].m_TurretId = i;
         }
 
         Reset();

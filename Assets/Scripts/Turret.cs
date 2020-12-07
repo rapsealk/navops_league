@@ -6,7 +6,7 @@ using UnityEngine.UI;
 public class Turret : MonoBehaviour
 {
     [HideInInspector] public int m_PlayerNumber;
-    // [HideInInspector] public int m_TurretId;
+    [HideInInspector] public int m_TurretId;
     [HideInInspector] public Slider m_CooldownIndicator;
     public GameObject m_Projectile;
     //public GameObject m_DirectionIndicator;
@@ -23,13 +23,27 @@ public class Turret : MonoBehaviour
     public float CurrentCooldownTime { get => Mathf.Min(reloadTime, m_CurrentCooldownTime) / reloadTime; }
     private bool m_IsLoaded = false;
 
-    // Start is called before the first frame update
-    void Start()
+    public enum TurretId
+    {
+        RIGHT_FRONTAL = 0,
+        RIGHT_BACKWARD = 1,
+        LEFT_FRONTAL = 2,
+        LEFT_BACKWARD = 3,
+        FRONTAL = 4,
+        BACKWARD = 5
+    }
+
+    void Awake()
     {
         m_WarshipAgent = GetComponentInParent<IWarshipController>();
 
         m_RotationOffset = GetComponent<Transform>().rotation.eulerAngles.y;
+        Debug.Log($"Start::RotationOffset: {m_RotationOffset}");
+    }
 
+    // Start is called before the first frame update
+    void Start()
+    {
         //m_InitialRotation = transform.rotation.eulerAngles.y;
         m_MuzzleFlash = m_Muzzle.GetComponentInChildren<ParticleSystem>();
         m_MuzzleFlash.transform.rotation = transform.rotation;
@@ -53,11 +67,12 @@ public class Turret : MonoBehaviour
         {
             rotation_y = 360 + rotation_y;
         }
-        //Debug.Log($"rotation.y: {rotation.y} / rotation_y: {rotation_y}");
+        Debug.Log($"Id: {m_PlayerNumber} ({m_RotationOffset}) rotation.y: {rotation.y} / rotation_y: {rotation_y}");
         // Pitch
         rotation.x = Mathf.Min(0, rotation.x);
         // Yaw
-        if (m_RotationOffset == 0)
+        if (//m_RotationOffset == 0f
+            m_TurretId == (int) TurretId.FRONTAL)
         {
             // FIXME: x % 360
             if (rotation_y >= 360 - m_RotationMaximum || rotation_y <= m_RotationMaximum)
@@ -76,14 +91,15 @@ public class Turret : MonoBehaviour
                 rotation_y = m_RotationMaximum;
             }
         }
-        else if (m_RotationOffset == 90)
+        else if (//m_RotationOffset == 90f
+                m_TurretId == (int) TurretId.RIGHT_FRONTAL || m_TurretId == (int) TurretId.RIGHT_BACKWARD)
         {
             if (rotation_y >= 90 - m_RotationMaximum && rotation_y <= 90 + m_RotationMaximum)
             {
                 //transform.rotation = Quaternion.Euler(rotation);
                 //m_IsLocked = true;
             }
-            if (rotation_y > 90 + m_RotationMaximum && rotation_y <= 270)
+            else if (rotation_y > 90 + m_RotationMaximum && rotation_y <= 270)
             {
                 rotation_y = 90 + m_RotationMaximum;
             }
@@ -92,7 +108,8 @@ public class Turret : MonoBehaviour
                 rotation_y = 90 - m_RotationMaximum;
             }
         }
-        else if (m_RotationOffset == 180)
+        else if (//m_RotationOffset == 180f
+                m_TurretId == (int) TurretId.BACKWARD)
         {
             if (rotation_y >= 180 - m_RotationMaximum && rotation_y <= 180 + m_RotationMaximum)
             {
@@ -110,14 +127,15 @@ public class Turret : MonoBehaviour
                 rotation_y = 180 - m_RotationMaximum;
             }
         }
-        else if (m_RotationOffset == 270)
+        else if (//m_RotationOffset == 270f
+                m_TurretId == (int) TurretId.LEFT_FRONTAL || m_TurretId == (int) TurretId.LEFT_BACKWARD)
         {
             if (rotation_y >= 270 - m_RotationMaximum && rotation_y <= 270 + m_RotationMaximum)
             {
                 //transform.rotation = Quaternion.Euler(rotation);
                 //m_IsLocked = true;
             }
-            if (rotation_y > 270 + m_RotationMaximum || rotation_y <= 90)
+            else if (rotation_y > 270 + m_RotationMaximum || rotation_y <= 90)
             {
                 rotation_y = 270 + m_RotationMaximum;
             }
@@ -128,8 +146,18 @@ public class Turret : MonoBehaviour
         }
 
         rotation.y = rotation_y;
+
         //rotation.y = Mathf.Lerp(rotation.y, rotation_y, Time.deltaTime);
         transform.rotation = Quaternion.Euler(rotation);
+
+        /*
+        if (Mathf.Abs(transform.localRotation.y) > m_RotationMaximum)
+        {
+            Vector3 localRotation = transform.localRotation.eulerAngles;
+            localRotation.y = Mathf.Sign(localRotation.y) * m_RotationMaximum;
+            transform.localRotation = Quaternion.Euler(localRotation);
+        }
+        */
     }
 
     public void Fire()

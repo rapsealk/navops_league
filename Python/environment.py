@@ -10,6 +10,7 @@ Observation = namedtuple('Observation',
                          ('decision_steps', 'terminal_steps'))
 
 BEHAVIOR_NAME = "Warship?team={team}"
+SKIP_FRAMES = 4
 
 
 class UnityEnvironmentImpl:
@@ -37,20 +38,24 @@ class UnityEnvironmentImpl:
         # https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Python-API.md
         done = False
         info = {}
-        for team_id, (decision_steps, terminal_steps) in enumerate(self.steps):
-            if decision_steps.reward.shape[0] == 0:
-                action = np.zeros((0, 6))
-            if terminal_steps.reward.shape[0] > 0:
-                done = True
-                print('terminal_steps.reward:', terminal_steps.reward)
-                info['win'] = int(terminal_steps.reward[0] == 1.0)
-            """
-            for i, id_ in enumerate(decision_steps.agent_id):
-                print('team_id: %d, enumerate(i:%d, id_: %d)' % (team_id, i, id_))
-                # self.env.set_action_for_agent(behavior_name=BEHAVIOR_NAME.format(team=team_id), agent_id=id_, action=action[id_-1])
-                self.env.set_action_for_agent(behavior_name=BEHAVIOR_NAME.format(team=team_id), agent_id=id_, action=action[id_, :])
-            """
-            self.env.set_actions(behavior_name=BEHAVIOR_NAME.format(team=team_id), action=action)
+        for _ in range(SKIP_FRAMES):
+            for team_id, (decision_steps, terminal_steps) in enumerate(self.steps):
+                if decision_steps.reward.shape[0] == 0:
+                    action = np.zeros((0, 6))
+                if terminal_steps.reward.shape[0] > 0:
+                    done = True
+                    # print('terminal_steps.reward:', terminal_steps.reward)
+                    info['win'] = int(terminal_steps.reward[0] == 1.0)
+                """
+                for i, id_ in enumerate(decision_steps.agent_id):
+                    print('team_id: %d, enumerate(i:%d, id_: %d)' % (team_id, i, id_))
+                    # self.env.set_action_for_agent(behavior_name=BEHAVIOR_NAME.format(team=team_id), agent_id=id_, action=action[id_-1])
+                    self.env.set_action_for_agent(behavior_name=BEHAVIOR_NAME.format(team=team_id), agent_id=id_, action=action[id_, :])
+                """
+                self.env.set_actions(behavior_name=BEHAVIOR_NAME.format(team=team_id), action=action)
+
+            if done:
+                break
 
         if done:
             observation = [obs.terminal_steps.obs for obs in self.observation]
