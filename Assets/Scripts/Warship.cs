@@ -9,7 +9,7 @@ public class Warship : MonoBehaviour
     public Rigidbody m_Rigidbody;
     public Transform m_StartingPoint;
     public Color m_RendererColor;
-    public ParticleSystem m_ExplosionAnimation;
+    public ParticleSystem m_ExplosionAnimation = null;
 
     [Header("Maneuver Parameters")]
     public const float m_EnginePower = 2f;

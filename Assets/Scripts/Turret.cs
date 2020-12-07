@@ -9,24 +9,27 @@ public class Turret : MonoBehaviour
     // [HideInInspector] public int m_TurretId;
     [HideInInspector] public Slider m_CooldownIndicator;
     public GameObject m_Projectile;
-    public GameObject m_BattleShip;
     //public GameObject m_DirectionIndicator;
     public Transform m_Muzzle;
     public ParticleSystem m_MuzzleFlash;
 
-    //private float m_InitialRotation;
-    //private float m_RotationLimit = 30f;
-    // private float m_RotationDistanceLimit = (Mathf.Sqrt(3) + 1) / Mathf.Sqrt(2);   // theta = 30'
+    private WarshipAgent m_WarshipAgent;
+    private float m_RotationSpeed = 15f;
+    private float m_RotationMaximum = 60f;
+    private float m_RotationOffset = 0f;
     //private bool m_IsLocked = false;
-    public const float m_CooldownTime = 6f;
+    public const float reloadTime = 8f;
     private float m_CurrentCooldownTime = 6f;
-    public float CurrentCooldownTime { get => Mathf.Min(m_CooldownTime, m_CurrentCooldownTime) / m_CooldownTime; }
+    public float CurrentCooldownTime { get => Mathf.Min(reloadTime, m_CurrentCooldownTime) / reloadTime; }
     private bool m_IsLoaded = false;
-    private Color ColorOrange = new Color(255 / 255f, 135 / 255f, 0f);
 
     // Start is called before the first frame update
     void Start()
     {
+        m_WarshipAgent = GetComponentInParent<WarshipAgent>();
+
+        m_RotationOffset = GetComponent<Transform>().rotation.eulerAngles.y;
+
         //m_InitialRotation = transform.rotation.eulerAngles.y;
         m_MuzzleFlash = m_Muzzle.GetComponentInChildren<ParticleSystem>();
         m_MuzzleFlash.transform.rotation = transform.rotation;
@@ -41,117 +44,92 @@ public class Turret : MonoBehaviour
         {
             m_CurrentCooldownTime += Time.deltaTime;
             // UpdateUI();
-            m_IsLoaded = (m_CurrentCooldownTime >= m_CooldownTime);
+            m_IsLoaded = (m_CurrentCooldownTime >= reloadTime);
         }
 
-        return;
-
-        /*
-        Vector3 rotation = m_DirectionIndicator.transform.rotation.eulerAngles - m_BattleShip.transform.rotation.eulerAngles;
-        //Vector3 rotation = Quaternion.FromToRotation(m_BattleShip.transform.rotation.eulerAngles, m_DirectionIndicator.transform.rotation.eulerAngles).eulerAngles;
+        Vector3 rotation = m_WarshipAgent.m_Opponent.m_Transform.rotation.eulerAngles - m_WarshipAgent.transform.rotation.eulerAngles;
+        float rotation_y = Geometry.GetAngleBetween(m_WarshipAgent.transform.position, m_WarshipAgent.m_Opponent.m_Transform.position);
+        if (rotation_y < 0)
+        {
+            rotation_y = 360 + rotation_y;
+        }
+        //Debug.Log($"rotation.y: {rotation.y} / rotation_y: {rotation_y}");
         // Pitch
         rotation.x = Mathf.Min(0, rotation.x);
         // Yaw
-        if (m_InitialRotation == 0)
+        if (m_RotationOffset == 0)
         {
             // FIXME: x % 360
-            if (rotation.y >= 360 - m_RotationLimit || rotation.y <= m_RotationLimit)
+            if (rotation_y >= 360 - m_RotationMaximum || rotation_y <= m_RotationMaximum)
             {
-                transform.Rotate(rotation - transform.rotation.eulerAngles, Space.Self);
+                //transform.Rotate(rotation - transform.rotation.eulerAngles, Space.Self);
+                //rotation_y -= transform.rotation.y;
                 // transform.rotation = Quaternion.Euler(rotation);
-                m_IsLocked = true;
+                //m_IsLocked = true;
             }
-            //if (rotation.y >= 180 && rotation.y < 360 - m_RotationLimit)
-            //{
-            //    rotation.y = 360 - m_RotationLimit;
-            //}
-            //else if (rotation.y > m_RotationLimit)
-            //{
-            //    rotation.y = m_RotationLimit;
-            //}
-        }
-        else if (m_InitialRotation == 90)
-        {
-            if (rotation.y >= 90 - m_RotationLimit && rotation.y <= 90 + m_RotationLimit)
+            else if (rotation_y >= 180 && rotation_y < 360 - m_RotationMaximum)
             {
-                transform.rotation = Quaternion.Euler(rotation);
-                m_IsLocked = true;
+                rotation_y = 360 - m_RotationMaximum;
             }
-            //if (rotation.y > 90 + m_RotationLimit && rotation.y <= 270)
-            //{
-            //    rotation.y = 90 + m_RotationLimit;
-            //}
-            //else if (rotation.y > 270 || rotation.y < 90 - m_RotationLimit)
-            //{
-            //    rotation.y = 90 - m_RotationLimit;
-            //}
-        }
-        else if (m_InitialRotation == 180)
-        {
-            if (rotation.y >= 180 - m_RotationLimit && rotation.y <= 180 + m_RotationLimit)
+            else if (rotation_y > m_RotationMaximum)
             {
-                transform.rotation = Quaternion.Euler(rotation);
-                m_IsLocked = true;
-            }
-            //if (rotation.y > 180 + m_RotationLimit && rotation.y <= 360)
-            //{
-            //    rotation.y = 180 + m_RotationLimit;
-            //}
-            //else if (rotation.y < 180 - m_RotationLimit)
-            //{
-            //    rotation.y = 180 - m_RotationLimit;
-            //}
-        }
-        else if (m_InitialRotation == 270)
-        {
-            if (rotation.y >= 270 - m_RotationLimit && rotation.y <= 270 + m_RotationLimit)
-            {
-                transform.rotation = Quaternion.Euler(rotation);
-                m_IsLocked = true;
-            }
-            //if (rotation.y > 270 + m_RotationLimit || rotation.y <= 90)
-            //{
-            //    rotation.y = 270 + m_RotationLimit;
-            //}
-            //else if (rotation.y < 270 - m_RotationLimit)
-            //{
-            //    rotation.y = 270 - m_RotationLimit;
-            //}
-        }
-        */
-
-        // transform.rotation = Quaternion.Euler(rotation);
-
-        /*
-        int layerMask = 1 << 8;
-        RaycastHit hit;
-        bool isLocked = Physics.Raycast(m_Muzzle.position, m_Muzzle.forward, out hit, Mathf.Infinity, layerMask);
-
-        if (isLocked)
-        {
-            Debug.DrawRay(m_Muzzle.position, m_Muzzle.forward * hit.distance, Color.green);
-            if (m_CooldownIndicator != null)
-            {
-                m_CooldownIndicator.GetComponentsInChildren<Image>()[1].color = Color.green;
+                rotation_y = m_RotationMaximum;
             }
         }
-        else
+        else if (m_RotationOffset == 90)
         {
-            Debug.DrawRay(m_Muzzle.position, m_Muzzle.forward * 1000, Color.red);
-            if (m_CooldownIndicator != null)
+            if (rotation_y >= 90 - m_RotationMaximum && rotation_y <= 90 + m_RotationMaximum)
             {
-                m_CooldownIndicator.GetComponentsInChildren<Image>()[1].color = ColorOrange;
+                //transform.rotation = Quaternion.Euler(rotation);
+                //m_IsLocked = true;
+            }
+            if (rotation_y > 90 + m_RotationMaximum && rotation_y <= 270)
+            {
+                rotation_y = 90 + m_RotationMaximum;
+            }
+            else if (rotation_y > 270 || rotation_y < 90 - m_RotationMaximum)
+            {
+                rotation_y = 90 - m_RotationMaximum;
+            }
+        }
+        else if (m_RotationOffset == 180)
+        {
+            if (rotation_y >= 180 - m_RotationMaximum && rotation_y <= 180 + m_RotationMaximum)
+            {
+                //transform.Rotate(rotation - transform.rotation.eulerAngles, Space.Self);
+                //rotation_y -= transform.rotation.y;
+                //transform.rotation = Quaternion.Euler(rotation);
+                //m_IsLocked = true;
+            }
+            else if (rotation_y > 180 + m_RotationMaximum && rotation_y <= 360)
+            {
+                rotation_y = 180 + m_RotationMaximum;
+            }
+            else if (rotation_y < 180 - m_RotationMaximum)
+            {
+                rotation_y = 180 - m_RotationMaximum;
+            }
+        }
+        else if (m_RotationOffset == 270)
+        {
+            if (rotation_y >= 270 - m_RotationMaximum && rotation_y <= 270 + m_RotationMaximum)
+            {
+                //transform.rotation = Quaternion.Euler(rotation);
+                //m_IsLocked = true;
+            }
+            if (rotation_y > 270 + m_RotationMaximum || rotation_y <= 90)
+            {
+                rotation_y = 270 + m_RotationMaximum;
+            }
+            else if (rotation_y < 270 - m_RotationMaximum)
+            {
+                rotation_y = 270 - m_RotationMaximum;
             }
         }
 
-        if (Input.GetKeyDown(KeyCode.Mouse0))
-        {
-            if (isLocked && m_IsLoaded)
-            {
-                Fire();
-            }
-        }
-        */
+        rotation.y = rotation_y;
+        //rotation.y = Mathf.Lerp(rotation.y, rotation_y, Time.deltaTime);
+        transform.rotation = Quaternion.Euler(rotation);
     }
 
     public void Fire()
@@ -189,7 +167,7 @@ public class Turret : MonoBehaviour
             return;
         }
 
-        indicator.value = m_CurrentCooldownTime / m_CooldownTime;
+        indicator.value = m_CurrentCooldownTime / reloadTime;
     }
     */
 }

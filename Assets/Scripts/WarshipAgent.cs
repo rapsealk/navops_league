@@ -8,7 +8,7 @@ public class WarshipAgent : Agent
     [HideInInspector]
     public Warship m_Warship;
     public Warship m_Opponent;
-    public DominationManager m_DominationManager;
+    public DominationManager m_DominationManager = null;
 
     public const float aggressiveFactor = 1.0f;
     public const float defensiveFactor = 0.5f;
@@ -54,7 +54,7 @@ public class WarshipAgent : Agent
     {
         Reset();
 
-        m_DominationManager.Reset();
+        m_DominationManager?.Reset();
     }
 
     public void Reset()
@@ -219,7 +219,7 @@ public class WarshipAgent : Agent
 
     void OnTriggerEnter(Collider collider)
     {
-        m_Warship.m_ExplosionAnimation.Play();
+        m_Warship.m_ExplosionAnimation?.Play();
 
         if (collider.tag.Contains("Bullet") && !collider.tag.EndsWith(m_PlayerId.ToString()))
         {
