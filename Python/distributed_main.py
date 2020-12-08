@@ -168,8 +168,11 @@ class Worker(Thread):
                             try:
                                 with tf.device('/GPU:0'):
                                     loss = self.global_agent.update(observations, actions, next_observations, rewards, dones)
+                                    del observations, actions, next_observations, rewards, dones
                             except:
                                 break
+                        else:
+                            loss = self.global_agent.update(observations, actions, next_observations, rewards, dones)
                         print('Episode %d: Loss: %f' % (CURRENT_EPISODE, loss))
 
                         if CURRENT_EPISODE % 100 == 0:

@@ -78,8 +78,8 @@ class ProximalPolicyOptimizationAgent:
         state = torch.from_numpy(state).float()
         self.model.cpu()
         policy, _ = self.model(state.cpu())
-        policy = np.squeeze(policy)
-        policy = policy.detach().numpy()[-1]
+        policy = policy.detach().numpy()
+        policy = np.squeeze(policy)[-1]
         action = np.random.choice(policy.shape[-1], p=policy)
         return action
 
@@ -127,11 +127,10 @@ class ProximalPolicyOptimizationAgent:
         loss_value = torch.mean(torch.square(target_values - train_value))
         total_loss = loss_pi + loss_value
 
-        # loss = total_loss.item()
         total_loss.backward()
         self.optimizer.step()
 
-        return total_loss.item()
+        return total_loss.detach().cpu().item()
 
     def gae(self, values, next_values, rewards, dones,
             gamma=0.99, lambda_=0.95, normalize=True):
