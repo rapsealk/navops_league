@@ -165,11 +165,37 @@ class Worker(Thread):
                     with self.lock:
                         # loss = self.global_agent.update(observations, actions, next_observations, rewards, dones)
                         if not args.torch:
-                            try:
-                                with tf.device('/GPU:0'):
-                                    loss = self.global_agent.update(observations, actions, next_observations, rewards, dones)
-                                    del observations, actions, next_observations, rewards, dones
-                            except:
+                            loss = 0
+                            flag = False
+
+                            batch_size = 256
+                            for b in range(np.ceil(len(observations) / batch_size).astype(np.uint8)):
+                                # batch = samples[b*256:(b+1)*256]
+                                """
+                                batch_states = [observations[i] for i in batch]
+                                batch_actions = np.array([actions[i] for i in batch])
+                                batch_next_observations = [next_observations[i] for i in batch]
+                                batch_policy = [policy[i] for i in batch]
+                                """
+                                batch_observations = observations[b*batch_size:(b+1)*batch_size]
+                                batch_actions = actions[b*batch_size:(b+1)*batch_size]
+                                batch_next_observations = next_observations[b*batch_size:(b+1)*batch_size]
+                                batch_rewards = rewards[b*batch_size:(b+1)*batch_size]
+                                batch_dones = dones[b*batch_size:(b+1)*batch_size]
+
+                                try:
+                                    with tf.device('/GPU:0'):
+                                        loss = self.global_agent.update(batch_observations, batch_actions, batch_next_observations, batch_rewards, batch_dones)
+                                    #with tf.device('/GPU:0'):
+                                    #    loss = self.global_agent.update(observations, actions, next_observations, rewards, dones)
+                                    #    del observations, actions, next_observations, rewards, dones
+                                except:
+                                    flag = True
+                                    break
+
+                            del observations, actions, next_observations, rewards, dones
+
+                            if flag:
                                 break
                         else:
                             loss = self.global_agent.update(observations, actions, next_observations, rewards, dones)
