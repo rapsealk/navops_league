@@ -62,7 +62,7 @@ public class Turret : MonoBehaviour
         }
 
         Vector3 rotation = m_WarshipAgent.GetOpponent().m_Transform.rotation.eulerAngles - m_WarshipAgent.GetTransform().rotation.eulerAngles;
-        float rotation_y = Geometry.GetAngleBetween(m_WarshipAgent.GetTransform().position, m_WarshipAgent.GetOpponent().m_Transform.position);
+        float rotation_y = Geometry.GetAngleBetween(m_WarshipAgent.GetTransform().position, m_WarshipAgent.GetOpponent().m_Transform.position) + transform.parent.rotation.eulerAngles.y;
         if (rotation_y < 0)
         {
             rotation_y = 360 + rotation_y;
@@ -148,7 +148,8 @@ public class Turret : MonoBehaviour
         rotation.y = rotation_y;
 
         //rotation.y = Mathf.Lerp(rotation.y, rotation_y, Time.deltaTime);
-        transform.rotation = Quaternion.Euler(rotation);
+        transform.localRotation = Quaternion.Euler(rotation);
+        //transform.rotation = Quaternion.Euler(rotation);
 
         /*
         if (Mathf.Abs(transform.localRotation.y) > m_RotationMaximum)
@@ -156,8 +157,7 @@ public class Turret : MonoBehaviour
             Vector3 localRotation = transform.localRotation.eulerAngles;
             localRotation.y = Mathf.Sign(localRotation.y) * m_RotationMaximum;
             transform.localRotation = Quaternion.Euler(localRotation);
-        }
-        */
+        }*/
     }
 
     public void Fire()
