@@ -1,6 +1,7 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
 import os
+import sys
 import socket
 import argparse
 import time
@@ -11,8 +12,13 @@ from threading import Thread, Lock
 from multiprocessing import cpu_count, Queue
 
 import numpy as np
+import tensorflow as tf
 
 from environment import UnityEnvironmentImpl
+
+physical_devices = tf.config.experimental.list_physical_devices("GPU")
+for physical_device in physical_devices:
+    tf.config.experimental.set_memory_growth(physical_device, True)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--tag', type=str, default=None)
@@ -37,8 +43,12 @@ else:
     from models.pytorch_impl.ppo_lstm import ProximalPolicyOptimizationAgent as Agent
 
 
+BATCH_SIZE = 128
 SAMPLE_SIZE = 64
 CURRENT_EPISODE = 0
+EPSILON = 1
+EPSILON_DISCOUNT = 0.01
+EPSILON_MINIMUM = 0.005
 RESULTS = deque([], maxlen=100)
 # JOB_QUEUE = Queue()
 
@@ -104,11 +114,8 @@ class Worker(Thread):
 
     def run(self):
         global CURRENT_EPISODE
+        global EPSILON
         global RESULTS
-
-        epsilon = 1
-        epsilon_discount = 0.001
-        epsilon_minimum = 0.005
 
         while True:
             observations = []
@@ -120,10 +127,13 @@ class Worker(Thread):
             observation = self.env.reset()
             observation = np.stack([observation[0]] * SAMPLE_SIZE, axis=1)
 
+            total_loss = 0
+            total_rewards = 0
+
             while True:
                 observations.append(observation)
 
-                if np.random.uniform(0, 1) > epsilon:
+                if np.random.uniform(0, 1) > EPSILON:
                     try:
                         # policy = agent.get_action(observation)
                         if not args.torch:
@@ -149,7 +159,7 @@ class Worker(Thread):
                 actions.append(action[0])
                 dones.append(not done)
 
-                if done:
+                if done or len(observation) == BATCH_SIZE:
                     observations = np.squeeze(np.array(observations), axis=1)
                     next_observations = np.squeeze(np.array(next_observations), axis=1)
                     actions = np.array(actions)
@@ -166,60 +176,48 @@ class Worker(Thread):
                         # loss = self.global_agent.update(observations, actions, next_observations, rewards, dones)
                         if not args.torch:
                             loss = 0
-                            flag = False
-
-                            batch_size = 256
-                            for b in range(np.ceil(len(observations) / batch_size).astype(np.uint8)):
-                                # batch = samples[b*256:(b+1)*256]
-                                """
-                                batch_states = [observations[i] for i in batch]
-                                batch_actions = np.array([actions[i] for i in batch])
-                                batch_next_observations = [next_observations[i] for i in batch]
-                                batch_policy = [policy[i] for i in batch]
-                                """
-                                batch_observations = observations[b*batch_size:(b+1)*batch_size]
-                                batch_actions = actions[b*batch_size:(b+1)*batch_size]
-                                batch_next_observations = next_observations[b*batch_size:(b+1)*batch_size]
-                                batch_rewards = rewards[b*batch_size:(b+1)*batch_size]
-                                batch_dones = dones[b*batch_size:(b+1)*batch_size]
-
-                                try:
-                                    with tf.device('/GPU:0'):
-                                        loss = self.global_agent.update(batch_observations, batch_actions, batch_next_observations, batch_rewards, batch_dones)
-                                    #with tf.device('/GPU:0'):
-                                    #    loss = self.global_agent.update(observations, actions, next_observations, rewards, dones)
-                                    #    del observations, actions, next_observations, rewards, dones
-                                except:
-                                    flag = True
-                                    break
-
-                            del observations, actions, next_observations, rewards, dones
-
-                            if flag:
+                            try:
+                                with tf.device('/GPU:0'):
+                                    loss = self.global_agent.update(observations, actions, next_observations, rewards, dones)
+                                del observations, actions, next_observations, rewards, dones
+                            except:
                                 break
                         else:
-                            loss = self.global_agent.update(observations, actions, next_observations, rewards, dones)
-                        print('Episode %d: Loss: %f' % (CURRENT_EPISODE, loss))
+                            try:
+                                loss = self.global_agent.update(observations, actions, next_observations, rewards, dones)
+                            except RuntimeError as e:
+                                sys.stderr.write('RuntimeError: %s\n' % e)
+                                break
+                        print('[%s] Episode %d: Loss: %f' % (datetime.now().isoformat(), CURRENT_EPISODE, loss))
 
                         if CURRENT_EPISODE % 100 == 0:
                             self.global_agent.save()
 
+                        total_loss += loss
+                        total_rewards += np.sum(returns)
+
+                    if done:
                         if not args.torch:
                             with TENSORBOARD_WRITER.as_default():
-                                tf.summary.scalar('Reward', np.sum(returns), CURRENT_EPISODE)
-                                tf.summary.scalar('Loss', loss, CURRENT_EPISODE)
+                                tf.summary.scalar('Reward', total_rewards, CURRENT_EPISODE)
+                                tf.summary.scalar('Loss', total_loss, CURRENT_EPISODE)
                                 if len(RESULTS) >= 100:
                                     tf.summary.scalar('Rate', np.mean(RESULTS), CURRENT_EPISODE)
                         else:
-                            TENSORBOARD_WRITER.add_scalar('Reward', np.sum(returns), CURRENT_EPISODE)
-                            TENSORBOARD_WRITER.add_scalar('Loss', loss, CURRENT_EPISODE)
+                            TENSORBOARD_WRITER.add_scalar('Reward', total_rewards, CURRENT_EPISODE)
+                            TENSORBOARD_WRITER.add_scalar('Loss', total_loss, CURRENT_EPISODE)
                             if len(RESULTS) >= 100:
                                 TENSORBOARD_WRITER.add_scalar('Rate', np.mean(RESULTS), CURRENT_EPISODE)
                         CURRENT_EPISODE += 1
 
-                    epsilon = max(epsilon - epsilon_discount, epsilon_minimum)
+                        EPSILON = max(EPSILON - EPSILON_DISCOUNT, EPSILON_MINIMUM)
 
-                    break
+                        observation = self.env.reset()
+                        observation = np.stack([observation[0]] * SAMPLE_SIZE, axis=1)
+
+                        break
+
+                    # break
 
         self.env.close()
 

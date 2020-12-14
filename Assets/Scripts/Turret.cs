@@ -16,12 +16,14 @@ public class Turret : MonoBehaviour
     private IWarshipController m_WarshipAgent;
     private float m_RotationSpeed = 15f;
     private float m_RotationMaximum = 60f;
-    private float m_RotationOffset = 0f;
-    //private bool m_IsLocked = false;
+    //private float m_RotationOffset = 0f;
     public const float reloadTime = 8f;
+    public const float repairTime = 60f;
     private float m_CurrentCooldownTime = 6f;
     public float CurrentCooldownTime { get => Mathf.Min(reloadTime, m_CurrentCooldownTime) / reloadTime; }
     private bool m_IsLoaded = false;
+    public bool m_IsDamaged = false;
+    public float RepairTimeLeft = 0f;
 
     public enum TurretId
     {
@@ -37,8 +39,8 @@ public class Turret : MonoBehaviour
     {
         m_WarshipAgent = GetComponentInParent<IWarshipController>();
 
-        m_RotationOffset = GetComponent<Transform>().rotation.eulerAngles.y;
-        Debug.Log($"Start::RotationOffset: {m_RotationOffset}");
+        //m_RotationOffset = GetComponent<Transform>().rotation.eulerAngles.y;
+        //Debug.Log($"Start::RotationOffset: {m_RotationOffset}");
     }
 
     // Start is called before the first frame update
@@ -61,13 +63,22 @@ public class Turret : MonoBehaviour
             m_IsLoaded = (m_CurrentCooldownTime >= reloadTime);
         }
 
+        if (m_IsDamaged)
+        {
+            RepairTimeLeft -= Time.deltaTime;
+            if (RepairTimeLeft <= 0f)
+            {
+                m_IsDamaged = false;
+            }
+        }
+
         Vector3 rotation = m_WarshipAgent.GetOpponent().m_Transform.rotation.eulerAngles - m_WarshipAgent.GetTransform().rotation.eulerAngles;
         float rotation_y = Geometry.GetAngleBetween(m_WarshipAgent.GetTransform().position, m_WarshipAgent.GetOpponent().m_Transform.position) + transform.parent.rotation.eulerAngles.y;
         if (rotation_y < 0)
         {
             rotation_y = 360 + rotation_y;
         }
-        Debug.Log($"Id: {m_PlayerNumber} ({m_RotationOffset}) rotation.y: {rotation.y} / rotation_y: {rotation_y}");
+        //Debug.Log($"Id: {m_PlayerNumber} ({m_RotationOffset}) rotation.y: {rotation.y} / rotation_y: {rotation_y}");
         // Pitch
         rotation.x = Mathf.Min(0, rotation.x);
         // Yaw
@@ -90,26 +101,12 @@ public class Turret : MonoBehaviour
             {
                 rotation_y = m_RotationMaximum;
             }
-        }
-        else if (//m_RotationOffset == 90f
-                m_TurretId == (int) TurretId.RIGHT_FRONTAL || m_TurretId == (int) TurretId.RIGHT_BACKWARD)
-        {
-            if (rotation_y >= 90 - m_RotationMaximum && rotation_y <= 90 + m_RotationMaximum)
-            {
-                //transform.rotation = Quaternion.Euler(rotation);
-                //m_IsLocked = true;
-            }
-            else if (rotation_y > 90 + m_RotationMaximum && rotation_y <= 270)
-            {
-                rotation_y = 90 + m_RotationMaximum;
-            }
-            else if (rotation_y > 270 || rotation_y < 90 - m_RotationMaximum)
-            {
-                rotation_y = 90 - m_RotationMaximum;
-            }
+
+            //rotation.y = rotation_y;
+            //transform.localRotation = Quaternion.Euler(rotation);
         }
         else if (//m_RotationOffset == 180f
-                m_TurretId == (int) TurretId.BACKWARD)
+                m_TurretId == (int)TurretId.BACKWARD)
         {
             if (rotation_y >= 180 - m_RotationMaximum && rotation_y <= 180 + m_RotationMaximum)
             {
@@ -125,6 +122,27 @@ public class Turret : MonoBehaviour
             else if (rotation_y < 180 - m_RotationMaximum)
             {
                 rotation_y = 180 - m_RotationMaximum;
+            }
+
+            //rotation.y = rotation_y;
+            //transform.localRotation = Quaternion.Euler(rotation);
+        }
+        // ================================================
+        else if (//m_RotationOffset == 90f
+                m_TurretId == (int) TurretId.RIGHT_FRONTAL || m_TurretId == (int) TurretId.RIGHT_BACKWARD)
+        {
+            if (rotation_y >= 90 - m_RotationMaximum && rotation_y <= 90 + m_RotationMaximum)
+            {
+                //transform.rotation = Quaternion.Euler(rotation);
+                //m_IsLocked = true;
+            }
+            else if (rotation_y > 90 + m_RotationMaximum && rotation_y <= 270)
+            {
+                rotation_y = 90 + m_RotationMaximum;
+            }
+            else if (rotation_y > 270 || rotation_y < 90 - m_RotationMaximum)
+            {
+                rotation_y = 90 - m_RotationMaximum;
             }
         }
         else if (//m_RotationOffset == 270f
@@ -145,11 +163,11 @@ public class Turret : MonoBehaviour
             }
         }
 
-        rotation.y = rotation_y;
-
-        //rotation.y = Mathf.Lerp(rotation.y, rotation_y, Time.deltaTime);
+        //rotation.y = rotation_y;
+        //rotation_y = Mathf.Sign(rotation_y) * Mathf.Min(Mathf.Abs(rotation_y), m_RotationSpeed);
+        rotation.y = Mathf.LerpAngle(rotation.y, rotation_y, Mathf.Abs(rotation.y - rotation_y) / m_RotationSpeed);
+        //rotation.y = rotation_y;
         transform.localRotation = Quaternion.Euler(rotation);
-        //transform.rotation = Quaternion.Euler(rotation);
 
         /*
         if (Mathf.Abs(transform.localRotation.y) > m_RotationMaximum)
@@ -158,11 +176,34 @@ public class Turret : MonoBehaviour
             localRotation.y = Mathf.Sign(localRotation.y) * m_RotationMaximum;
             transform.localRotation = Quaternion.Euler(localRotation);
         }*/
+
+        /*
+        int layerMask = 1 << 8;
+        RaycastHit hit;
+        if (!Physics.Raycast(m_Muzzle.position, m_Muzzle.forward, out hit, Mathf.Infinity, layerMask))
+        {
+            return;
+        }*/
+
+        Debug.DrawRay(m_Muzzle.position, m_Muzzle.forward, Color.green);
+    }
+
+    void OnTriggerEnter(Collider collider)
+    {
+        if (collider.tag.Contains("Bullet") && !collider.tag.EndsWith(m_PlayerNumber.ToString()))
+        {
+            //Debug.Log($"Turret#{m_PlayerNumber}-{m_TurretId} => TriggerEnter! ({collider.tag})");
+            if (!m_IsDamaged)
+            {
+                RepairTimeLeft = repairTime;
+                m_IsDamaged = true;
+            }
+        }
     }
 
     public void Fire()
     {
-        if (!m_IsLoaded)
+        if (!m_IsLoaded || m_IsDamaged)
         {
             return;
         }

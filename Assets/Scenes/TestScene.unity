@@ -131,7 +131,7 @@ PrefabInstance:
     - target: {fileID: 4238590687307645855, guid: e7459eedf8ddcd4489e585bf4ec48365,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: 10
+      value: 11.3
       objectReference: {fileID: 0}
     - target: {fileID: 4238590687307645855, guid: e7459eedf8ddcd4489e585bf4ec48365,
         type: 3}
@@ -141,7 +141,7 @@ PrefabInstance:
     - target: {fileID: 4238590687307645855, guid: e7459eedf8ddcd4489e585bf4ec48365,
         type: 3}
       propertyPath: m_LocalPosition.z
-      value: 10
+      value: 8.7
       objectReference: {fileID: 0}
     - target: {fileID: 4238590687307645855, guid: e7459eedf8ddcd4489e585bf4ec48365,
         type: 3}
@@ -188,6 +188,26 @@ PrefabInstance:
       propertyPath: m_Name
       value: Opponent
       objectReference: {fileID: 0}
+    - target: {fileID: 4241543866688603613, guid: e7459eedf8ddcd4489e585bf4ec48365,
+        type: 3}
+      propertyPath: m_UseGravity
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4241543866688603613, guid: e7459eedf8ddcd4489e585bf4ec48365,
+        type: 3}
+      propertyPath: m_Mass
+      value: 1000
+      objectReference: {fileID: 0}
+    - target: {fileID: 4241543866688603613, guid: e7459eedf8ddcd4489e585bf4ec48365,
+        type: 3}
+      propertyPath: m_AngularDrag
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4241543868122792343, guid: e7459eedf8ddcd4489e585bf4ec48365,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 8284690504285027206, guid: e7459eedf8ddcd4489e585bf4ec48365,
         type: 3}
       propertyPath: m_PlayerId
@@ -228,7 +248,7 @@ MonoBehaviour:
   m_Rigidbody: {fileID: 0}
   m_StartingPoint: {fileID: 1834037113}
   m_RendererColor: {r: 1, g: 0, b: 0, a: 0}
-  m_ExplosionAnimation: {fileID: 0}
+  m_ExplosionAnimation: {fileID: 1918772573}
   m_CurrentHealth: 0
   m_Turrets: []
 --- !u!1001 &399354734
@@ -498,13 +518,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1318281333}
-  m_LocalRotation: {x: 0.2588191, y: 0, z: 0, w: 0.9659258}
-  m_LocalPosition: {x: 0, y: 10, z: -12}
+  m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: 0, y: 40, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
-  m_LocalEulerAnglesHint: {x: 30, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
 --- !u!1001 &1542697871
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -567,26 +587,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 4240153756724500121, guid: e7459eedf8ddcd4489e585bf4ec48365,
-        type: 3}
-      propertyPath: m_Name
-      value: Medium Turret (RB)
-      objectReference: {fileID: 0}
-    - target: {fileID: 4240291623896512171, guid: e7459eedf8ddcd4489e585bf4ec48365,
-        type: 3}
-      propertyPath: m_Name
-      value: Medium Turret (RF)
-      objectReference: {fileID: 0}
-    - target: {fileID: 4240490327200221977, guid: e7459eedf8ddcd4489e585bf4ec48365,
-        type: 3}
-      propertyPath: m_Name
-      value: Medium Turret (LF)
-      objectReference: {fileID: 0}
-    - target: {fileID: 4240830087816099543, guid: e7459eedf8ddcd4489e585bf4ec48365,
-        type: 3}
-      propertyPath: m_Name
-      value: Medium Turret (LB)
-      objectReference: {fileID: 0}
     - target: {fileID: 4240856526741707265, guid: e7459eedf8ddcd4489e585bf4ec48365,
         type: 3}
       propertyPath: m_Name
@@ -605,7 +605,7 @@ PrefabInstance:
     - target: {fileID: 8284690504285027207, guid: e7459eedf8ddcd4489e585bf4ec48365,
         type: 3}
       propertyPath: m_BehaviorType
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: e7459eedf8ddcd4489e585bf4ec48365, type: 3}
@@ -632,9 +632,15 @@ MonoBehaviour:
   m_Rigidbody: {fileID: 0}
   m_StartingPoint: {fileID: 1008238728}
   m_RendererColor: {r: 1, g: 0.5019608, b: 0, a: 0}
-  m_ExplosionAnimation: {fileID: 0}
+  m_ExplosionAnimation: {fileID: 1599965179}
   m_CurrentHealth: 0
   m_Turrets: []
+--- !u!198 &1599965179 stripped
+ParticleSystem:
+  m_CorrespondingSourceObject: {fileID: 4241543866703732524, guid: e7459eedf8ddcd4489e585bf4ec48365,
+    type: 3}
+  m_PrefabInstance: {fileID: 1542697871}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1834037112
 GameObject:
   m_ObjectHideFlags: 0
@@ -665,3 +671,9 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 6
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!198 &1918772573 stripped
+ParticleSystem:
+  m_CorrespondingSourceObject: {fileID: 4241543866703732524, guid: e7459eedf8ddcd4489e585bf4ec48365,
+    type: 3}
+  m_PrefabInstance: {fileID: 201756478}
+  m_PrefabAsset: {fileID: 0}

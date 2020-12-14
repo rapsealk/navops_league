@@ -46,7 +46,7 @@ class ProximalPolicyOptimizationLSTM(tf.keras.Model):
 
 class Agent:
 
-    def __init__(self, n, model=None, gamma=0.99, lambda_=0.95, learning_rate=2e-4):
+    def __init__(self, n, model=None, gamma=0.998, lambda_=0.95, learning_rate=2e-4):
         self.gamma = gamma
         self.lambda_ = lambda_
 
@@ -81,6 +81,8 @@ class Agent:
         advantages, target_values = self.generalized_advantage_estimator(values, next_values, rewards, dones,
                                                                          gamma=self.gamma, lambda_=self.lambda_,
                                                                          normalize=self.normalize)
+
+        total_loss_ = 0
 
         for i in range(3):  # epochs
             samples = np.arange(len(states))
@@ -133,7 +135,9 @@ class Agent:
             grads = tape.gradient(total_loss, self.model.trainable_variables)
             self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
 
-            return total_loss.numpy()
+            total_loss_ += total_loss.numpy()
+
+        return total_loss.numpy()
 
     def generalized_advantage_estimator(self, values, next_values, rewards, dones,
                                         gamma=0.99, lambda_=0.95, normalize=True):

@@ -48000,7 +48000,7 @@ GameObject:
   - component: {fileID: 4194508999632343943}
   - component: {fileID: 4241543867179403724}
   m_Layer: 8
-  m_Name: Medium Turret
+  m_Name: Medium Turret (RB)
   m_TagString: Battleship
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -48101,6 +48101,8 @@ MonoBehaviour:
   m_Muzzle: {fileID: 4241543867159523919}
   m_MuzzleFlash: {fileID: 198234346748616026, guid: ad2ab49d0a2a17148bd51c93d977bdbc,
     type: 3}
+  m_IsDamaged: 0
+  RepairTimeLeft: 0
 --- !u!1 &4240216360510806941
 GameObject:
   m_ObjectHideFlags: 0
@@ -48151,7 +48153,7 @@ GameObject:
   - component: {fileID: 4194112734271151243}
   - component: {fileID: 4241543867742418128}
   m_Layer: 8
-  m_Name: Medium Turret
+  m_Name: Medium Turret (RF)
   m_TagString: Battleship
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -48252,6 +48254,8 @@ MonoBehaviour:
   m_Muzzle: {fileID: 4241543866741077363}
   m_MuzzleFlash: {fileID: 198234346748616026, guid: ad2ab49d0a2a17148bd51c93d977bdbc,
     type: 3}
+  m_IsDamaged: 0
+  RepairTimeLeft: 0
 --- !u!1 &4240472631844701891
 GameObject:
   m_ObjectHideFlags: 0
@@ -48454,7 +48458,7 @@ GameObject:
   - component: {fileID: 4194689119193982223}
   - component: {fileID: 4241543867055921093}
   m_Layer: 8
-  m_Name: Medium Turret
+  m_Name: Medium Turret (LF)
   m_TagString: Battleship
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -48555,6 +48559,8 @@ MonoBehaviour:
   m_Muzzle: {fileID: 4241543866545897147}
   m_MuzzleFlash: {fileID: 198234346748616026, guid: ad2ab49d0a2a17148bd51c93d977bdbc,
     type: 3}
+  m_IsDamaged: 0
+  RepairTimeLeft: 0
 --- !u!1 &4240538396296170035
 GameObject:
   m_ObjectHideFlags: 0
@@ -48858,6 +48864,8 @@ MonoBehaviour:
   m_Muzzle: {fileID: 4241543868322325855}
   m_MuzzleFlash: {fileID: 198234346748616026, guid: ad2ab49d0a2a17148bd51c93d977bdbc,
     type: 3}
+  m_IsDamaged: 0
+  RepairTimeLeft: 0
 --- !u!1 &4240719385564690413
 GameObject:
   m_ObjectHideFlags: 0
@@ -49178,7 +49186,7 @@ GameObject:
   - component: {fileID: 4194211231170563185}
   - component: {fileID: 4241543866589537062}
   m_Layer: 8
-  m_Name: Medium Turret
+  m_Name: Medium Turret (LB)
   m_TagString: Battleship
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -49279,6 +49287,8 @@ MonoBehaviour:
   m_Muzzle: {fileID: 4241543867630144530}
   m_MuzzleFlash: {fileID: 198234346748616026, guid: ad2ab49d0a2a17148bd51c93d977bdbc,
     type: 3}
+  m_IsDamaged: 0
+  RepairTimeLeft: 0
 --- !u!1 &4240856526741707265
 GameObject:
   m_ObjectHideFlags: 0
@@ -49392,10 +49402,10 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4240856526741707265}
   serializedVersion: 2
-  m_Mass: 1
+  m_Mass: 1000
   m_Drag: 1
-  m_AngularDrag: 0.05
-  m_UseGravity: 0
+  m_AngularDrag: 1
+  m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 0
   m_Constraints: 0
@@ -49600,7 +49610,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &4241543868122792342
 Transform:
   m_ObjectHideFlags: 0
@@ -49839,6 +49849,8 @@ MonoBehaviour:
   m_Muzzle: {fileID: 4241543868189336000}
   m_MuzzleFlash: {fileID: 198234346748616026, guid: ad2ab49d0a2a17148bd51c93d977bdbc,
     type: 3}
+  m_IsDamaged: 0
+  RepairTimeLeft: 0
 --- !u!1 &4242170299932398399
 GameObject:
   m_ObjectHideFlags: 0

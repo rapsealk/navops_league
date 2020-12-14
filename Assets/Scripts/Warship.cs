@@ -79,12 +79,26 @@ public class Warship : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        Vector3 position = transform.position;
+
         if (transform.position.y <= 0.0f)
         {
-            Vector3 position = transform.position;
             position.y = 0f;
-            transform.position = position;
         }
+
+        if (Mathf.Abs(transform.position.x) > 90f)
+        {
+            position.x = Mathf.Sign(position.x) * 90f;
+        }
+
+        if (Mathf.Abs(transform.position.z) > 90f)
+        {
+            position.z = Mathf.Sign(position.z) * 90f;
+        }
+
+        transform.position = position;
+
+        // Fire();
     }
 
     private void FixedUpdate()
@@ -92,6 +106,13 @@ public class Warship : MonoBehaviour
         m_Rigidbody.AddRelativeForce(Vector3.forward * m_EnginePower * m_VelocityLevel, ForceMode.Acceleration);
         transform.rotation = Quaternion.Euler(0, transform.rotation.eulerAngles.y + m_RudderPower * m_SteerLevel, 0);
     }
+
+    /*
+    void OnTriggerEnter(Collider collider)
+    {
+        m_ExplosionAnimation?.Play();
+    }
+    */
 
     public void Reset()
     {

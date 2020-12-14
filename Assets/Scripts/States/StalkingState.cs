@@ -30,6 +30,16 @@ public class StalkingState : BaseState
         {
             targetPosition = opponentPosition - new Vector3(x, 0f, z);
         }
+
+        if (Mathf.Abs(targetPosition.x) > 90)
+        {
+            targetPosition.x = Mathf.Sign(targetPosition.x) * 90;
+        }
+        if (Mathf.Abs(targetPosition.z) > 90)
+        {
+            targetPosition.z = Mathf.Sign(targetPosition.z) * 90;
+        }
+
         Vector3 targetDirection = targetPosition - currentPosition;
         Debug.DrawRay(currentPosition, targetDirection, Color.red);
 
