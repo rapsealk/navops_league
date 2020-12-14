@@ -21,6 +21,9 @@ class UnityEnvironmentImpl:
         self.env = UnityEnvironment(file_name=name, seed=1, worker_id=worker_id, base_port=base_port, side_channels=[channel])
         self.action_space = 6
 
+        self.aggressive_weight = 1.0
+        self.defensive_weight = 0.5
+
     def reset(self):
         self.env.reset()
 
@@ -78,6 +81,8 @@ class UnityEnvironmentImpl:
             reward = np.array(reward)
             if 0 in reward.shape:
                 reward = np.zeros((1,))
+
+            reward -= 0.001
 
         return np.squeeze(observation, axis=1), np.squeeze(reward), done, info
 
