@@ -137,7 +137,7 @@ class Agent:
 
             total_loss_ += total_loss.numpy()
 
-        return total_loss.numpy()
+        return total_loss_
 
     def generalized_advantage_estimator(self, values, next_values, rewards, dones,
                                         gamma=0.99, lambda_=0.95, normalize=True):
