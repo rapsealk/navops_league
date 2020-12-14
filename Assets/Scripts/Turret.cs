@@ -72,24 +72,23 @@ public class Turret : MonoBehaviour
             }
         }
 
-        Vector3 rotation = m_WarshipAgent.GetOpponent().m_Transform.rotation.eulerAngles - m_WarshipAgent.GetTransform().rotation.eulerAngles;
-        float rotation_y = Geometry.GetAngleBetween(m_WarshipAgent.GetTransform().position, m_WarshipAgent.GetOpponent().m_Transform.position) + transform.parent.rotation.eulerAngles.y;
-        if (rotation_y < 0)
-        {
-            rotation_y = 360 + rotation_y;
-        }
-        //Debug.Log($"Id: {m_PlayerNumber} ({m_RotationOffset}) rotation.y: {rotation.y} / rotation_y: {rotation_y}");
+        Vector3 parentRotation = m_WarshipAgent.GetTransform().rotation.eulerAngles;
+        Vector3 rotation = transform.rotation.eulerAngles;
+        float rotation_y = Geometry.GetAngleBetween(m_WarshipAgent.GetTransform().position, m_WarshipAgent.GetOpponent().m_Transform.position) - parentRotation.y;
+        rotation_y = (rotation_y + 360) % 360;
+
+        //string log = $"Id: {m_PlayerNumber}-{m_TurretId} rotation.y: {rotation.y} / rotation_y: {rotation_y}";
+        
         // Pitch
         rotation.x = Mathf.Min(0, rotation.x);
         // Yaw
-        if (//m_RotationOffset == 0f
-            m_TurretId == (int) TurretId.FRONTAL)
+        if (m_TurretId == (int) TurretId.FRONTAL)
         {
             // FIXME: x % 360
             if (rotation_y >= 360 - m_RotationMaximum || rotation_y <= m_RotationMaximum)
             {
                 //transform.Rotate(rotation - transform.rotation.eulerAngles, Space.Self);
-                //rotation_y -= transform.rotation.y;
+                //rotation_y = (rotation_y + parentRotation.y) % 360;
                 // transform.rotation = Quaternion.Euler(rotation);
                 //m_IsLocked = true;
             }
@@ -101,17 +100,13 @@ public class Turret : MonoBehaviour
             {
                 rotation_y = m_RotationMaximum;
             }
-
-            //rotation.y = rotation_y;
-            //transform.localRotation = Quaternion.Euler(rotation);
         }
-        else if (//m_RotationOffset == 180f
-                m_TurretId == (int)TurretId.BACKWARD)
+        else if (m_TurretId == (int)TurretId.BACKWARD)
         {
             if (rotation_y >= 180 - m_RotationMaximum && rotation_y <= 180 + m_RotationMaximum)
             {
                 //transform.Rotate(rotation - transform.rotation.eulerAngles, Space.Self);
-                //rotation_y -= transform.rotation.y;
+                //rotation_y = (rotation_y + parentRotation.y) % 360;
                 //transform.rotation = Quaternion.Euler(rotation);
                 //m_IsLocked = true;
             }
@@ -123,16 +118,14 @@ public class Turret : MonoBehaviour
             {
                 rotation_y = 180 - m_RotationMaximum;
             }
-
-            //rotation.y = rotation_y;
-            //transform.localRotation = Quaternion.Euler(rotation);
         }
         // ================================================
-        else if (//m_RotationOffset == 90f
-                m_TurretId == (int) TurretId.RIGHT_FRONTAL || m_TurretId == (int) TurretId.RIGHT_BACKWARD)
+        else if (m_TurretId == (int) TurretId.RIGHT_FRONTAL || m_TurretId == (int) TurretId.RIGHT_BACKWARD)
         {
             if (rotation_y >= 90 - m_RotationMaximum && rotation_y <= 90 + m_RotationMaximum)
             {
+                //Debug.Log($"Turret: {m_TurretId} (RIGHT) Case#1 rotation_y={rotation_y}");
+                //rotation_y = (rotation_y + parentRotation.y) % 360;
                 //transform.rotation = Quaternion.Euler(rotation);
                 //m_IsLocked = true;
             }
@@ -145,11 +138,11 @@ public class Turret : MonoBehaviour
                 rotation_y = 90 - m_RotationMaximum;
             }
         }
-        else if (//m_RotationOffset == 270f
-                m_TurretId == (int) TurretId.LEFT_FRONTAL || m_TurretId == (int) TurretId.LEFT_BACKWARD)
+        else if (m_TurretId == (int) TurretId.LEFT_FRONTAL || m_TurretId == (int) TurretId.LEFT_BACKWARD)
         {
             if (rotation_y >= 270 - m_RotationMaximum && rotation_y <= 270 + m_RotationMaximum)
             {
+                //rotation_y = (rotation_y + parentRotation.y) % 360;
                 //transform.rotation = Quaternion.Euler(rotation);
                 //m_IsLocked = true;
             }
@@ -163,10 +156,14 @@ public class Turret : MonoBehaviour
             }
         }
 
-        //rotation.y = rotation_y;
-        //rotation_y = Mathf.Sign(rotation_y) * Mathf.Min(Mathf.Abs(rotation_y), m_RotationSpeed);
-        rotation.y = Mathf.LerpAngle(rotation.y, rotation_y, Mathf.Abs(rotation.y - rotation_y) / m_RotationSpeed);
-        //rotation.y = rotation_y;
+        /*
+        if (m_PlayerNumber == 2)
+        {
+            Debug.Log($"{log} -> {rotation_y} / ParentRotation: {parentRotation}");
+        }
+        */
+
+        rotation.y = rotation_y;
         transform.localRotation = Quaternion.Euler(rotation);
 
         /*
