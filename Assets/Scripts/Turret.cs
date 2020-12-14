@@ -216,7 +216,9 @@ public class Turret : MonoBehaviour
         bullet.tag = "Bullet" + m_PlayerNumber.ToString();
         //bullet.GetComponent<Renderer>().material.SetColor("_Color", Color.red);
         //bullet.GetComponent<Rigidbody>().AddForce(m_Muzzle.forward * 4000 + m_Muzzle.up * 10);
-        bullet.GetComponent<Rigidbody>().AddForce(m_Muzzle.forward * 6000 + m_Muzzle.up * 20);
+        float power = 10000; // 6000;
+        float powerY = 3000;  // 20;
+        bullet.GetComponent<Rigidbody>().AddForce(m_Muzzle.forward * power + m_Muzzle.up * powerY);
         //Physics.IgnoreCollision(bullet.GetComponent<Collider>(), GetComponent<Collider>());
         m_MuzzleFlash.Play();
 
