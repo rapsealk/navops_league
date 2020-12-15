@@ -44,8 +44,9 @@ else:
 
 
 SAMPLE_SIZE = 64
-CURRENT_EPISODE = 0
-RESULTS = deque([], maxlen=100)
+CURRENT_EPISODE = 1
+RESULTS = deque([0] * 99, maxlen=10000)
+GLOBAL_WEIGHT_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'a3c.h5')
 # JOB_QUEUE = Queue()
 
 
@@ -70,6 +71,8 @@ class Learner:
         self.global_agent = Agent(n=6)
         self.global_agent.load()
         self.num_workers = args.core    # cpu_count()
+
+        _ = self.global_agent.get_action(np.random.uniform(-1, 1, (1, 64, 16)))
 
         self.queue = Queue()
 
@@ -169,6 +172,9 @@ class Worker(Thread):
                     # JOB_QUEUE.put(job)
 
                     with self.lock:
+                        episode = CURRENT_EPISODE
+                        CURRENT_EPISODE += 1
+
                         # loss = self.global_agent.update(observations, actions, next_observations, rewards, dones)
                         if not args.torch:
                             loss = 0
@@ -206,23 +212,27 @@ class Worker(Thread):
                                 break
                         else:
                             loss = self.global_agent.update(observations, actions, next_observations, rewards, dones)
-                        print('Episode %d: Loss: %f' % (CURRENT_EPISODE, loss))
+                        print('[%s] Episode %d: Loss: %f' % (datetime.now().isoformat(), episode, loss))
 
-                        if CURRENT_EPISODE % 100 == 0:
-                            self.global_agent.save()
+                        if episode % 100 == 0:
+                            self.global_agent.save(GLOBAL_WEIGHT_PATH)
 
                         if not args.torch:
                             with TENSORBOARD_WRITER.as_default():
-                                tf.summary.scalar('Reward', np.sum(returns), CURRENT_EPISODE)
-                                tf.summary.scalar('Loss', loss, CURRENT_EPISODE)
+                                tf.summary.scalar('Reward', np.sum(returns), episode)
+                                tf.summary.scalar('Loss', loss, episode)
                                 if len(RESULTS) >= 100:
-                                    tf.summary.scalar('Rate', np.mean(RESULTS), CURRENT_EPISODE)
+                                    tf.summary.scalar('Rate', np.mean(RESULTS), episode)
                         else:
-                            TENSORBOARD_WRITER.add_scalar('Reward', np.sum(returns), CURRENT_EPISODE)
-                            TENSORBOARD_WRITER.add_scalar('Loss', loss, CURRENT_EPISODE)
+                            TENSORBOARD_WRITER.add_scalar('Reward', np.sum(returns), episode)
+                            TENSORBOARD_WRITER.add_scalar('Loss', loss, episode)
                             if len(RESULTS) >= 100:
-                                TENSORBOARD_WRITER.add_scalar('Rate', np.mean(RESULTS), CURRENT_EPISODE)
-                        CURRENT_EPISODE += 1
+                                TENSORBOARD_WRITER.add_scalar('Rate', np.mean(RESULTS), episode)
+
+                        try:
+                            self.agent.set_weights(self.global_agent.get_weights())
+                        except Exception as e:
+                            self.agent.load(GLOBAL_WEIGHT_PATH)
 
                     epsilon = max(epsilon - epsilon_discount, epsilon_minimum)
 

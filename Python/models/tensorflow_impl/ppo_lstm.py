@@ -52,6 +52,7 @@ class Agent:
 
         self.n = n
         self.model = model or ProximalPolicyOptimizationLSTM(n)
+        self.model.build((256, 64, 16))
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
         # self.optimizer = tf.keras.optimizers.RMSprop(learning_rate=learning_rate)   # Adam
 
@@ -168,8 +169,8 @@ class Agent:
     def load(self, path=os.path.join(os.path.dirname(__file__), 'model.h5')):
         try:
             self.model.load_weights(path)
-        except:
-            sys.stderr.write('Failed to load: %s\n' % path)
+        except Exception as e:
+            sys.stderr.write('Failed to load %s: %s\n' % (path, e))
 
 
 if __name__ == "__main__":
