@@ -72,7 +72,7 @@ public class WarshipAgent : Agent, IWarshipController
 
     public override void CollectObservations(VectorSensor sensor)
     {
-        Vector3 position = m_Warship.m_Transform.localPosition / 100f;
+        Vector3 position = m_Warship.m_Transform.localPosition / 160f;
         // sensor.AddObservation(m_Warship.m_Transform.localPosition / 100f);          // 3 (x, y, z)
         sensor.AddObservation(position.x);
         sensor.AddObservation(position.z);
@@ -84,10 +84,14 @@ public class WarshipAgent : Agent, IWarshipController
 
         for (int i = 0; i < m_Warship.m_Turrets.Length; i++)
         {
-            sensor.AddObservation(m_Warship.m_Turrets[i].CurrentCooldownTime);      // 6
+            Turret turret = m_Warship.m_Turrets[i];
+            sensor.AddObservation(turret.m_IsLoaded);
+            sensor.AddObservation(turret.CurrentCooldownTime);      // 6
+            sensor.AddObservation(turret.m_IsDamaged);
+            sensor.AddObservation(turret.RepairTimeLeft / Turret.repairTime);
         }
 
-        Vector3 opponentPosition = m_OpponentTransform.localPosition / 100;
+        Vector3 opponentPosition = m_OpponentTransform.localPosition / 160;
         // sensor.AddObservation(m_OpponentTransform.localPosition / 100f);            // 3
         sensor.AddObservation(opponentPosition.x);
         sensor.AddObservation(opponentPosition.z);

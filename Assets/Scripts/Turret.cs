@@ -21,7 +21,7 @@ public class Turret : MonoBehaviour
     public const float repairTime = 60f;
     private float m_CurrentCooldownTime = 6f;
     public float CurrentCooldownTime { get => Mathf.Min(reloadTime, m_CurrentCooldownTime) / reloadTime; }
-    private bool m_IsLoaded = false;
+    public bool m_IsLoaded = false;
     public bool m_IsDamaged = false;
     public float RepairTimeLeft = 0f;
 

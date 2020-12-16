@@ -44,8 +44,11 @@ else:
 
 
 SAMPLE_SIZE = 64
+BATCH_SIZE = 32
 CURRENT_EPISODE = 1
-RESULTS = deque([0] * 99, maxlen=10000)
+RESULTS = deque([0] * 10000, maxlen=10000)
+RESULTS100 = deque([0] * 100, maxlen=100)
+RESULTS1000 = deque([0] * 1000, maxlen=1000)
 GLOBAL_WEIGHT_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'a3c.h5')
 # JOB_QUEUE = Queue()
 
@@ -166,6 +169,8 @@ class Worker(Thread):
                     dones = np.array(dones)
 
                     RESULTS.append(info['win'])
+                    RESULTS100.append(info['win'])
+                    RESULTS1000.append(info['win'])
                     returns = discount_rewards(rewards, dones)
 
                     # job = (observations, next_observations, actions, rewards, dones)
@@ -180,8 +185,7 @@ class Worker(Thread):
                             loss = 0
                             flag = False
 
-                            batch_size = 256
-                            for b in range(np.ceil(len(observations) / batch_size).astype(np.uint8)):
+                            for b in range(np.ceil(len(observations) / BATCH_SIZE).astype(np.uint8)):
                                 # batch = samples[b*256:(b+1)*256]
                                 """
                                 batch_states = [observations[i] for i in batch]
@@ -189,11 +193,11 @@ class Worker(Thread):
                                 batch_next_observations = [next_observations[i] for i in batch]
                                 batch_policy = [policy[i] for i in batch]
                                 """
-                                batch_observations = observations[b*batch_size:(b+1)*batch_size]
-                                batch_actions = actions[b*batch_size:(b+1)*batch_size]
-                                batch_next_observations = next_observations[b*batch_size:(b+1)*batch_size]
-                                batch_rewards = rewards[b*batch_size:(b+1)*batch_size]
-                                batch_dones = dones[b*batch_size:(b+1)*batch_size]
+                                batch_observations = observations[b*BATCH_SIZE:(b+1)*BATCH_SIZE]
+                                batch_actions = actions[b*BATCH_SIZE:(b+1)*BATCH_SIZE]
+                                batch_next_observations = next_observations[b*BATCH_SIZE:(b+1)*BATCH_SIZE]
+                                batch_rewards = rewards[b*BATCH_SIZE:(b+1)*BATCH_SIZE]
+                                batch_dones = dones[b*BATCH_SIZE:(b+1)*BATCH_SIZE]
 
                                 try:
                                     with tf.device('/GPU:0'):
@@ -221,8 +225,9 @@ class Worker(Thread):
                             with TENSORBOARD_WRITER.as_default():
                                 tf.summary.scalar('Reward', np.sum(returns), episode)
                                 tf.summary.scalar('Loss', loss, episode)
-                                if len(RESULTS) >= 100:
-                                    tf.summary.scalar('Rate', np.mean(RESULTS), episode)
+                                tf.summary.scalar('Rate', np.mean(RESULTS), episode)
+                                tf.summary.scalar('Rate(100)', np.mean(RESULTS100), episode)
+                                tf.summary.scalar('Rate(1000)', np.mean(RESULTS1000), episode)
                         else:
                             TENSORBOARD_WRITER.add_scalar('Reward', np.sum(returns), episode)
                             TENSORBOARD_WRITER.add_scalar('Loss', loss, episode)

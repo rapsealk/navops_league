@@ -17,7 +17,7 @@ class ProximalPolicyOptimizationLSTM(tf.keras.Model):
     def __init__(self, n):
         super(ProximalPolicyOptimizationLSTM, self).__init__()
 
-        self.recurrent = tf.keras.layers.LSTM(256, input_shape=(64, 16),
+        self.recurrent = tf.keras.layers.LSTM(256, input_shape=(64, 34),
                                               recurrent_initializer='he_uniform',
                                               stateful=False,
                                               return_sequences=True)
@@ -46,17 +46,18 @@ class ProximalPolicyOptimizationLSTM(tf.keras.Model):
 
 class Agent:
 
-    def __init__(self, n, model=None, gamma=0.998, lambda_=0.95, learning_rate=2e-4):
+    def __init__(self, n, model=None, batch_size=32, gamma=0.998, lambda_=0.95, learning_rate=2e-4):
         self.gamma = gamma
         self.lambda_ = lambda_
 
+        self.batch_size = batch_size
+
         self.n = n
         self.model = model or ProximalPolicyOptimizationLSTM(n)
-        self.model.build((256, 64, 16))
+        self.model.build((batch_size, 64, 34))
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
         # self.optimizer = tf.keras.optimizers.RMSprop(learning_rate=learning_rate)   # Adam
 
-        # self.batch_size = 256
         self.epsilon = 0.2
         self.normalize = True
 
