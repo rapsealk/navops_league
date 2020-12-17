@@ -15,6 +15,7 @@ import numpy as np
 import tensorflow as tf
 
 from environment import UnityEnvironmentImpl
+from buffer import ReplayBuffer
 
 physical_devices = tf.config.experimental.list_physical_devices("GPU")
 for physical_device in physical_devices:
@@ -51,6 +52,7 @@ RESULTS100 = deque([0] * 100, maxlen=100)
 RESULTS1000 = deque([0] * 1000, maxlen=1000)
 GLOBAL_WEIGHT_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'a3c.h5')
 # JOB_QUEUE = Queue()
+REPLAY_MEMORY = ReplayBuffer()
 
 
 def get_available_port():
@@ -130,7 +132,7 @@ class Worker(Thread):
             dones = []
 
             observation = self.env.reset()
-            observation = np.stack([observation[0]] * SAMPLE_SIZE, axis=1)
+            # observation = np.stack([observation[0]] * SAMPLE_SIZE, axis=1)
 
             while True:
                 observations.append(observation)
@@ -155,18 +157,22 @@ class Worker(Thread):
 
                 next_observation, reward, done, info = self.env.step(action)
 
-                observation = np.append([next_observation[0, 0]], observation[0, :-1]).reshape((1, SAMPLE_SIZE, -1))
-                next_observations.append(observation)
+                # observation = np.append([next_observation[0, 0]], observation[0, :-1]).reshape((1, SAMPLE_SIZE, -1))
+                next_observations.append(next_observation)
                 rewards.append(reward)
                 actions.append(action[0])
                 dones.append(not done)
 
                 if done:
-                    observations = np.squeeze(np.array(observations), axis=1)
-                    next_observations = np.squeeze(np.array(next_observations), axis=1)
-                    actions = np.array(actions)
-                    rewards = np.array(rewards)
-                    dones = np.array(dones)
+                    # observations = np.squeeze(np.array(observations), axis=1)
+                    # next_observations = np.squeeze(np.array(next_observations), axis=1)
+                    # actions = np.array(actions)
+                    # rewards = np.array(rewards)
+                    # dones = np.array(dones)
+
+                    with self.lock:
+                        for obs, action, reward, obs_, done in zip(observations, actions, rewards, next_observations, dones):
+                            REPLAY_MEMORY.append((obs, action, reward, obs_, done))
 
                     RESULTS.append(info['win'])
                     RESULTS100.append(info['win'])
@@ -183,16 +189,25 @@ class Worker(Thread):
                         # loss = self.global_agent.update(observations, actions, next_observations, rewards, dones)
                         if not args.torch:
                             loss = 0
-                            flag = False
+                            # flag = False
 
+                            batch = REPLAY_MEMORY.sample(BATCH_SIZE)
+                            batch = np.array(batch)
+                            s = batch[:, 0]
+                            a = batch[:, 1]
+                            r = batch[:, 2]
+                            s_ = batch[:, 3]
+                            d = batch[:, 4]
+
+                            try:
+                                with tf.device('/GPU:0'):
+                                    loss = self.global_agent.update(s, a, s_, r, d)
+                            except Exception as e:
+                                sys.stderr.write('Exception: %s\n' % e)
+                                break
+
+                            """
                             for b in range(np.ceil(len(observations) / BATCH_SIZE).astype(np.uint8)):
-                                # batch = samples[b*256:(b+1)*256]
-                                """
-                                batch_states = [observations[i] for i in batch]
-                                batch_actions = np.array([actions[i] for i in batch])
-                                batch_next_observations = [next_observations[i] for i in batch]
-                                batch_policy = [policy[i] for i in batch]
-                                """
                                 batch_observations = observations[b*BATCH_SIZE:(b+1)*BATCH_SIZE]
                                 batch_actions = actions[b*BATCH_SIZE:(b+1)*BATCH_SIZE]
                                 batch_next_observations = next_observations[b*BATCH_SIZE:(b+1)*BATCH_SIZE]
@@ -210,10 +225,12 @@ class Worker(Thread):
                                     flag = True
                                     break
 
-                            del observations, actions, next_observations, rewards, dones
-
                             if flag:
                                 break
+                            """
+
+                            del observations, actions, next_observations, rewards, dones
+
                         else:
                             loss = self.global_agent.update(observations, actions, next_observations, rewards, dones)
                         print('[%s] Episode %d: Loss: %f' % (datetime.now().isoformat(), episode, loss))
