@@ -12,6 +12,38 @@ for physical_device in physical_devices:
 # tf.config.set_visible_devices([], "GPU")
 
 
+class Model(tf.keras.Model):
+
+    def __init__(self):
+        super(Model, self).__init__()
+
+        self.dense = tf.keras.layers.Dense(64, activation='relu', kernel_initializer='he_uniform')
+        self.norm = tf.keras.layers.BatchNormalization()
+        self.recurrent = tf.keras.layers.LSTM(256, input_shape=(-1, 34),
+                                              # kernel_initializer='he_uniform',
+                                              stateful=True, return_sequences=False)
+
+        self.dense_pi = tf.keras.layers.Dense(128, activation='relu', kernel_initializer='he_uniform')
+        self.pi_norm = tf.keras.layers.BatchNormalization()
+        self.pi = tf.keras.layers.Dense(6)
+
+        self.dense_v = tf.keras.layers.Dense(128, activation='relu', kernel_initializer='he_uniform')
+        self.v_norm = tf.keras.layers.BatchNormalization()
+        self.v = tf.keras.layers.Dense(1)
+
+    def call(self, inputs):
+        x = self.norm(self.dense(inputs))
+        x = self.recurrent(x)
+        logits = self.pi(self.pi_norm(self.dense_pi(x)))
+        policy = tf.nn.softmax(logits)
+        value = self.v(self.v_norm(self.dense_v(x)))
+        return policy, value
+
+    def reset(self):
+        self.recurrent.reset_states()
+
+
+"""
 class ProximalPolicyOptimizationLSTM(tf.keras.Model):
 
     def __init__(self, n):
@@ -42,6 +74,7 @@ class ProximalPolicyOptimizationLSTM(tf.keras.Model):
         p = self.policy(self.dense_policy(x))
         v = self.value(self.dense_value(x))
         return p, v
+"""
 
 
 class Agent:
@@ -53,13 +86,16 @@ class Agent:
         self.batch_size = batch_size
 
         self.n = n
-        self.model = model or ProximalPolicyOptimizationLSTM(n)
-        self.model.build((batch_size, 64, 34))
+        self.model = model or Model() # ProximalPolicyOptimizationLSTM(n)
+        self.model.build((32, 1, 34))
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
         # self.optimizer = tf.keras.optimizers.RMSprop(learning_rate=learning_rate)   # Adam
 
         self.epsilon = 0.2
         self.normalize = True
+
+    def reset(self):
+        self.model.reset()
 
     def get_action(self, state):
         state = tf.convert_to_tensor(state, dtype=tf.float32)
@@ -83,7 +119,6 @@ class Agent:
         advantages, target_values = self.generalized_advantage_estimator(values, next_values, rewards, dones,
                                                                          gamma=self.gamma, lambda_=self.lambda_,
                                                                          normalize=self.normalize)
-
         total_loss_ = 0
 
         for i in range(3):  # epochs

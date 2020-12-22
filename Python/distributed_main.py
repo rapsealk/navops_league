@@ -15,7 +15,7 @@ import numpy as np
 import tensorflow as tf
 
 from environment import UnityEnvironmentImpl
-from buffer import ReplayBuffer
+from utils.buffer import ReplayBuffer
 
 physical_devices = tf.config.experimental.list_physical_devices("GPU")
 for physical_device in physical_devices:
@@ -77,7 +77,7 @@ class Learner:
         self.global_agent.load()
         self.num_workers = args.core    # cpu_count()
 
-        _ = self.global_agent.get_action(np.random.uniform(-1, 1, (1, 64, 16)))
+        # _ = self.global_agent.get_action(np.random.uniform(-1, 1, (1, 64, 16)))
 
         self.queue = Queue()
 
@@ -192,12 +192,28 @@ class Worker(Thread):
                             # flag = False
 
                             batch = REPLAY_MEMORY.sample(BATCH_SIZE)
-                            batch = np.array(batch)
-                            s = batch[:, 0]
-                            a = batch[:, 1]
-                            r = batch[:, 2]
-                            s_ = batch[:, 3]
-                            d = batch[:, 4]
+                            s, a, r, s_, d = [], [], [], [], []
+                            for bs, ba, br, bs_, bd in batch:
+                                s.append(bs)
+                                a.append(ba)
+                                r.append(br)
+                                s_.append(bs_)
+                                d.append(bd)
+
+                            s = np.squeeze(np.array(s), axis=1)
+                            a = np.array(a)
+                            r = np.array(r)
+                            s_ = np.squeeze(np.array(s_), axis=1)
+                            d = np.array(d)
+                            """
+                            s = np.concatenate([b for b in batch[:, 0].squeeze()]).squeeze()
+                            a = np.concatenate([b for b in batch[:, 1].squeeze()]).squeeze()
+                            r = np.concatenate([b for b in batch[:, 2].squeeze()]).squeeze()
+                            s_ = np.concatenate([b for b in batch[:, 3].squeeze()]).squeeze()
+                            d = np.concatenate([b for b in batch[:, 4].squeeze()]).squeeze()
+                            """
+                            print('s.shape:', s.shape, a.shape, r.shape, s_.shape, d.shape)
+                            print('---squeeze')
 
                             try:
                                 with tf.device('/GPU:0'):
@@ -243,8 +259,8 @@ class Worker(Thread):
                                 tf.summary.scalar('Reward', np.sum(returns), episode)
                                 tf.summary.scalar('Loss', loss, episode)
                                 tf.summary.scalar('Rate', np.mean(RESULTS), episode)
-                                tf.summary.scalar('Rate(100)', np.mean(RESULTS100), episode)
-                                tf.summary.scalar('Rate(1000)', np.mean(RESULTS1000), episode)
+                                tf.summary.scalar('Rate/100', np.mean(RESULTS100), episode)
+                                tf.summary.scalar('Rate/1000', np.mean(RESULTS1000), episode)
                         else:
                             TENSORBOARD_WRITER.add_scalar('Reward', np.sum(returns), episode)
                             TENSORBOARD_WRITER.add_scalar('Loss', loss, episode)
@@ -257,6 +273,8 @@ class Worker(Thread):
                             self.agent.load(GLOBAL_WEIGHT_PATH)
 
                     epsilon = max(epsilon - epsilon_discount, epsilon_minimum)
+
+                    self.agent.reset()
 
                     break
 
