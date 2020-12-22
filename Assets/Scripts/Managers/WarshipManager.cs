@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
+using Deprecated;
 
 [System.Serializable]
 public class WarshipManager
@@ -51,7 +52,7 @@ public class WarshipManager
             renderers[i].material.color = m_PlayerColor;
         }
 
-        Turret[] turrets = m_Movement.GetComponentsInChildren<Turret>();
+        Deprecated.Turret[] turrets = m_Movement.GetComponentsInChildren<Deprecated.Turret>();
         for (int i = 0; i < turrets.Length; i++)
         {
             turrets[i].m_PlayerNumber = m_PlayerNumber;

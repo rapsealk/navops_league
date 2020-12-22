@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using Unity.MLAgents;
 using Unity.MLAgents.Sensors;
+using Deprecated;
 
 public class WarshipAgent : Agent, IWarshipController
 {
@@ -84,11 +85,11 @@ public class WarshipAgent : Agent, IWarshipController
 
         for (int i = 0; i < m_Warship.m_Turrets.Length; i++)
         {
-            Turret turret = m_Warship.m_Turrets[i];
+            Deprecated.Turret turret = m_Warship.m_Turrets[i];
             sensor.AddObservation(turret.m_IsLoaded);
             sensor.AddObservation(turret.CurrentCooldownTime);      // 6
             sensor.AddObservation(turret.m_IsDamaged);
-            sensor.AddObservation(turret.RepairTimeLeft / Turret.repairTime);
+            sensor.AddObservation(turret.RepairTimeLeft / Deprecated.Turret.repairTime);
         }
 
         Vector3 opponentPosition = m_OpponentTransform.localPosition / 160;

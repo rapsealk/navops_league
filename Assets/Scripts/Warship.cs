@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using Deprecated;
 
 public class Warship : MonoBehaviour
 {
@@ -66,7 +67,7 @@ public class Warship : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        m_Turrets = GetComponentsInChildren<Turret>();
+        m_Turrets = GetComponentsInChildren<Deprecated.Turret>();
         for (int i = 0; i < m_Turrets.Length; i++)
         {
             m_Turrets[i].m_PlayerNumber = m_PlayerId;

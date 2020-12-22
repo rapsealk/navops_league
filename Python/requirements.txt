@@ -2,3 +2,4 @@ tensorflow==2.3.1
 mlagents_envs==0.22.0
 grpcio==1.33.2
 grpcio-tools==1.33.2
+firebase_admin==4.4.0
