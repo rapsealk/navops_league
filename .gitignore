@@ -1,6 +1,7 @@
 __pycache__/
 summary/
 runs/
+firebase.json
 Build/
 
 # prtobuf
