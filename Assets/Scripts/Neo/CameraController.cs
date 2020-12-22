@@ -19,7 +19,7 @@ public class CameraController : MonoBehaviour
         float horizontal = Input.GetAxis("Mouse X") * Time.deltaTime;
         float vertical = -1 * Input.GetAxis("Mouse Y") * Time.deltaTime;
 
-        transform.RotateAround(TargetObject.transform.position, transform.up, horizontal * 100);
-        transform.Rotate(transform.right, vertical * 50);
+        transform.RotateAround(TargetObject.transform.position, TargetObject.transform.up, horizontal * 100);
+        transform.Rotate(Vector3.right, vertical * 50);
     }
 }
