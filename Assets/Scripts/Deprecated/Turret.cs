@@ -16,7 +16,7 @@ namespace Deprecated
         public ParticleSystem m_MuzzleFlash;
 
         private IWarshipController m_WarshipAgent;
-        private float m_RotationSpeed = 15f;
+        //private float m_RotationSpeed = 15f;
         private float m_RotationMaximum = 60f;
         //private float m_RotationOffset = 0f;
         public const float reloadTime = 8f;
