@@ -4,13 +4,15 @@ using UnityEngine;
 
 public class Engine : MonoBehaviour
 {
-    private float m_HorsePower = 1f;
+    //private float m_HorsePower = 1f;
     private Rigidbody m_Rigidbody;
 
     // Start is called before the first frame update
     void Start()
     {
         m_Rigidbody = GetComponent<Rigidbody>();
+
+        m_Rigidbody.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
     }
 
     // Update is called once per frame
