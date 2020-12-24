@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
-using Deprecated;
 
+/*
 public class Warship : MonoBehaviour
 {
     public int m_PlayerId;
@@ -108,12 +108,10 @@ public class Warship : MonoBehaviour
         transform.rotation = Quaternion.Euler(0, transform.rotation.eulerAngles.y + m_RudderPower * m_SteerLevel, 0);
     }
 
-    /*
-    void OnTriggerEnter(Collider collider)
-    {
-        m_ExplosionAnimation?.Play();
-    }
-    */
+    //void OnTriggerEnter(Collider collider)
+    //{
+    //    m_ExplosionAnimation?.Play();
+    //}
 
     public void Reset()
     {
@@ -175,3 +173,4 @@ public class Warship : MonoBehaviour
         }
     }
 }
+*/

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+/*
 public class WarshipControllerFSM : MonoBehaviour, IWarshipController
 {
     public int m_PlayerId;
@@ -71,3 +72,4 @@ public class WarshipControllerFSM : MonoBehaviour, IWarshipController
         return m_Opponent;
     }
 }
+*/

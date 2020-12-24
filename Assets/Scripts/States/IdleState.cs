@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 
+/*
 public class IdleState : BaseState
 {
     public override void EnterState(WarshipControllerFSM warship)
@@ -24,3 +25,4 @@ public class IdleState : BaseState
 
     }
 }
+*/

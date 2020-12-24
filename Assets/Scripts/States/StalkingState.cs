@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 
+/*
 public class StalkingState : BaseState
 {
     public readonly float safeDistance = 28f;
@@ -74,3 +75,4 @@ public class StalkingState : BaseState
 
     }
 }
+*/

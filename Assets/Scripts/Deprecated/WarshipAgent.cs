@@ -1,8 +1,8 @@
 ﻿using UnityEngine;
 using Unity.MLAgents;
 using Unity.MLAgents.Sensors;
-using Deprecated;
 
+/*
 public class WarshipAgent : Agent, IWarshipController
 {
     public int m_PlayerId;
@@ -109,32 +109,30 @@ public class WarshipAgent : Agent, IWarshipController
 
         //AddReward(-0.0001f);
 
-        /*
-        if (m_PlayerId == 1 && m_DominationManager.IsBlueDominating)
-        {
-            AddReward(0.01f);
+        //if (m_PlayerId == 1 && m_DominationManager.IsBlueDominating)
+        //{
+        //    AddReward(0.01f);
 
-            if (m_DominationManager.IsDominated)
-            {
-                SetReward(winReward);
-                EndEpisode();
-                //m_Opponent.SetReward(-winReward);
-                //m_Opponent.EndEpisode();
-            }
-        }
-        else if (m_PlayerId == 2 && m_DominationManager.IsRedDominating)
-        {
-            AddReward(0.01f);
+        //    if (m_DominationManager.IsDominated)
+        //    {
+        //        SetReward(winReward);
+        //        EndEpisode();
+        //        //m_Opponent.SetReward(-winReward);
+        //        //m_Opponent.EndEpisode();
+        //    }
+        //}
+        //else if (m_PlayerId == 2 && m_DominationManager.IsRedDominating)
+        //{
+        //    AddReward(0.01f);
 
-            if (m_DominationManager.IsDominated)
-            {
-                SetReward(winReward);
-                EndEpisode();
-                //m_Opponent.SetReward(-winReward);
-                //m_Opponent.EndEpisode();
-            }
-        }
-        */
+        //    if (m_DominationManager.IsDominated)
+        //    {
+        //        SetReward(winReward);
+        //        EndEpisode();
+        //        //m_Opponent.SetReward(-winReward);
+        //        //m_Opponent.EndEpisode();
+        //    }
+        //}
 
         #endregion
     }
@@ -205,21 +203,19 @@ public class WarshipAgent : Agent, IWarshipController
 
     void OnCollisionEnter(Collision collision)
     {
-        /*
-        if (collision.collider.tag == "Wall")
-        {
-            TakeDamage(Warship.DefaultDamage);
-            Debug.Log($"ID#{m_PlayerId} - {collision.collider.tag} -> {m_Warship.m_CurrentHealth}");
+        //if (collision.collider.tag == "Wall")
+        //{
+        //    TakeDamage(Warship.DefaultDamage);
+        //    Debug.Log($"ID#{m_PlayerId} - {collision.collider.tag} -> {m_Warship.m_CurrentHealth}");
 
-            AddReward(damageReward);
+        //    AddReward(damageReward);
 
-            if (m_Warship.m_CurrentHealth <= 0f)
-            {
-                SetReward(-winReward);
-                EndEpisode();
-            }
-        }
-        */
+        //    if (m_Warship.m_CurrentHealth <= 0f)
+        //    {
+        //        SetReward(-winReward);
+        //        EndEpisode();
+        //    }
+        //}
     }
 
     void OnTriggerEnter(Collider collider)
@@ -258,3 +254,4 @@ public class WarshipAgent : Agent, IWarshipController
         return m_Opponent;
     }
 }
+*/

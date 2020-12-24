@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class CameraController : MonoBehaviour
 {
-    public Transform TargetObject;
+    public Warship TargetObject;
 
     // Start is called before the first frame update
     void Start()
@@ -21,5 +21,16 @@ public class CameraController : MonoBehaviour
 
         transform.RotateAround(TargetObject.transform.position, TargetObject.transform.up, horizontal * 100);
         transform.Rotate(Vector3.right, vertical * 50);
+
+        Vector3 rotation = transform.rotation.eulerAngles;
+        rotation.x = (rotation.x + 360) % 360;
+        rotation.x = (rotation.x > 180f) ? (rotation.x - 360f) : rotation.x;
+        if (Mathf.Abs(rotation.x) > 25f + Mathf.Epsilon)
+        {
+            rotation.x = Mathf.Sign(rotation.x) * 25f;
+            transform.rotation = Quaternion.Euler(rotation);
+        }
+
+        TargetObject.SetTargetPoint(transform.rotation);
     }
 }

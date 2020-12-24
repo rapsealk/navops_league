@@ -1,28 +1,55 @@
 ﻿using UnityEngine;
 
+public enum TurretType
+{
+    FRONTAL = 0,
+    RIGHT = 1,
+    REAR = 2,
+    LEFT = 3
+}
+
 public class Artillery : MonoBehaviour
 {
     public GameObject m_ShellPrefab;
     public Transform m_Muzzle;
     public ParticleSystem m_MuzzleFlash;
+    [HideInInspector]
+    public float Traverse = 30f;
 
-    private Vector2 m_FirePower = new Vector2(8000f, 600f);
+    private TurretType TurretType;
+    private bool Locked = true;
+    private float InitialEulerRotation;
+    private Vector2 FirePower = new Vector2(8000f, 600f);
 
     // Start is called before the first frame update
     void Start()
     {
-        
+        InitialEulerRotation = (transform.localRotation.eulerAngles.y + 360) % 360;
+
+        if (InitialEulerRotation <= Mathf.Epsilon)
+        {
+            TurretType = TurretType.FRONTAL;
+        }
+        else if (InitialEulerRotation <= 90f + Mathf.Epsilon)
+        {
+            TurretType = TurretType.RIGHT;
+        }
+        else if (InitialEulerRotation <= 180f + Mathf.Epsilon)
+        {
+            TurretType = TurretType.REAR;
+        }
+        else
+        {
+            TurretType = TurretType.LEFT;
+        }
+
+        Debug.Log($"{GetType().Name}({name} {TurretType}) InitialEulerRotation: {InitialEulerRotation}");
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Mouse0))
-        {
-            Debug.Log($"{GetType().Name}:Mouse0");
-            Fire();
-        }
-
+        /*
         float horizontal = Input.GetAxis("Horizontal");
         float vertical = -1 * Input.GetAxis("Vertical");
 
@@ -38,14 +65,114 @@ public class Artillery : MonoBehaviour
             rotation.x = 15f * sign;
             m_Muzzle.transform.rotation = Quaternion.Euler(rotation);
         }
+        */
     }
 
     public void Fire()
     {
+        if (!Locked)
+        {
+            return;
+        }
+
         m_MuzzleFlash.Play();
 
         GameObject projectile = Instantiate(m_ShellPrefab, m_Muzzle.position + m_Muzzle.forward * 3, m_Muzzle.rotation);
-        projectile.GetComponent<Rigidbody>().AddForce(m_Muzzle.transform.forward * m_FirePower.x
-                                                    + m_Muzzle.transform.up * m_FirePower.y);
+        projectile.GetComponent<Rigidbody>().AddForce(m_Muzzle.transform.forward * FirePower.x
+                                                    + m_Muzzle.transform.up * FirePower.y);
+    }
+
+    public void Rotate(Quaternion target)
+    {
+        // Base: Horizontal, Barrel: Vertical
+        bool locked = true;
+        Vector3 rotation = target.eulerAngles;
+
+        float x = (rotation.x + 360) % 360;
+        if (x < 180f)
+        {
+            x = 0f;
+        }
+        else if (360 - x > 30f)
+        {
+            x = -30f;
+        }
+        rotation.x = x;
+
+        float y = (rotation.y + 360) % 360;
+        rotation.y = y;
+
+        transform.rotation = Quaternion.Euler(rotation);
+
+        ///
+        /// Post-processing
+        ///
+        Vector3 localRotation = transform.localRotation.eulerAngles;
+        localRotation.y = (localRotation.y > 180f) ? (localRotation.y - 360f) : localRotation.y;
+        switch (TurretType)
+        {
+            case TurretType.FRONTAL:
+                if (Mathf.Abs(localRotation.y) >= Traverse + Mathf.Epsilon)
+                {
+                    localRotation.y = Mathf.Sign(localRotation.y) * Traverse;
+                    transform.localRotation = Quaternion.Euler(localRotation);
+
+                    locked = false;
+                }
+                break;
+            case TurretType.REAR:
+                if (Mathf.Abs(localRotation.y) <= 180f - (Traverse + Mathf.Epsilon))
+                {
+                    localRotation.y = 180f - Mathf.Sign(localRotation.y) * Traverse;
+                    transform.localRotation = Quaternion.Euler(localRotation);
+
+                    locked = false;
+                }
+                break;
+            case TurretType.LEFT:
+                if (Mathf.Abs(localRotation.y + 90f) >= Traverse + Mathf.Epsilon)
+                {
+                    localRotation.y = -90f + Mathf.Sign(localRotation.y + 90f) * Traverse;
+                    transform.localRotation = Quaternion.Euler(localRotation);
+
+                    locked = false;
+                }
+                break;
+            case TurretType.RIGHT:
+                if (Mathf.Abs(localRotation.y - 90f) >= Traverse + Mathf.Epsilon)
+                {
+                    localRotation.y = 90f + Mathf.Sign(localRotation.y - 90f) * Traverse;
+                    transform.localRotation = Quaternion.Euler(localRotation);
+
+                    locked = false;
+                }
+                break;
+        }
+
+        Locked = locked;
+
+        /* Clamp
+        Vector3 localTargetPos = transform.InverseTransformPoint(target.eulerAngles);
+        localTargetPos.y = 0.0f;
+
+        // Clamp target rotation by creating a limited rotation to the target.
+        // Use different clamps depending if the target is to the left or right of the turret.
+        Vector3 clampedLocalVec2Target = localTargetPos;
+        if (true)
+        {
+            if (localTargetPos.x >= 0.0f)
+                clampedLocalVec2Target = Vector3.RotateTowards(Vector3.forward, localTargetPos, Mathf.Deg2Rad * 30f, float.MaxValue);
+            else
+                clampedLocalVec2Target = Vector3.RotateTowards(Vector3.forward, localTargetPos, Mathf.Deg2Rad * 30f, float.MaxValue);
+        }
+
+        // Create new rotation towards the target in local space.
+        float turnRate = 30f;
+        Quaternion rotationGoal = Quaternion.LookRotation(clampedLocalVec2Target);
+        Quaternion newRotation = Quaternion.RotateTowards(transform.localRotation, rotationGoal, turnRate * Time.deltaTime);
+
+        // Set the new rotation of the base.
+        transform.localRotation = newRotation;
+        */
     }
 }

@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 
+/*
 public abstract class BaseState
 {
     public abstract void EnterState(WarshipControllerFSM warship);
@@ -8,3 +9,4 @@ public abstract class BaseState
 
     public abstract void OnCollisionEnter(WarshipControllerFSM warship);
 }
+*/

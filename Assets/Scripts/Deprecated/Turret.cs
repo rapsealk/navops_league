@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+/*
 namespace Deprecated
 {
     public class Turret : MonoBehaviour
@@ -158,31 +159,27 @@ namespace Deprecated
                 }
             }
 
-            /*
-            if (m_PlayerNumber == 2)
-            {
-                Debug.Log($"{log} -> {rotation_y} / ParentRotation: {parentRotation}");
-            }
-            */
+            //if (m_PlayerNumber == 2)
+            //{
+            //    Debug.Log($"{log} -> {rotation_y} / ParentRotation: {parentRotation}");
+            //}
 
             rotation.y = rotation_y;
             transform.localRotation = Quaternion.Euler(rotation);
 
-            /*
-            if (Mathf.Abs(transform.localRotation.y) > m_RotationMaximum)
-            {
-                Vector3 localRotation = transform.localRotation.eulerAngles;
-                localRotation.y = Mathf.Sign(localRotation.y) * m_RotationMaximum;
-                transform.localRotation = Quaternion.Euler(localRotation);
-            }*/
+            //if (Mathf.Abs(transform.localRotation.y) > m_RotationMaximum)
+            //{
+            //    Vector3 localRotation = transform.localRotation.eulerAngles;
+            //    localRotation.y = Mathf.Sign(localRotation.y) * m_RotationMaximum;
+            //    transform.localRotation = Quaternion.Euler(localRotation);
+            //}
 
-            /*
-            int layerMask = 1 << 8;
-            RaycastHit hit;
-            if (!Physics.Raycast(m_Muzzle.position, m_Muzzle.forward, out hit, Mathf.Infinity, layerMask))
-            {
-                return;
-            }*/
+            //int layerMask = 1 << 8;
+            //RaycastHit hit;
+            //if (!Physics.Raycast(m_Muzzle.position, m_Muzzle.forward, out hit, Mathf.Infinity, layerMask))
+            //{
+            //    return;
+            //}
 
             Debug.DrawRay(m_Muzzle.position, m_Muzzle.forward, Color.green);
         }
@@ -228,17 +225,16 @@ namespace Deprecated
             m_CurrentCooldownTime = 0f;
         }
 
-        /*
-        private void UpdateUI()
-        {
-            var indicator = m_CooldownIndicator;
-            if (indicator == null)
-            {
-                return;
-            }
+        //private void UpdateUI()
+        //{
+        //    var indicator = m_CooldownIndicator;
+        //    if (indicator == null)
+        //    {
+        //        return;
+        //    }
 
-            indicator.value = m_CurrentCooldownTime / reloadTime;
-        }
-        */
+        //    indicator.value = m_CurrentCooldownTime / reloadTime;
+        //}
     }
 }
+*/

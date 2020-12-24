@@ -23,4 +23,10 @@ public class Shell : MonoBehaviour
             Destroy(gameObject);
         }
     }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        Debug.Log($"{GetType().Name}.OnCollisionEnter: {collision.collider} {transform.position} ({transform.position.magnitude})");
+        Destroy(gameObject);
+    }
 }

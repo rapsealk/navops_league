@@ -7,6 +7,8 @@ public class Engine : MonoBehaviour
     //private float m_HorsePower = 1f;
     private Rigidbody m_Rigidbody;
 
+    //private float fuel;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -26,5 +28,10 @@ public class Engine : MonoBehaviour
         //m_Rigidbody.AddForce(transform.forward * m_HorsePower, ForceMode.Force);
 
         //Debug.Log($"[{GetType().Name}] Velocity: {m_Rigidbody.velocity.magnitude}");
+    }
+
+    public void Combust()
+    {
+        // NotImplemented
     }
 }

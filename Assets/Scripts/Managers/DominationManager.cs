@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 
+/*
 public class DominationManager : MonoBehaviour
 {
     public bool m_IsEnabled = false;
@@ -45,11 +46,9 @@ public class DominationManager : MonoBehaviour
                                         + Mathf.Pow(m_RedWarship.transform.position.z, 2f));
         m_IsRedDominating = (redDistance < ControlAreaScale);
 
-        /*
-        Debug.Log($"[DominationManager]" +
-            $" Warship#{m_BlueWarship.m_PlayerId}: {m_BlueWarship.transform.position} ({m_IsBlueDominating}) /" +
-            $" Warship#{m_RedWarship.m_PlayerId}: {m_RedWarship.transform.position} ({m_IsRedDominating})");
-        */
+        //Debug.Log($"[DominationManager]" +
+        //    $" Warship#{m_BlueWarship.m_PlayerId}: {m_BlueWarship.transform.position} ({m_IsBlueDominating}) /" +
+        //    $" Warship#{m_RedWarship.m_PlayerId}: {m_RedWarship.transform.position} ({m_IsRedDominating})");
 
         if (m_IsBlueDominating ^ m_IsRedDominating)
         {
@@ -62,12 +61,10 @@ public class DominationManager : MonoBehaviour
 
             //UpdateUI();
         }
-        /*
-        else
-        {
-            Reset();
-        }
-        */
+        //else
+        //{
+        //    Reset();
+        //}
     }
 
     void FixedUpdate()
@@ -75,11 +72,10 @@ public class DominationManager : MonoBehaviour
 
     }
 
-    /*
-    public void Init(WarshipManager[] warships)
-    {
-        m_Warships = (WarshipManager[]) warships.Clone();
-    }*/
+    //public void Init(WarshipManager[] warships)
+    //{
+    //    m_Warships = (WarshipManager[]) warships.Clone();
+    //}
 
     public void Reset()
     {
@@ -88,19 +84,18 @@ public class DominationManager : MonoBehaviour
         // UpdateUI();
     }
 
-    /*
-    private void UpdateUI()
-    {
-        m_DominationSlider.value = DominationTime / RequiredDominationTime;
+    //private void UpdateUI()
+    //{
+    //    m_DominationSlider.value = DominationTime / RequiredDominationTime;
 
-        if (IsBlueDominating)
-        {
-            m_DominationSlider.GetComponentsInChildren<Image>()[1].color = Color.blue;
-        }
-        else if (IsRedDominating)
-        {
-            m_DominationSlider.GetComponentsInChildren<Image>()[1].color = Color.red;
-        }
-    }
-    */
+    //    if (IsBlueDominating)
+    //    {
+    //        m_DominationSlider.GetComponentsInChildren<Image>()[1].color = Color.blue;
+    //    }
+    //    else if (IsRedDominating)
+    //    {
+    //        m_DominationSlider.GetComponentsInChildren<Image>()[1].color = Color.red;
+    //    }
+    //}
 }
+*/

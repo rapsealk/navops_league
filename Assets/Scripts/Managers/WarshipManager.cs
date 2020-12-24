@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
-using Deprecated;
 
+/*
 [System.Serializable]
 public class WarshipManager
 {
@@ -92,3 +92,4 @@ public class WarshipManager
         m_Instance.SetActive(true);
     }
 }
+*/

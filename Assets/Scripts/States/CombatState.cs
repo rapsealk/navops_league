@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 
+/*
 public class CombatState : BaseState
 {
     public override void EnterState(WarshipControllerFSM warship)
@@ -17,3 +18,4 @@ public class CombatState : BaseState
         throw new System.NotImplementedException();
     }
 }
+*/
