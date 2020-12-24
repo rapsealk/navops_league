@@ -14,7 +14,9 @@ public class Artillery : MonoBehaviour
     public Transform m_Muzzle;
     public ParticleSystem m_MuzzleFlash;
     [HideInInspector]
-    public float Traverse = 30f;
+    public float Traverse = 90f;
+    [HideInInspector]
+    public float TraverseSpeed = 15f;
 
     private TurretType TurretType;
     private bool Locked = true;
@@ -43,7 +45,7 @@ public class Artillery : MonoBehaviour
             TurretType = TurretType.LEFT;
         }
 
-        Debug.Log($"{GetType().Name}({name} {TurretType}) InitialEulerRotation: {InitialEulerRotation}");
+        // Debug.Log($"{GetType().Name}({name} {TurretType}) InitialEulerRotation: {InitialEulerRotation}");
     }
 
     // Update is called once per frame
@@ -89,20 +91,19 @@ public class Artillery : MonoBehaviour
         Vector3 rotation = target.eulerAngles;
 
         float x = (rotation.x + 360) % 360;
-        if (x < 180f)
+        if (x < 180f + 0f)
         {
             x = 0f;
         }
-        else if (360 - x > 30f)
+        else if (360 - x > 60f)
         {
-            x = -30f;
+            x = -60f;
         }
         rotation.x = x;
+        rotation.y = (rotation.y + 360) % 360;
 
-        float y = (rotation.y + 360) % 360;
-        rotation.y = y;
-
-        transform.rotation = Quaternion.Euler(rotation);
+        //transform.rotation = Quaternion.Euler(rotation);
+        transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.Euler(rotation), TraverseSpeed * Time.deltaTime);
 
         ///
         /// Post-processing
@@ -150,29 +151,5 @@ public class Artillery : MonoBehaviour
         }
 
         Locked = locked;
-
-        /* Clamp
-        Vector3 localTargetPos = transform.InverseTransformPoint(target.eulerAngles);
-        localTargetPos.y = 0.0f;
-
-        // Clamp target rotation by creating a limited rotation to the target.
-        // Use different clamps depending if the target is to the left or right of the turret.
-        Vector3 clampedLocalVec2Target = localTargetPos;
-        if (true)
-        {
-            if (localTargetPos.x >= 0.0f)
-                clampedLocalVec2Target = Vector3.RotateTowards(Vector3.forward, localTargetPos, Mathf.Deg2Rad * 30f, float.MaxValue);
-            else
-                clampedLocalVec2Target = Vector3.RotateTowards(Vector3.forward, localTargetPos, Mathf.Deg2Rad * 30f, float.MaxValue);
-        }
-
-        // Create new rotation towards the target in local space.
-        float turnRate = 30f;
-        Quaternion rotationGoal = Quaternion.LookRotation(clampedLocalVec2Target);
-        Quaternion newRotation = Quaternion.RotateTowards(transform.localRotation, rotationGoal, turnRate * Time.deltaTime);
-
-        // Set the new rotation of the base.
-        transform.localRotation = newRotation;
-        */
     }
 }
