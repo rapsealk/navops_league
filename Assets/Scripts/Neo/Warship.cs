@@ -5,6 +5,7 @@ using UnityEngine;
 public class Warship : MonoBehaviour
 {
     public Color RendererColor;
+    public ParticleSystem Explosion;
 
     private Artillery[] artilleries;    // Weapon Systems Officer
 
@@ -18,6 +19,9 @@ public class Warship : MonoBehaviour
         }
 
         artilleries = GetComponentsInChildren<Artillery>();
+
+        ParticleSystem.MainModule explosionMainModule = Explosion.main;
+        explosionMainModule.duration = 3f;
     }
 
     // Update is called once per frame
@@ -30,17 +34,10 @@ public class Warship : MonoBehaviour
                 artilleries[i].Fire();
             }
         }
-    }
 
-    /**
-     * IArmedVehicle
-     */
-    /*
-    public Transform GetTransform()
-    {
-        return transform;
+        //Vector3 rotation = new Vector3(-40f, -0.4f, 12f) - transform.position;
+        //SetTargetPoint(Quaternion.Euler(rotation));
     }
-    */
 
     public void SetTargetPoint(Quaternion target)
     {
@@ -48,5 +45,33 @@ public class Warship : MonoBehaviour
         {
             artilleries[i].Rotate(target);
         }
+    }
+
+    public void OnCollisionEnter(Collision collision)
+    {
+        if (collision.collider.name.StartsWith("Water"))
+        {
+            return;
+        }
+
+        Vector3 collisionVelocity = Vector3.zero;
+        if (collision.rigidbody != null)
+        {
+            collisionVelocity = collision.rigidbody.velocity;
+        }
+        //
+        Debug.Log($"Warship.OnCollisionEnter: {collision.collider} {collisionVelocity.magnitude} {collision.transform.position}");
+
+        //Explosion.transform.position = collision.transform.position;
+        //ParticleSystem explosion = Instantiate(ExplosionPrefab, collision.transform.position, collision.transform.rotation);
+        //explosion.Stop();
+        Explosion.transform.position = collision.transform.position;
+        Explosion.transform.rotation = collision.transform.rotation;
+        Explosion.Play();
+    }
+
+    public void OnTriggerEnter(Collider other)
+    {
+        //
     }
 }

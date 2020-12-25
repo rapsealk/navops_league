@@ -21,7 +21,7 @@ public class Artillery : MonoBehaviour
     private TurretType TurretType;
     private bool Locked = true;
     private float InitialEulerRotation;
-    private Vector2 FirePower = new Vector2(8000f, 600f);
+    private Vector2 FirePower = new Vector2(8000f, 100f);
 
     // Start is called before the first frame update
     void Start()
@@ -91,9 +91,9 @@ public class Artillery : MonoBehaviour
         Vector3 rotation = target.eulerAngles;
 
         float x = (rotation.x + 360) % 360;
-        if (x < 180f + 0f)
+        if (x < 180f + 30f)
         {
-            x = 0f;
+            x = 30f;
         }
         else if (360 - x > 60f)
         {
@@ -151,5 +151,10 @@ public class Artillery : MonoBehaviour
         }
 
         Locked = locked;
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        GetComponent<Warship>().OnCollisionEnter(collision);
     }
 }

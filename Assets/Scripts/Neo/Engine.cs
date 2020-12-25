@@ -7,7 +7,7 @@ public class Engine : MonoBehaviour
     //private float m_HorsePower = 1f;
     private Rigidbody m_Rigidbody;
 
-    //private float fuel;
+    private float HorsePower = 30f;
 
     // Start is called before the first frame update
     void Start()
@@ -20,17 +20,27 @@ public class Engine : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        float vertical = Input.GetAxisRaw("Vertical") * 30;
-        float horizontal = Input.GetAxisRaw("Horizontal") * 1e-1f;
+        float vertical = Input.GetAxisRaw("Vertical");
+        float horizontal = Input.GetAxisRaw("Horizontal");
 
-        m_Rigidbody.transform.Rotate(Vector3.up, horizontal);
-        m_Rigidbody.AddForce(transform.forward * vertical, ForceMode.Acceleration);
-        //m_Rigidbody.AddForce(transform.forward * m_HorsePower, ForceMode.Force);
+        //float vertical = Random.Range(-1f, 1f);
+        //float horizontal = Random.Range(-1f, 1f);
 
-        //Debug.Log($"[{GetType().Name}] Velocity: {m_Rigidbody.velocity.magnitude}");
+        Steer(horizontal);
+        Combust(vertical);
     }
 
-    public void Combust()
+    public void Combust(float fuel = 1.0f)
+    {
+        m_Rigidbody.AddForce(transform.forward * fuel * HorsePower, ForceMode.Acceleration);
+    }
+
+    public void Steer(float rudder = 1.0f)
+    {
+        m_Rigidbody.transform.Rotate(Vector3.up, rudder * 0.1f);
+    }
+
+    public void NavigateTo(Vector3 target)
     {
         // NotImplemented
     }

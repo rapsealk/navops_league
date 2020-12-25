@@ -19,14 +19,14 @@ public class Shell : MonoBehaviour
     {
         if (transform.position.y < 0f)
         {
-            Debug.Log($"{GetType().Name}.transform.position: {transform.position} ({transform.position.magnitude})");
+            // Debug.Log($"{GetType().Name}.transform.position: {transform.position} ({transform.position.magnitude})");
             Destroy(gameObject);
         }
     }
 
     private void OnCollisionEnter(Collision collision)
     {
-        Debug.Log($"{GetType().Name}.OnCollisionEnter: {collision.collider} {transform.position} ({transform.position.magnitude})");
+        // Debug.Log($"{GetType().Name}.OnCollisionEnter: {collision.collider} {transform.position} ({transform.position.magnitude})");
         Destroy(gameObject);
     }
 }
