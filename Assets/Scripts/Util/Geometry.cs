@@ -20,4 +20,11 @@ public class Geometry
     {
         return Mathf.Sqrt(Mathf.Pow(b.x - a.x, 2) + Mathf.Pow(b.z - a.z, 2));
     }
+
+    /*
+    public static bool ObjectExists(Vector3 position, int layerMask = int.MaxValue)
+    {
+        return Physics.OverlapSphere(position, 0.01f, layerMask).Length > 0;
+    }
+    */
 }

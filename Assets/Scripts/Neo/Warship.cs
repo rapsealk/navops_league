@@ -22,6 +22,20 @@ public class Warship : MonoBehaviour
 
         ParticleSystem.MainModule explosionMainModule = Explosion.main;
         explosionMainModule.duration = 3f;
+
+        /*
+        int layerMask = 1 << 11;
+        for (int i = 0; i < 8; i++)
+        {
+            Vector3 position = new Vector3(i * 10f, 0.1f, i * 10f);
+            //Debug.Log($"LayerMask ({i * 10}, {i * 10}) {Geometry.ObjectExists(position, layerMask)}");
+            //Debug.Log($"AllLayers ({i * 10}, {i * 10}) {Geometry.ObjectExists(position)}");
+
+            RaycastHit hit;
+            bool raycastResult = Physics.Raycast(Vector3.zero, position.normalized, out hit, i * 10, layerMask);
+            Debug.Log($"Raycast ({i * 10}) {raycastResult} ({hit.distance})");
+        }
+        */
     }
 
     // Update is called once per frame

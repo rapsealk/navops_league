@@ -87,7 +87,7 @@ public class Artillery : MonoBehaviour
     public void Rotate(Quaternion target)
     {
         // Base: Horizontal, Barrel: Vertical
-        bool locked = true;
+        bool locked = false;
         Vector3 rotation = target.eulerAngles;
 
         float x = (rotation.x + 360) % 360;
@@ -102,7 +102,6 @@ public class Artillery : MonoBehaviour
         rotation.x = x;
         rotation.y = (rotation.y + 360) % 360;
 
-        //transform.rotation = Quaternion.Euler(rotation);
         transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.Euler(rotation), TraverseSpeed * Time.deltaTime);
 
         ///
@@ -120,6 +119,10 @@ public class Artillery : MonoBehaviour
 
                     locked = false;
                 }
+                else
+                {
+                    locked = true;
+                }
                 break;
             case TurretType.REAR:
                 if (Mathf.Abs(localRotation.y) <= 180f - (Traverse + Mathf.Epsilon))
@@ -128,6 +131,10 @@ public class Artillery : MonoBehaviour
                     transform.localRotation = Quaternion.Euler(localRotation);
 
                     locked = false;
+                }
+                else
+                {
+                    locked = true;
                 }
                 break;
             case TurretType.LEFT:
@@ -138,6 +145,10 @@ public class Artillery : MonoBehaviour
 
                     locked = false;
                 }
+                else
+                {
+                    locked = true;
+                }
                 break;
             case TurretType.RIGHT:
                 if (Mathf.Abs(localRotation.y - 90f) >= Traverse + Mathf.Epsilon)
@@ -146,6 +157,10 @@ public class Artillery : MonoBehaviour
                     transform.localRotation = Quaternion.Euler(localRotation);
 
                     locked = false;
+                }
+                else
+                {
+                    locked = true;
                 }
                 break;
         }
