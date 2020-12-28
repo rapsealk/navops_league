@@ -89,15 +89,49 @@ public class Pathfinder : MonoBehaviour
         List<Node> path = new List<Node>();
         Node currentNode = endNode;
 
+        Vector3 dir = Vector3.zero; // endNode.WorldPosition - currentNode.WorldPosition;
+
         while (currentNode != startNode)
         {
-            currentNode.IsPath = true;
-            path.Add(currentNode);
+            // Simplify path;
+            Vector3 tmp = endNode.WorldPosition - currentNode.WorldPosition;
+            if ((tmp - dir).magnitude > 12f)
+            {
+                //currentNode.IsPath = true;
+                path.Add(currentNode);
+
+                dir = tmp;
+            }
+            
+            //currentNode.IsPath = true;
+            //path.Add(currentNode);
             currentNode = currentNode.Parent;
         }
         path.Reverse();
 
-        return path;
+        // Bezier
+        List<Node> bezierPath = new List<Node>();
+        bezierPath.Add(path[0]);
+        for (int i = 0; i < path.Count - 2; i++)
+        {
+            float t = i / (float) path.Count;
+            Vector3 a = path[i].WorldPosition;
+            Vector3 b = path[i + 1].WorldPosition;
+            Vector3 c = path[i + 2].WorldPosition;
+
+            Vector3 ab = a + (b - a) * t;
+            Vector3 bc = b + (c - b) * t;
+
+            Vector3 p = ab + (bc - ab) * t;
+            Node node = WorldGrid.NodeFromWorldPoint(p);
+            node.IsPath = true;
+
+            bezierPath.Add(node);
+        }
+        bezierPath.Add(path[path.Count - 1]);
+
+        //return path;
+        return bezierPath;
     }
 
     public int GetDistance(Node a, Node b)

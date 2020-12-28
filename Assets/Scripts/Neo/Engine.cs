@@ -10,6 +10,9 @@ public class Engine : MonoBehaviour
     private Pathfinder Pathfinder;
     private float HorsePower = 30f;
 
+    private float AccumulatedTime = 0f;
+    private bool IsPathAssigned = false;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -18,19 +21,6 @@ public class Engine : MonoBehaviour
         m_Rigidbody.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
 
         Pathfinder = GetComponent<Pathfinder>();
-        List<Node> path = Pathfinder.FindPath(transform.position, new Vector3(-94f, 0f, 220f));
-        Queue<Vector3> pathPoints = new Queue<Vector3>();
-        for (int i = 0; i < path.Count; i++)
-        {
-            pathPoints.Enqueue(path[i].WorldPosition);
-        }
-        StartCoroutine(NavigateTo(pathPoints));
-
-        /*Queue<Vector3> pathPoints = new Queue<Vector3>();
-        pathPoints.Enqueue(new Vector3(-20f, 0f, 10f));
-        pathPoints.Enqueue(new Vector3(-40f, 0f, -10f));
-        pathPoints.Enqueue(new Vector3(-60f, 0f, 10f));
-        StartCoroutine(NavigateTo(pathPoints));*/
     }
 
     // Update is called once per frame
@@ -44,6 +34,27 @@ public class Engine : MonoBehaviour
 
         Steer(horizontal);
         Combust(vertical);
+
+        AccumulatedTime += Time.deltaTime;
+        if (AccumulatedTime >= 3f && !IsPathAssigned)
+        {
+            IsPathAssigned = true;
+
+            Vector3 target = new Vector3(159.7f, 0f, 216.8f); // new Vector3(-94f, 0f, 220f)
+            List<Node> path = Pathfinder.FindPath(transform.position, target);
+            Queue<Vector3> pathPoints = new Queue<Vector3>();
+            for (int i = 0; i < path.Count; i++)
+            {
+                pathPoints.Enqueue(path[i].WorldPosition);
+            }
+            StartCoroutine(NavigateTo(pathPoints));
+
+            /*Queue<Vector3> pathPoints = new Queue<Vector3>();
+            pathPoints.Enqueue(new Vector3(-20f, 0f, 10f));
+            pathPoints.Enqueue(new Vector3(-40f, 0f, -10f));
+            pathPoints.Enqueue(new Vector3(-60f, 0f, 10f));
+            StartCoroutine(NavigateTo(pathPoints));*/
+        }
     }
 
     public void Combust(float fuel = 1.0f)
