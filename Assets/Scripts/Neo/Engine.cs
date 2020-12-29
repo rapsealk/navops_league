@@ -35,6 +35,7 @@ public class Engine : MonoBehaviour
         Steer(horizontal);
         Combust(vertical);
 
+        /*
         AccumulatedTime += Time.deltaTime;
         if (AccumulatedTime >= 3f && !IsPathAssigned)
         {
@@ -48,13 +49,8 @@ public class Engine : MonoBehaviour
                 pathPoints.Enqueue(path[i].WorldPosition);
             }
             StartCoroutine(NavigateTo(pathPoints));
-
-            /*Queue<Vector3> pathPoints = new Queue<Vector3>();
-            pathPoints.Enqueue(new Vector3(-20f, 0f, 10f));
-            pathPoints.Enqueue(new Vector3(-40f, 0f, -10f));
-            pathPoints.Enqueue(new Vector3(-60f, 0f, 10f));
-            StartCoroutine(NavigateTo(pathPoints));*/
         }
+        */
     }
 
     public void Combust(float fuel = 1.0f)
@@ -92,9 +88,9 @@ public class Engine : MonoBehaviour
                     Steer(Mathf.Sign(y - degree));
                 }
 
-                if (dir.magnitude > 8f || Mathf.Abs(degree - y) < 10f)
+                if (/*dir.magnitude > 10f || */Mathf.Abs(degree - y) < 90f)
                 {
-                    Combust(Mathf.Min(1.0f, dir.sqrMagnitude * 0.5f));
+                    Combust(Mathf.Min(1.0f, dir.magnitude * 0.5f));
                 }
 
                 //Debug.Log($"NavigateTo: {y} -> {degree} ({degree - y})");
@@ -106,6 +102,6 @@ public class Engine : MonoBehaviour
 
     public bool ArrivedAt(Vector3 target)
     {
-        return (transform.position - target).magnitude <= 1f;
+        return (transform.position - target).magnitude <= 10f;
     }
 }

@@ -1,17 +1,15 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class Shell : MonoBehaviour
 {
     public ParticleSystem m_TrailParticleSystem;
-    public ParticleSystem m_AfterburnerParticleSystem;
+    // public ParticleSystem m_AfterburnerParticleSystem;
 
     // Start is called before the first frame update
     void Start()
     {
         m_TrailParticleSystem.Play();
-        m_AfterburnerParticleSystem.Play();
+        // m_AfterburnerParticleSystem.Play();
     }
 
     // Update is called once per frame

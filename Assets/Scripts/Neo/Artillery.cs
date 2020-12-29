@@ -91,9 +91,9 @@ public class Artillery : MonoBehaviour
         Vector3 rotation = target.eulerAngles;
 
         float x = (rotation.x + 360) % 360;
-        if (x < 180f + 30f)
+        if (x < 180f)
         {
-            x = 30f;
+            x = 0f;
         }
         else if (360 - x > 60f)
         {
