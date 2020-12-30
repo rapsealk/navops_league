@@ -6,7 +6,9 @@ public class Warship : MonoBehaviour
 {
     public Color RendererColor;
     public ParticleSystem Explosion;
+    public GameObject TorpedoPrefab;
 
+    private Quaternion cameraQuaternion;
     private Artillery[] artilleries;    // Weapon Systems Officer
 
     // Start is called before the first frame update
@@ -22,20 +24,6 @@ public class Warship : MonoBehaviour
 
         ParticleSystem.MainModule explosionMainModule = Explosion.main;
         explosionMainModule.duration = 3f;
-
-        /*
-        int layerMask = 1 << 11;
-        for (int i = 0; i < 8; i++)
-        {
-            Vector3 position = new Vector3(i * 10f, 0.1f, i * 10f);
-            //Debug.Log($"LayerMask ({i * 10}, {i * 10}) {Geometry.ObjectExists(position, layerMask)}");
-            //Debug.Log($"AllLayers ({i * 10}, {i * 10}) {Geometry.ObjectExists(position)}");
-
-            RaycastHit hit;
-            bool raycastResult = Physics.Raycast(Vector3.zero, position.normalized, out hit, i * 10, layerMask);
-            Debug.Log($"Raycast ({i * 10}) {raycastResult} ({hit.distance})");
-        }
-        */
     }
 
     // Update is called once per frame
@@ -48,17 +36,43 @@ public class Warship : MonoBehaviour
                 artilleries[i].Fire();
             }
         }
+        else if (Input.GetKeyDown(KeyCode.Mouse1))
+        {
+            Debug.Log("KeyCode.Mouse1");
 
-        //Vector3 rotation = new Vector3(-40f, -0.4f, 12f) - transform.position;
-        //SetTargetPoint(Quaternion.Euler(rotation));
+            // if (Application.platform == RuntimePlatform.WindowsEditor) { }
+
+            // TODO: Animation
+            Vector3 pointer = Input.mousePosition;
+            Ray cast = Camera.main.ScreenPointToRay(pointer);
+            int waterLayerMask = 1 << 4;
+            if (Physics.Raycast(cast, out RaycastHit hit, Mathf.Infinity, waterLayerMask))
+            {
+                Debug.Log($"RaycastHit: {hit.point}");
+                FireTorpedoAt(hit.point, cameraQuaternion.eulerAngles);
+            }
+        }
     }
 
     public void SetTargetPoint(Quaternion target)
     {
+        cameraQuaternion = target;
+
         for (int i = 0; i < artilleries.Length; i++)
         {
             artilleries[i].Rotate(target);
         }
+    }
+
+    public void FireTorpedoAt(Vector3 position, Vector3 rotation)
+    {
+        Vector3 releasePoint = transform.position + (position - transform.position).normalized * 8f;
+        releasePoint.y = 0f;
+
+        rotation.x = 90f;
+        rotation.z = 0f;
+
+        GameObject _ = Instantiate(TorpedoPrefab, releasePoint, Quaternion.Euler(rotation));
     }
 
     public void OnCollisionEnter(Collision collision)
@@ -82,6 +96,11 @@ public class Warship : MonoBehaviour
         Explosion.transform.position = collision.transform.position;
         Explosion.transform.rotation = collision.transform.rotation;
         Explosion.Play();
+
+        if (collision.collider.tag.Equals("Torpedo"))
+        {
+            // Destroy;
+        }
     }
 
     public void OnTriggerEnter(Collider other)
