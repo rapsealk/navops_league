@@ -43,7 +43,7 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8767120018942817592}
   serializedVersion: 2
-  m_Mass: 1
+  m_Mass: 100
   m_Drag: 0.1
   m_AngularDrag: 1
   m_UseGravity: 1
@@ -77,8 +77,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_TrailParticleSystem: {fileID: 19800000, guid: 98c58c8dd46640c49bb5f557afafea7c,
-    type: 3}
-  m_AfterburnerParticleSystem: {fileID: 19800000, guid: d8c41be67f41aa545ae053b0b927f821,
     type: 3}
 --- !u!1 &8767120019951423392
 GameObject:

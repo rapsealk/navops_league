@@ -7,6 +7,7 @@ public class Warship : MonoBehaviour
     public Color RendererColor;
     public ParticleSystem Explosion;
     public GameObject TorpedoPrefab;
+    public Transform TargetObject;
 
     private Quaternion cameraQuaternion;
     private Artillery[] artilleries;    // Weapon Systems Officer
@@ -51,6 +52,10 @@ public class Warship : MonoBehaviour
                 Debug.Log($"RaycastHit: {hit.point}");
                 FireTorpedoAt(hit.point, cameraQuaternion.eulerAngles);
             }
+        }
+        else if (Input.GetKeyDown(KeyCode.Mouse2))  // Wheel
+        {
+            Debug.Log($"Mouse..");
         }
     }
 

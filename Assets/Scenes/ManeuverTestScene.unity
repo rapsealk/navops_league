@@ -267,6 +267,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Destroyer
       objectReference: {fileID: 0}
+    - target: {fileID: 1171684472522874, guid: 74d0740f4abc7e54fab50d33af2582da, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4618546184181590, guid: 74d0740f4abc7e54fab50d33af2582da, type: 3}
       propertyPath: m_LocalPosition.x
       value: -10
@@ -1684,7 +1688,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1648470578}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -93.9, y: 0, z: 220.5}
+  m_LocalPosition: {x: -20, y: 0, z: 20}
   m_LocalScale: {x: 10, y: 10, z: 10}
   m_Children: []
   m_Father: {fileID: 0}
@@ -2621,6 +2625,11 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1870133709723759398, guid: 6b810bf88c9c8b84d853bfa201c823bf,
         type: 3}
+    - target: {fileID: 7312774272413534956, guid: 170cb6a7e72e1d64c9ff8d2543824285,
+        type: 3}
+      propertyPath: TargetObject
+      value: 
+      objectReference: {fileID: 1648470582}
     - target: {fileID: 8769870293178061244, guid: 170cb6a7e72e1d64c9ff8d2543824285,
         type: 3}
       propertyPath: m_Enabled

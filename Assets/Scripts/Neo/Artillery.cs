@@ -80,8 +80,14 @@ public class Artillery : MonoBehaviour
         m_MuzzleFlash.Play();
 
         GameObject projectile = Instantiate(m_ShellPrefab, m_Muzzle.position + m_Muzzle.forward * 3, m_Muzzle.rotation);
+
+        Vector3 velocity = m_Muzzle.transform.forward * FirePower.x + m_Muzzle.transform.up * FirePower.y;
+        Rigidbody rigidbody = projectile.GetComponent<Rigidbody>();
+        rigidbody.velocity = velocity / rigidbody.mass;
+        /*
         projectile.GetComponent<Rigidbody>().AddForce(m_Muzzle.transform.forward * FirePower.x
                                                     + m_Muzzle.transform.up * FirePower.y);
+        */
     }
 
     public void Rotate(Quaternion target)
