@@ -92,7 +92,7 @@ public class Warship : MonoBehaviour
         {
             collisionVelocity = collision.rigidbody.velocity;
         }
-        //
+
         Debug.Log($"Warship.OnCollisionEnter: {collision.collider} {collisionVelocity.magnitude} {collision.transform.position}");
 
         //Explosion.transform.position = collision.transform.position;
