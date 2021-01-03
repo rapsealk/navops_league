@@ -25,6 +25,7 @@ public class Warship : MonoBehaviour
 
         ParticleSystem.MainModule explosionMainModule = Explosion.main;
         explosionMainModule.duration = 3f;
+        explosionMainModule.loop = false;
     }
 
     // Update is called once per frame
@@ -41,6 +42,7 @@ public class Warship : MonoBehaviour
             // if (Application.platform == RuntimePlatform.WindowsEditor) { }
 
             // TODO: Animation
+            /* Human Controller
             Vector3 pointer = Input.mousePosition;
             Ray cast = Camera.main.ScreenPointToRay(pointer);
             int waterLayerMask = 1 << 4;
@@ -49,6 +51,11 @@ public class Warship : MonoBehaviour
                 Debug.Log($"RaycastHit: {hit.point}");
                 FireTorpedoAt(hit.point, cameraQuaternion.eulerAngles);
             }
+            */
+            // API Controller
+            float y = Geometry.GetAngleBetween(transform.position, TargetObject.transform.position);
+            Vector3 rotation = new Vector3(0f, y, 0f);
+            FireTorpedoAt(TargetObject.transform.position, rotation);
         }
         else if (Input.GetKeyDown(KeyCode.Mouse2))  // Wheel
         {
@@ -100,9 +107,6 @@ public class Warship : MonoBehaviour
 
         Debug.Log($"Warship.OnCollisionEnter: {collision.collider} {collisionVelocity.magnitude} {collision.transform.position}");
 
-        //Explosion.transform.position = collision.transform.position;
-        //ParticleSystem explosion = Instantiate(ExplosionPrefab, collision.transform.position, collision.transform.rotation);
-        //explosion.Stop();
         Explosion.transform.position = collision.transform.position;
         Explosion.transform.rotation = collision.transform.rotation;
         Explosion.Play();
@@ -115,6 +119,10 @@ public class Warship : MonoBehaviour
 
     public void OnTriggerEnter(Collider other)
     {
-        //
+        Debug.Log($"Warship.OnTriggerEnter(other: {other})");
+
+        Explosion.transform.position = other.transform.position;
+        Explosion.transform.rotation = other.transform.rotation;
+        Explosion.Play();
     }
 }

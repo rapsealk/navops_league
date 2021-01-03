@@ -176,6 +176,11 @@ public class Artillery : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
-        GetComponent<Warship>().OnCollisionEnter(collision);
+        Debug.Log($"Artillery({name}).OnCollisionEnter(collision: {collision})");
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        Debug.Log($"Artillery({name}).OnTriggerEnter(other: {other})");
     }
 }
