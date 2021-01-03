@@ -32,10 +32,7 @@ public class Warship : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Mouse0))
         {
-            for (int i = 0; i < artilleries.Length; i++)
-            {
-                artilleries[i].Fire();
-            }
+            FireMainBattery();
         }
         else if (Input.GetKeyDown(KeyCode.Mouse1))
         {
@@ -66,6 +63,14 @@ public class Warship : MonoBehaviour
         for (int i = 0; i < artilleries.Length; i++)
         {
             artilleries[i].Rotate(target);
+        }
+    }
+
+    public void FireMainBattery()
+    {
+        for (int i = 0; i < artilleries.Length; i++)
+        {
+            artilleries[i].Fire();
         }
     }
 

@@ -60,6 +60,7 @@ public class Trajectory : MonoBehaviour
         float R = Vector3.Distance(projectileXZPos, targetXZPos);
         float G = Physics.gravity.y;
         float tanAlpha = Mathf.Tan(LaunchAngle * Mathf.Deg2Rad);
+        //float launchAngle = Mathf.Atan(tanAlpha) * Mathf.Rad2Deg;
         float H = (TargetObject.transform.position.y + GetPlatformOffset()) - transform.position.y;
 
         float Vz = Mathf.Sqrt(G * R * R / (2f * (H - R * tanAlpha)));
