@@ -5,6 +5,7 @@ using UnityEngine;
 public class CameraController : MonoBehaviour
 {
     public Warship TargetObject;
+    public Radar Radar;
 
     // Start is called before the first frame update
     void Start()
@@ -32,5 +33,6 @@ public class CameraController : MonoBehaviour
         }
 
         //TargetObject.SetTargetPoint(transform.rotation);
+        Radar.ViewDirection = rotation.y;
     }
 }

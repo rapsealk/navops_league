@@ -8,6 +8,7 @@ TagManager:
   - Bullet1
   - Bullet2
   - Wall
+  - RadarBlip
   layers:
   - Default
   - TransparentFX

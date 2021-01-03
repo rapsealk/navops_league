@@ -24,13 +24,13 @@ public class Shell : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
-        Debug.Log($"{GetType().Name}.OnCollisionEnter: {collision.collider} {transform.position} ({transform.position.magnitude})");
+        // Debug.Log($"{GetType().Name}.OnCollisionEnter: {collision.collider} {transform.position} ({transform.position.magnitude})");
         Destroy(gameObject);
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        Debug.Log($"Shell.OnTriggerEnter(other: {other}) - ({transform.position})");
+        // Debug.Log($"Shell.OnTriggerEnter(other: {other}) - ({transform.position})");
         Destroy(gameObject);
     }
 }

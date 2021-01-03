@@ -105,7 +105,7 @@ public class Warship : MonoBehaviour
             collisionVelocity = collision.rigidbody.velocity;
         }
 
-        Debug.Log($"Warship.OnCollisionEnter: {collision.collider} {collisionVelocity.magnitude} {collision.transform.position}");
+        // Debug.Log($"Warship.OnCollisionEnter: {collision.collider} {collisionVelocity.magnitude} {collision.transform.position}");
 
         Explosion.transform.position = collision.transform.position;
         Explosion.transform.rotation = collision.transform.rotation;
@@ -119,7 +119,7 @@ public class Warship : MonoBehaviour
 
     public void OnTriggerEnter(Collider other)
     {
-        Debug.Log($"Warship.OnTriggerEnter(other: {other})");
+        // Debug.Log($"Warship.OnTriggerEnter(other: {other})");
 
         Explosion.transform.position = other.transform.position;
         Explosion.transform.rotation = other.transform.rotation;

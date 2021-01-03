@@ -30,6 +30,14 @@ public class MovableTarget : MonoBehaviour
             transform.RotateAround(Center.transform.position, Center.transform.up, -100 * Time.deltaTime);
             transform.Rotate(Vector3.up, -25 * Time.deltaTime);
         }
+        else if (Input.GetKey(KeyCode.U))
+        {
+            transform.Rotate(Vector3.up, 25 * Time.deltaTime);
+        }
+        else if (Input.GetKey(KeyCode.I))
+        {
+            transform.Rotate(Vector3.up, -25 * Time.deltaTime);
+        }
         else if (Input.GetKey(KeyCode.H))
         {
             Distance += 10f * Time.deltaTime;
