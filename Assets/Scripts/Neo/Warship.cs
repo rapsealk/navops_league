@@ -8,6 +8,8 @@ public class Warship : MonoBehaviour
     public ParticleSystem Explosion;
     public GameObject TorpedoPrefab;
     public Transform TargetObject;
+    public int playerId;
+    public int teamId;
 
     private Quaternion cameraQuaternion;
     private Artillery[] artilleries;    // Weapon Systems Officer
@@ -53,9 +55,7 @@ public class Warship : MonoBehaviour
             }
             */
             // API Controller
-            float y = Geometry.GetAngleBetween(transform.position, TargetObject.transform.position);
-            Vector3 rotation = new Vector3(0f, y, 0f);
-            FireTorpedoAt(TargetObject.transform.position, rotation);
+            FireTorpedoAt(TargetObject.transform.position);
         }
         else if (Input.GetKeyDown(KeyCode.Mouse2))  // Wheel
         {
@@ -81,13 +81,13 @@ public class Warship : MonoBehaviour
         }
     }
 
-    public void FireTorpedoAt(Vector3 position, Vector3 rotation)
+    public void FireTorpedoAt(Vector3 position)
     {
         Vector3 releasePoint = transform.position + (position - transform.position).normalized * 8f;
         releasePoint.y = 0f;
 
-        rotation.x = 90f;
-        rotation.z = 0f;
+        float y = Geometry.GetAngleBetween(transform.position, position);
+        Vector3 rotation = new Vector3(90f, y, 0f);
 
         GameObject _ = Instantiate(TorpedoPrefab, releasePoint, Quaternion.Euler(rotation));
     }
@@ -111,9 +111,11 @@ public class Warship : MonoBehaviour
         Explosion.transform.rotation = collision.transform.rotation;
         Explosion.Play();
 
-        if (collision.collider.tag.Equals("Torpedo"))
+        Debug.Log($"OnCollisionEnter(collision: {collision.collider.name}) ({collision.collider.tag})");
+        if (collision.collider.tag == "Player"
+            || collision.collider.tag == "Torpedo")
         {
-            // Destroy;
+            Destroy(gameObject);
         }
     }
 

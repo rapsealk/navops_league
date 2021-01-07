@@ -4,11 +4,12 @@
 TagManager:
   serializedVersion: 2
   tags:
-  - Battleship
   - Bullet1
   - Bullet2
   - Wall
   - RadarBlip
+  - Battleship
+  - Torpedo
   layers:
   - Default
   - TransparentFX

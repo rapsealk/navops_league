@@ -294,12 +294,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35bb7c0dabe42614ba86087208c23b68, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_ShellPrefab: {fileID: 8767120018942817592, guid: eb978559e6aff5a4f8e14256635a7e6e,
+  shellPrefab: {fileID: 8767120018942817592, guid: eb978559e6aff5a4f8e14256635a7e6e,
     type: 3}
-  m_Muzzle: {fileID: 3389645990330441364}
-  m_MuzzleFlash: {fileID: 9037122864931110071}
-  Traverse: 90
-  TraverseSpeed: 15
+  muzzle: {fileID: 3389645990330441364}
+  muzzleFlash: {fileID: 9037122864931110071}
+  playerId: 0
+  teamId: 0
 --- !u!1 &8768797658424079428
 GameObject:
   m_ObjectHideFlags: 0
@@ -594,12 +594,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35bb7c0dabe42614ba86087208c23b68, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_ShellPrefab: {fileID: 8767120018942817592, guid: eb978559e6aff5a4f8e14256635a7e6e,
+  shellPrefab: {fileID: 8767120018942817592, guid: eb978559e6aff5a4f8e14256635a7e6e,
     type: 3}
-  m_Muzzle: {fileID: 7279004818194950533}
-  m_MuzzleFlash: {fileID: 4386306857348789940}
-  Traverse: 90
-  TraverseSpeed: 15
+  muzzle: {fileID: 7279004818194950533}
+  muzzleFlash: {fileID: 4386306857348789940}
+  playerId: 0
+  teamId: 0
 --- !u!1 &8768881385159623418
 GameObject:
   m_ObjectHideFlags: 0
@@ -1013,12 +1013,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35bb7c0dabe42614ba86087208c23b68, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_ShellPrefab: {fileID: 8767120018942817592, guid: eb978559e6aff5a4f8e14256635a7e6e,
+  shellPrefab: {fileID: 8767120018942817592, guid: eb978559e6aff5a4f8e14256635a7e6e,
     type: 3}
-  m_Muzzle: {fileID: 6946408783533097452}
-  m_MuzzleFlash: {fileID: 1415439288949318679}
-  Traverse: 90
-  TraverseSpeed: 15
+  muzzle: {fileID: 6946408783533097452}
+  muzzleFlash: {fileID: 1415439288949318679}
+  playerId: 0
+  teamId: 0
 --- !u!1 &8769064389062665310
 GameObject:
   m_ObjectHideFlags: 0
@@ -1220,12 +1220,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35bb7c0dabe42614ba86087208c23b68, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_ShellPrefab: {fileID: 8767120018942817592, guid: eb978559e6aff5a4f8e14256635a7e6e,
+  shellPrefab: {fileID: 8767120018942817592, guid: eb978559e6aff5a4f8e14256635a7e6e,
     type: 3}
-  m_Muzzle: {fileID: 6502262637646839465}
-  m_MuzzleFlash: {fileID: 7765663985925534203}
-  Traverse: 90
-  TraverseSpeed: 15
+  muzzle: {fileID: 6502262637646839465}
+  muzzleFlash: {fileID: 7765663985925534203}
+  playerId: 0
+  teamId: 0
 --- !u!1 &8769216347674134184
 GameObject:
   m_ObjectHideFlags: 0
@@ -1334,12 +1334,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35bb7c0dabe42614ba86087208c23b68, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_ShellPrefab: {fileID: 8767120018942817592, guid: eb978559e6aff5a4f8e14256635a7e6e,
+  shellPrefab: {fileID: 8767120018942817592, guid: eb978559e6aff5a4f8e14256635a7e6e,
     type: 3}
-  m_Muzzle: {fileID: 6530759934103057187}
-  m_MuzzleFlash: {fileID: 3926733963885411403}
-  Traverse: 90
-  TraverseSpeed: 15
+  muzzle: {fileID: 6530759934103057187}
+  muzzleFlash: {fileID: 3926733963885411403}
+  playerId: 0
+  teamId: 0
 --- !u!1 &8769296819471582632
 GameObject:
   m_ObjectHideFlags: 0
@@ -1684,12 +1684,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35bb7c0dabe42614ba86087208c23b68, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_ShellPrefab: {fileID: 8767120018942817592, guid: eb978559e6aff5a4f8e14256635a7e6e,
+  shellPrefab: {fileID: 8767120018942817592, guid: eb978559e6aff5a4f8e14256635a7e6e,
     type: 3}
-  m_Muzzle: {fileID: 6308531739989902113}
-  m_MuzzleFlash: {fileID: 6609605117351643001}
-  Traverse: 90
-  TraverseSpeed: 15
+  muzzle: {fileID: 6308531739989902113}
+  muzzleFlash: {fileID: 6609605117351643001}
+  playerId: 0
+  teamId: 0
 --- !u!1 &8770590186553502042
 GameObject:
   m_ObjectHideFlags: 0
@@ -1837,8 +1837,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   RendererColor: {r: 1, g: 0, b: 0, a: 0}
   Explosion: {fileID: 6329613978102475674}
-  TorpedoPrefab: {fileID: 0}
-  TargetObject: {fileID: 0}
+  TorpedoPrefab: {fileID: 1870133709723759398, guid: 6b810bf88c9c8b84d853bfa201c823bf,
+    type: 3}
+  TargetObject: {fileID: 8771740689538203462}
+  playerId: 0
+  teamId: 0
 --- !u!114 &4854572135729809124
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1846,7 +1849,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8770590186553502042}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c28ed3910f3ecb94e9bc5db025b29209, type: 3}
   m_Name: 
