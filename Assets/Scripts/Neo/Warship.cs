@@ -1,21 +1,19 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using Unity.MLAgents;
 using Unity.MLAgents.Sensors;
 
-public class Warship : MonoBehaviour    // Agent
+public class Warship : Agent
 {
     public const float m_Durability = 1000f;
     public Color rendererColor;
     public ParticleSystem explosion;
-    //public GameObject torpedoPrefab;
-    public Transform target;
+    public Warship target;
     [HideInInspector] public Rigidbody rb;
     public int playerId;
     public int teamId;
+    [HideInInspector] public WeaponSystemsOfficer weaponSystemsOfficer;
+    public Transform battleField;
 
-    private WeaponSystemsOfficer weaponSystemsOfficer;
     private float m_CurrentHealth;
 
     public void Reset()
@@ -30,6 +28,7 @@ public class Warship : MonoBehaviour    // Agent
         weaponSystemsOfficer.Assign(teamId, playerId);
 
         rb = GetComponent<Rigidbody>();
+        rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
 
         MeshRenderer[] meshRenderers = GetComponentsInChildren<MeshRenderer>();
         for (int i = 0; i < meshRenderers.Length; i++)
@@ -47,22 +46,7 @@ public class Warship : MonoBehaviour    // Agent
         }
         else if (Input.GetKeyDown(KeyCode.Mouse1))
         {
-            Debug.Log("KeyCode.Mouse1");
-
-            // if (Application.platform == RuntimePlatform.WindowsEditor) { }
-
             // TODO: Animation
-            /* Human Controller
-            Vector3 pointer = Input.mousePosition;
-            Ray cast = Camera.main.ScreenPointToRay(pointer);
-            int waterLayerMask = 1 << 4;
-            if (Physics.Raycast(cast, out RaycastHit hit, Mathf.Infinity, waterLayerMask))
-            {
-                Debug.Log($"RaycastHit: {hit.point}");
-                FireTorpedoAt(hit.point, cameraQuaternion.eulerAngles);
-            }
-            */
-            // API Controller
             weaponSystemsOfficer.FireTorpedoAt(target.transform.position);
         }
 
@@ -74,7 +58,6 @@ public class Warship : MonoBehaviour    // Agent
         Vector3 rotation = Vector3.zero;
         rotation.y = Geometry.GetAngleBetween(transform.position, target.transform.position);
 
-        //
         Vector3 projectilexz = transform.position;
         projectilexz.y = 0f;
         Vector3 targetxz = target.transform.position;
@@ -87,7 +70,6 @@ public class Warship : MonoBehaviour    // Agent
         weaponSystemsOfficer.Aim(Quaternion.Euler(rotation));
     }
 
-    /*
     #region MLAgent
     public override void Initialize()
     {
@@ -101,24 +83,56 @@ public class Warship : MonoBehaviour    // Agent
 
     public override void CollectObservations(VectorSensor sensor)
     {
-        sensor.AddObservation(transform.position.x);
-        sensor.AddObservation(transform.position.z);
+        // Player
+        sensor.AddObservation(transform.position.x / (battleField.transform.localScale.x / 2) - 1f);
+        sensor.AddObservation(transform.position.z / (battleField.transform.localScale.z / 2) - 1f);
 
         float radian = (transform.rotation.eulerAngles.y % 360) * Mathf.Deg2Rad;
         sensor.AddObservation(Mathf.Cos(radian));
         sensor.AddObservation(Mathf.Sin(radian));
 
-        sensor.AddObservation(target.transform.position.x);
-        sensor.AddObservation(target.transform.position.z);
+        // Opponent
+        sensor.AddObservation(target.transform.position.x / (battleField.transform.localScale.x / 2) - 1f);
+        sensor.AddObservation(target.transform.position.z / (battleField.transform.localScale.z / 2) - 1f);
 
         float targetRadian = (target.transform.rotation.eulerAngles.y % 360) * Mathf.Deg2Rad;
         sensor.AddObservation(Mathf.Cos(targetRadian));
         sensor.AddObservation(Mathf.Sin(targetRadian));
+
+        bool isEnemyTorpedoLaunched = false;
+        Vector3 enemyTorpedoPosition = Vector3.zero;
+        GameObject torpedo = target.weaponSystemsOfficer.torpedoInstance;
+        if (torpedo != null)
+        {
+            isEnemyTorpedoLaunched = true;
+            enemyTorpedoPosition = torpedo.transform.position;
+        }
+        sensor.AddObservation(isEnemyTorpedoLaunched);
+        sensor.AddObservation(enemyTorpedoPosition.x / (battleField.transform.localScale.x / 2) - 1f);
+        sensor.AddObservation(enemyTorpedoPosition.z / (battleField.transform.localScale.z / 2) - 1f);
+
+        // Weapon
+        WeaponSystemsOfficer.BatterySummary[] batterySummary = weaponSystemsOfficer.Summary();
+        for (int i = 0; i < batterySummary.Length; i++)
+        {
+            WeaponSystemsOfficer.BatterySummary summary = batterySummary[i];
+            sensor.AddObservation(Mathf.Cos(summary.rotation.x));
+            sensor.AddObservation(Mathf.Sin(summary.rotation.x));
+            sensor.AddObservation(Mathf.Cos(summary.rotation.y));
+            sensor.AddObservation(Mathf.Sin(summary.rotation.y));
+            sensor.AddObservation(summary.isReloaded);
+            sensor.AddObservation(summary.cooldown);
+            sensor.AddObservation(summary.isDamaged);
+            sensor.AddObservation(summary.repairProgress);
+        }
+        sensor.AddObservation(weaponSystemsOfficer.isTorpedoReady);
+        sensor.AddObservation(weaponSystemsOfficer.torpedoCooldown / WeaponSystemsOfficer.m_TorpedoReloadTime);
     }
 
     public override void OnActionReceived(float[] vectorAction)
     {
-        FireMainBattery();
+        weaponSystemsOfficer.FireMainBattery();
+        weaponSystemsOfficer.FireTorpedoAt(target.transform.position);
     }
 
     public override void Heuristic(float[] actionsOut)
@@ -126,7 +140,6 @@ public class Warship : MonoBehaviour    // Agent
         //
     }
     #endregion
-    */
 
     public void OnCollisionEnter(Collision collision)
     {
@@ -163,8 +176,6 @@ public class Warship : MonoBehaviour    // Agent
 
     public void OnTriggerEnter(Collider other)
     {
-        // Debug.Log($"Warship.OnTriggerEnter(other: {other})");
-
         explosion.transform.position = other.transform.position;
         explosion.transform.rotation = other.transform.rotation;
         explosion.Play();

@@ -19,14 +19,14 @@ public class Artillery : MonoBehaviour
     [HideInInspector] public const float m_TraverseSpeed = 15f;
     [HideInInspector] public const float m_ReloadTime = 6f;
     [HideInInspector] public const float m_RepairTime = 30f;
+    [HideInInspector] public float cooldownTimer = 0f;
+    [HideInInspector] public bool isReloaded = true;
+    [HideInInspector] public float repairTimer = 0f;
+    [HideInInspector] public bool isDamaged = false;
 
     private TurretType m_TurretType;
     private float m_InitialEulerRotation;
     private Vector2 m_FirePower = new Vector2(8000f, 100f);
-    private float m_CooldownTimer = 0f;
-    private bool m_Reloaded = true;
-    private float m_RepairTimer = 0f;
-    private bool m_Damaged = false;
 
     // Start is called before the first frame update
     void Start()
@@ -56,29 +56,29 @@ public class Artillery : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (m_Damaged)
+        if (isDamaged)
         {
-            m_RepairTimer += Time.deltaTime;
+            repairTimer += Time.deltaTime;
 
-            if (m_RepairTimer >= m_RepairTime)
+            if (repairTimer >= m_RepairTime)
             {
-                m_Damaged = false;
+                isDamaged = false;
             }
         }
-        else if (!m_Reloaded)
+        else if (!isReloaded)
         {
-            m_CooldownTimer += Time.deltaTime;
+            cooldownTimer += Time.deltaTime;
 
-            if (m_CooldownTimer >= m_ReloadTime)
+            if (cooldownTimer >= m_ReloadTime)
             {
-                m_Reloaded = true;
+                isReloaded = true;
             }
         }
     }
 
     public void Fire()
     {
-        if (!m_Reloaded || m_Damaged)
+        if (!isReloaded || isDamaged)
         {
             return;
         }
@@ -96,8 +96,8 @@ public class Artillery : MonoBehaviour
                                                     + muzzle.transform.up * m_FirePower.y);
         */
 
-        m_Reloaded = false;
-        m_CooldownTimer = 0f;
+        isReloaded = false;
+        cooldownTimer = 0f;
     }
 
     public void Rotate(Quaternion target)
@@ -166,7 +166,7 @@ public class Artillery : MonoBehaviour
     private void OnTriggerEnter(Collider other)
     {
         // Debug.Log($"Artillery({name}).OnTriggerEnter(other: {other})");
-        m_Damaged = true;
-        m_RepairTimer = 0f;
+        isDamaged = true;
+        repairTimer = 0f;
     }
 }

@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class WeaponSystemsOfficer : MonoBehaviour
 {
@@ -8,11 +6,11 @@ public class WeaponSystemsOfficer : MonoBehaviour
     [HideInInspector] public int teamId;
     public GameObject torpedoPrefab;
     [HideInInspector] public GameObject torpedoInstance = null;
-    [HideInInspector] public float m_TorpedoReloadTime = 40f;
+    [HideInInspector] public const float m_TorpedoReloadTime = 40f;
+    [HideInInspector] public bool isTorpedoReady { get; private set; } = true;
+    [HideInInspector] public float torpedoCooldown { get; private set; } = 0f;
 
     private Artillery[] m_Batteries;
-    private float m_TorpedoCooldownTimer = 0f;
-    private bool m_TorpedoReloaded = true;
 
     // Start is called before the first frame update
     void Start()
@@ -23,13 +21,13 @@ public class WeaponSystemsOfficer : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (!m_TorpedoReloaded)
+        if (!isTorpedoReady)
         {
-            m_TorpedoCooldownTimer += Time.deltaTime;
+            torpedoCooldown += Time.deltaTime;
 
-            if (m_TorpedoCooldownTimer >= m_TorpedoReloadTime)
+            if (torpedoCooldown >= m_TorpedoReloadTime)
             {
-                m_TorpedoReloaded = true;
+                isTorpedoReady = true;
             }
         }
 
@@ -70,7 +68,7 @@ public class WeaponSystemsOfficer : MonoBehaviour
 
     public void FireTorpedoAt(Vector3 position)
     {
-        if (!m_TorpedoReloaded)
+        if (!isTorpedoReady)
         {
             return;
         }
@@ -83,6 +81,36 @@ public class WeaponSystemsOfficer : MonoBehaviour
 
         torpedoInstance = Instantiate(torpedoPrefab, releasePoint, Quaternion.Euler(rotation));
 
-        m_TorpedoReloaded = false;
+        isTorpedoReady = false;
+    }
+
+    public class BatterySummary
+    {
+        public Vector2 rotation;
+        public bool isReloaded;
+        public float cooldown;
+        public bool isDamaged;
+        public float repairProgress;
+
+        public void Copy(Artillery battery)
+        {
+            Vector3 batteryRotation = battery.transform.rotation.eulerAngles;
+            rotation = new Vector2(batteryRotation.x, batteryRotation.y);
+            isReloaded = battery.isReloaded;
+            cooldown = battery.cooldownTimer / Artillery.m_ReloadTime;
+            isDamaged = battery.isDamaged;
+            repairProgress = battery.repairTimer / Artillery.m_RepairTime;
+        }
+    }
+
+    public BatterySummary[] Summary()
+    {
+        BatterySummary[] summary = new BatterySummary[m_Batteries.Length];
+        for (int i = 0; i < m_Batteries.Length; i++)
+        {
+            summary[i] = new BatterySummary();
+            summary[i].Copy(m_Batteries[i]);
+        }
+        return summary;
     }
 }
