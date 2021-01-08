@@ -5,6 +5,7 @@ using Unity.MLAgents.Sensors;
 public class Warship : Agent
 {
     public const float m_Durability = 1000f;
+    public Transform startingPoint;
     public Color rendererColor;
     public ParticleSystem explosion;
     public Warship target;
@@ -15,9 +16,16 @@ public class Warship : Agent
     public Transform battleField;
 
     private float m_CurrentHealth;
+    private Engine m_Engine;
 
     public void Reset()
     {
+        GetComponent<Rigidbody>().velocity = Vector3.zero;
+        GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+
+        transform.position = startingPoint.position;
+        transform.rotation = startingPoint.rotation;
+
         m_CurrentHealth = m_Durability;
     }
 
@@ -30,24 +38,31 @@ public class Warship : Agent
         rb = GetComponent<Rigidbody>();
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
 
+        m_Engine = GetComponent<Engine>();
+
         MeshRenderer[] meshRenderers = GetComponentsInChildren<MeshRenderer>();
         for (int i = 0; i < meshRenderers.Length; i++)
         {
             meshRenderers[i].material.color = rendererColor;
         }
+
+        Reset();
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Mouse0))
+        if (Application.platform == RuntimePlatform.WindowsEditor)
         {
-            weaponSystemsOfficer.FireMainBattery();
-        }
-        else if (Input.GetKeyDown(KeyCode.Mouse1))
-        {
-            // TODO: Animation
-            weaponSystemsOfficer.FireTorpedoAt(target.transform.position);
+            if (Input.GetKeyDown(KeyCode.Mouse0))
+            {
+                weaponSystemsOfficer.FireMainBattery();
+            }
+            else if (Input.GetKeyDown(KeyCode.Mouse1))
+            {
+                // TODO: Animation
+                weaponSystemsOfficer.FireTorpedoAt(target.transform.position);
+            }
         }
 
         KeepTrackOnTarget();
@@ -78,7 +93,7 @@ public class Warship : Agent
 
     public override void OnEpisodeBegin()
     {
-        //
+        Reset();
     }
 
     public override void CollectObservations(VectorSensor sensor)
@@ -127,19 +142,46 @@ public class Warship : Agent
         }
         sensor.AddObservation(weaponSystemsOfficer.isTorpedoReady);
         sensor.AddObservation(weaponSystemsOfficer.torpedoCooldown / WeaponSystemsOfficer.m_TorpedoReloadTime);
+
+        // Penalty
+        float distance = Vector3.Distance(transform.position, target.transform.position);
+        if (distance >= 200f)
+        {
+            float penalty = -Mathf.Pow(distance - 200f, 2f) / 10000f;
+            AddReward(penalty);
+        }
+        
+        float fuelLoss = 1 / 10000f;
+        AddReward(fuelLoss);
     }
 
     public override void OnActionReceived(float[] vectorAction)
     {
-        weaponSystemsOfficer.FireMainBattery();
-        weaponSystemsOfficer.FireTorpedoAt(target.transform.position);
+        // Interpret signals
+        float enginePower = Mathf.Clamp(vectorAction[0], -1f, 1f);
+        float rudderPower = Mathf.Clamp(vectorAction[1], -1f, 1f);
+        bool fireMainBattery = (vectorAction[2] >= 0.5f);
+        bool launchTorpedo = (vectorAction[3] >= 0.5f);
+
+        m_Engine.Combust(enginePower);
+        m_Engine.Steer(rudderPower);
+
+        if (fireMainBattery)
+        {
+            weaponSystemsOfficer.FireMainBattery();
+        }
+
+        if (launchTorpedo)
+        {
+            weaponSystemsOfficer.FireTorpedoAt(target.transform.position);
+        }
     }
 
     public override void Heuristic(float[] actionsOut)
     {
         //
     }
-    #endregion
+    #endregion  // MLAgent
 
     public void OnCollisionEnter(Collision collision)
     {
@@ -152,12 +194,16 @@ public class Warship : Agent
         explosion.transform.rotation = collision.transform.rotation;
         explosion.Play();
 
-        if (collision.collider.tag == "Player"
-            || collision.collider.tag == "Torpedo")
+        if (collision.collider.tag == "Player")
         {
-            Destroy(gameObject);
-            //SetReward(-1.0f);
-            //EndEpisode();
+            SetReward(-1.0f);
+            target.SetReward(-1.0f);
+            EndEpisode();
+            return;
+        }
+        else if (collision.collider.tag == "Torpedo")
+        {
+            m_CurrentHealth = 0f;
         }
         else if (collision.collider.tag.StartsWith("Bullet")
                  && !collision.collider.tag.EndsWith(teamId.ToString()))
@@ -171,6 +217,13 @@ public class Warship : Agent
             float damage = rb.velocity.magnitude * rb.mass;
             Debug.Log($"[{teamId}-{playerId}] OnCollisionEnter(collision: {collision.collider.name}) ({collision.collider.tag} / {damage})");
             m_CurrentHealth -= damage;
+        }
+
+        if (m_CurrentHealth <= 0f + Mathf.Epsilon)
+        {
+            SetReward(-10.0f);
+            target.SetReward(10.0f);
+            EndEpisode();
         }
     }
 

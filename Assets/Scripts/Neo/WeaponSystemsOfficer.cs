@@ -12,10 +12,27 @@ public class WeaponSystemsOfficer : MonoBehaviour
 
     private Artillery[] m_Batteries;
 
+    public void Reset()
+    {
+        if (torpedoInstance != null)
+        {
+            Destroy(torpedoInstance);
+            torpedoInstance = null;
+        }
+
+        isTorpedoReady = true;
+        torpedoCooldown = 0f;
+
+        for (int i = 0; i < m_Batteries.Length; i++)
+        {
+            m_Batteries[i].Reset();
+        }
+    }
+
     // Start is called before the first frame update
     void Start()
     {
-        
+        Reset();
     }
 
     // Update is called once per frame
