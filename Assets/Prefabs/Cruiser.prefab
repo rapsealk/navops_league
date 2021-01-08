@@ -1706,6 +1706,7 @@ GameObject:
   - component: {fileID: 8769870293178061244}
   - component: {fileID: 7312774272413534956}
   - component: {fileID: 4854572135729809124}
+  - component: {fileID: 3835267860656973181}
   m_Layer: 0
   m_Name: Cruiser
   m_TagString: Untagged
@@ -1835,13 +1836,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 955db0c2d465a8142ada7886fba9c288, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  RendererColor: {r: 1, g: 0, b: 0, a: 0}
-  Explosion: {fileID: 6329613978102475674}
-  TorpedoPrefab: {fileID: 1870133709723759398, guid: 6b810bf88c9c8b84d853bfa201c823bf,
-    type: 3}
-  TargetObject: {fileID: 8771740689538203462}
-  playerId: 0
-  teamId: 0
+  rendererColor: {r: 0, g: 0, b: 0, a: 0}
+  explosion: {fileID: 6329613978102475674}
+  target: {fileID: 8771740689538203462}
+  rb: {fileID: 0}
+  playerId: 1
+  teamId: 1
 --- !u!114 &4854572135729809124
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1855,6 +1855,24 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   WorldGrid: {fileID: 0}
+--- !u!114 &3835267860656973181
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8770590186553502042}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a5f47d58efb44154ab8c9b7116954e7e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playerId: 0
+  teamId: 0
+  torpedoPrefab: {fileID: 1870133709723759398, guid: 6b810bf88c9c8b84d853bfa201c823bf,
+    type: 3}
+  torpedoInstance: {fileID: 0}
+  m_TorpedoReloadTime: 30
 --- !u!1001 &1253376865113946445
 PrefabInstance:
   m_ObjectHideFlags: 0

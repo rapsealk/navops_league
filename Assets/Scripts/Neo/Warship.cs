@@ -1,33 +1,41 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Unity.MLAgents;
+using Unity.MLAgents.Sensors;
 
-public class Warship : MonoBehaviour
+public class Warship : MonoBehaviour    // Agent
 {
-    public Color RendererColor;
-    public ParticleSystem Explosion;
-    public GameObject TorpedoPrefab;
-    public Transform TargetObject;
+    public const float m_Durability = 1000f;
+    public Color rendererColor;
+    public ParticleSystem explosion;
+    //public GameObject torpedoPrefab;
+    public Transform target;
+    [HideInInspector] public Rigidbody rb;
     public int playerId;
     public int teamId;
 
-    private Quaternion cameraQuaternion;
-    private Artillery[] artilleries;    // Weapon Systems Officer
+    private WeaponSystemsOfficer weaponSystemsOfficer;
+    private float m_CurrentHealth;
+
+    public void Reset()
+    {
+        m_CurrentHealth = m_Durability;
+    }
 
     // Start is called before the first frame update
     void Start()
     {
+        weaponSystemsOfficer = GetComponent<WeaponSystemsOfficer>();
+        weaponSystemsOfficer.Assign(teamId, playerId);
+
+        rb = GetComponent<Rigidbody>();
+
         MeshRenderer[] meshRenderers = GetComponentsInChildren<MeshRenderer>();
         for (int i = 0; i < meshRenderers.Length; i++)
         {
-            meshRenderers[i].material.color = RendererColor;
+            meshRenderers[i].material.color = rendererColor;
         }
-
-        artilleries = GetComponentsInChildren<Artillery>();
-
-        ParticleSystem.MainModule explosionMainModule = Explosion.main;
-        explosionMainModule.duration = 3f;
-        explosionMainModule.loop = false;
     }
 
     // Update is called once per frame
@@ -35,7 +43,7 @@ public class Warship : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Mouse0))
         {
-            FireMainBattery();
+            weaponSystemsOfficer.FireMainBattery();
         }
         else if (Input.GetKeyDown(KeyCode.Mouse1))
         {
@@ -55,42 +63,70 @@ public class Warship : MonoBehaviour
             }
             */
             // API Controller
-            FireTorpedoAt(TargetObject.transform.position);
+            weaponSystemsOfficer.FireTorpedoAt(target.transform.position);
         }
-        else if (Input.GetKeyDown(KeyCode.Mouse2))  // Wheel
-        {
-            Debug.Log($"Mouse..");
-        }
+
+        KeepTrackOnTarget();
     }
 
-    public void SetTargetPoint(Quaternion target)
+    private void KeepTrackOnTarget()
     {
-        cameraQuaternion = target;
+        Vector3 rotation = Vector3.zero;
+        rotation.y = Geometry.GetAngleBetween(transform.position, target.transform.position);
 
-        for (int i = 0; i < artilleries.Length; i++)
-        {
-            artilleries[i].Rotate(target);
-        }
+        //
+        Vector3 projectilexz = transform.position;
+        projectilexz.y = 0f;
+        Vector3 targetxz = target.transform.position;
+        targetxz.y = 0f;
+        float r = Vector3.Distance(projectilexz, targetxz);
+        float G = Physics.gravity.y;
+        float vz = 8000f;
+        rotation.x = Mathf.Atan((G * r) / (vz * 2f)) * Mathf.Rad2Deg;   // max: 140
+
+        weaponSystemsOfficer.Aim(Quaternion.Euler(rotation));
     }
 
-    public void FireMainBattery()
+    /*
+    #region MLAgent
+    public override void Initialize()
     {
-        for (int i = 0; i < artilleries.Length; i++)
-        {
-            artilleries[i].Fire();
-        }
+        // Academy.Instance.AutomaticSteppingEnabled = false;
     }
 
-    public void FireTorpedoAt(Vector3 position)
+    public override void OnEpisodeBegin()
     {
-        Vector3 releasePoint = transform.position + (position - transform.position).normalized * 8f;
-        releasePoint.y = 0f;
-
-        float y = Geometry.GetAngleBetween(transform.position, position);
-        Vector3 rotation = new Vector3(90f, y, 0f);
-
-        GameObject _ = Instantiate(TorpedoPrefab, releasePoint, Quaternion.Euler(rotation));
+        //
     }
+
+    public override void CollectObservations(VectorSensor sensor)
+    {
+        sensor.AddObservation(transform.position.x);
+        sensor.AddObservation(transform.position.z);
+
+        float radian = (transform.rotation.eulerAngles.y % 360) * Mathf.Deg2Rad;
+        sensor.AddObservation(Mathf.Cos(radian));
+        sensor.AddObservation(Mathf.Sin(radian));
+
+        sensor.AddObservation(target.transform.position.x);
+        sensor.AddObservation(target.transform.position.z);
+
+        float targetRadian = (target.transform.rotation.eulerAngles.y % 360) * Mathf.Deg2Rad;
+        sensor.AddObservation(Mathf.Cos(targetRadian));
+        sensor.AddObservation(Mathf.Sin(targetRadian));
+    }
+
+    public override void OnActionReceived(float[] vectorAction)
+    {
+        FireMainBattery();
+    }
+
+    public override void Heuristic(float[] actionsOut)
+    {
+        //
+    }
+    #endregion
+    */
 
     public void OnCollisionEnter(Collision collision)
     {
@@ -99,23 +135,29 @@ public class Warship : MonoBehaviour
             return;
         }
 
-        Vector3 collisionVelocity = Vector3.zero;
-        if (collision.rigidbody != null)
-        {
-            collisionVelocity = collision.rigidbody.velocity;
-        }
+        explosion.transform.position = collision.transform.position;
+        explosion.transform.rotation = collision.transform.rotation;
+        explosion.Play();
 
-        // Debug.Log($"Warship.OnCollisionEnter: {collision.collider} {collisionVelocity.magnitude} {collision.transform.position}");
-
-        Explosion.transform.position = collision.transform.position;
-        Explosion.transform.rotation = collision.transform.rotation;
-        Explosion.Play();
-
-        Debug.Log($"OnCollisionEnter(collision: {collision.collider.name}) ({collision.collider.tag})");
         if (collision.collider.tag == "Player"
             || collision.collider.tag == "Torpedo")
         {
             Destroy(gameObject);
+            //SetReward(-1.0f);
+            //EndEpisode();
+        }
+        else if (collision.collider.tag.StartsWith("Bullet")
+                 && !collision.collider.tag.EndsWith(teamId.ToString()))
+        {
+            float damage = collision.rigidbody?.velocity.magnitude ?? 0f;
+            Debug.Log($"[{teamId}-{playerId}] OnCollisionEnter(collision: {collision.collider.name}) ({collision.collider.tag} / {damage})");
+            m_CurrentHealth -= damage;
+        }
+        else if (collision.collider.tag == "Terrain")
+        {
+            float damage = rb.velocity.magnitude * rb.mass;
+            Debug.Log($"[{teamId}-{playerId}] OnCollisionEnter(collision: {collision.collider.name}) ({collision.collider.tag} / {damage})");
+            m_CurrentHealth -= damage;
         }
     }
 
@@ -123,8 +165,8 @@ public class Warship : MonoBehaviour
     {
         // Debug.Log($"Warship.OnTriggerEnter(other: {other})");
 
-        Explosion.transform.position = other.transform.position;
-        Explosion.transform.rotation = other.transform.rotation;
-        Explosion.Play();
+        explosion.transform.position = other.transform.position;
+        explosion.transform.rotation = other.transform.rotation;
+        explosion.Play();
     }
 }

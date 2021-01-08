@@ -86,6 +86,7 @@ public class Artillery : MonoBehaviour
         muzzleFlash.Play();
 
         GameObject projectile = Instantiate(shellPrefab, muzzle.position + muzzle.forward * 3, muzzle.rotation);
+        projectile.tag = $"Bullet{teamId}";
 
         Vector3 velocity = muzzle.transform.forward * m_FirePower.x + muzzle.transform.up * m_FirePower.y;
         Rigidbody rigidbody = projectile.GetComponent<Rigidbody>();
@@ -159,7 +160,7 @@ public class Artillery : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
-        // Debug.Log($"Artillery({name}).OnCollisionEnter(collision: {collision})");
+        Debug.Log($"[{teamId}-{playerId}] Artillery({name}).OnCollisionEnter(collision: {collision.collider.tag})");
     }
 
     private void OnTriggerEnter(Collider other)

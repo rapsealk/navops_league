@@ -6,10 +6,9 @@ TagManager:
   tags:
   - Bullet1
   - Bullet2
-  - Wall
   - RadarBlip
-  - Battleship
   - Torpedo
+  - Terrain
   layers:
   - Default
   - TransparentFX
