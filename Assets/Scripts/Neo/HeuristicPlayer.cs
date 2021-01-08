@@ -93,4 +93,37 @@ public class HeuristicPlayer : MonoBehaviour
         return (transform.position - target).magnitude <= 10f;
     }
     */
+
+    /*
+    public GameObject Opponent;
+    public float RadarRange = 100f;
+
+    public readonly IdleState<HeuristicPlayer> IdleState = new IdleState<HeuristicPlayer>();
+    public readonly BattleState<HeuristicPlayer> BattleState = new BattleState<HeuristicPlayer>();
+    private BaseState<HeuristicPlayer> CurrentState;
+
+    public Engine Engine { get; private set; }
+    public Pathfinder Pathfinder { get; private set; }
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        Engine = GetComponent<Engine>();
+        Pathfinder = GetComponent<Pathfinder>();
+
+        Transition(IdleState);
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        CurrentState.Update(this);
+    }
+
+    public void Transition(BaseState<HeuristicPlayer> state)
+    {
+        CurrentState = state;
+        CurrentState.EnterState(this);
+    }
+    */
 }

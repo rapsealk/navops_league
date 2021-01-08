@@ -13,9 +13,9 @@ public class Warship : Agent
     public int playerId;
     public int teamId;
     [HideInInspector] public WeaponSystemsOfficer weaponSystemsOfficer;
+    [HideInInspector] public float currentHealth { get; private set; }
     public Transform battleField;
 
-    private float m_CurrentHealth;
     private Engine m_Engine;
 
     public void Reset()
@@ -26,7 +26,7 @@ public class Warship : Agent
         transform.position = startingPoint.position;
         transform.rotation = startingPoint.rotation;
 
-        m_CurrentHealth = m_Durability;
+        currentHealth = m_Durability;
     }
 
     // Start is called before the first frame update
@@ -203,23 +203,23 @@ public class Warship : Agent
         }
         else if (collision.collider.tag == "Torpedo")
         {
-            m_CurrentHealth = 0f;
+            currentHealth = 0f;
         }
         else if (collision.collider.tag.StartsWith("Bullet")
                  && !collision.collider.tag.EndsWith(teamId.ToString()))
         {
             float damage = collision.rigidbody?.velocity.magnitude ?? 0f;
             Debug.Log($"[{teamId}-{playerId}] OnCollisionEnter(collision: {collision.collider.name}) ({collision.collider.tag} / {damage})");
-            m_CurrentHealth -= damage;
+            currentHealth -= damage;
         }
         else if (collision.collider.tag == "Terrain")
         {
             float damage = rb.velocity.magnitude * rb.mass;
             Debug.Log($"[{teamId}-{playerId}] OnCollisionEnter(collision: {collision.collider.name}) ({collision.collider.tag} / {damage})");
-            m_CurrentHealth -= damage;
+            currentHealth -= damage;
         }
 
-        if (m_CurrentHealth <= 0f + Mathf.Epsilon)
+        if (currentHealth <= 0f + Mathf.Epsilon)
         {
             SetReward(-10.0f);
             target.SetReward(10.0f);
