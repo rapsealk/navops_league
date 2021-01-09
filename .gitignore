@@ -1,8 +1,15 @@
+# Python
 __pycache__/
+*.egg-info
+
+# Tensorboard
 summary/
 runs/
-firebase.json
+
+# Unity Build
 Build/
+
+firebase.json
 
 # prtobuf
 *_pb2.py
