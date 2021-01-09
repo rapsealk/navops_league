@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package distf;
+
+import "google/protobuf/empty.proto";
+
+service LearnerService {
+    rpc Enqueue(Episode) returns (google.protobuf.Empty) {}
+    rpc Load(google.protobuf.Empty) returns (stream Bytes) {}
+}
+
+message Episode {
+    repeated Observation observations = 1;
+    repeated uint32 actions = 2;
+    repeated float rewards = 3;
+    bool result = 4;
+}
+
+message Observation {
+
+}
+
+message Bytes {
+    bytes data = 1;
+}
+
+message TensorArray {
+    repeated Tensor data = 1;
+}
+
+message Tensor {
+    bytes data = 1;
+    repeated uint32 shape = 2;
+    enum Type {
+        FLOAT32 = 0;
+        FLOAT64 = 1;
+        INT32 = 2;
+        INT64 = 3;
+        UINT32 = 4;
+        UINT64 = 5;
+    }
+    Type dtype = 3;
+}

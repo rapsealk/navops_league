@@ -3,3 +3,5 @@ mlagents_envs==0.22.0
 grpcio==1.33.2
 grpcio-tools==1.33.2
 firebase_admin==4.4.0
+gym==0.18.0
+gym[box2d]==1.4.1
