@@ -4,7 +4,7 @@ using Unity.MLAgents.Sensors;
 
 public class Warship : Agent
 {
-    public const float m_Durability = 1000f;
+    public const float m_Durability = 200f;
     public Transform startingPoint;
     public Color rendererColor;
     public ParticleSystem explosion;
@@ -27,6 +27,8 @@ public class Warship : Agent
         transform.rotation = startingPoint.rotation;
 
         currentHealth = m_Durability;
+
+        weaponSystemsOfficer.Reset();
     }
 
     // Start is called before the first frame update
@@ -63,6 +65,11 @@ public class Warship : Agent
                 // TODO: Animation
                 weaponSystemsOfficer.FireTorpedoAt(target.transform.position);
             }
+            else if (Input.GetKeyDown(KeyCode.R))
+            {
+                EndEpisode();
+                target.EndEpisode();
+            }
         }
 
         KeepTrackOnTarget();
@@ -88,6 +95,24 @@ public class Warship : Agent
     #region MLAgent
     public override void Initialize()
     {
+        /*
+        weaponSystemsOfficer = GetComponent<WeaponSystemsOfficer>();
+        weaponSystemsOfficer.Assign(teamId, playerId);
+
+        rb = GetComponent<Rigidbody>();
+        rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+
+        m_Engine = GetComponent<Engine>();
+
+        MeshRenderer[] meshRenderers = GetComponentsInChildren<MeshRenderer>();
+        for (int i = 0; i < meshRenderers.Length; i++)
+        {
+            meshRenderers[i].material.color = rendererColor;
+        }
+
+        Reset();
+        */
+
         // Academy.Instance.AutomaticSteppingEnabled = false;
     }
 
@@ -197,8 +222,9 @@ public class Warship : Agent
         if (collision.collider.tag == "Player")
         {
             SetReward(-1.0f);
-            target.SetReward(-1.0f);
             EndEpisode();
+            target.SetReward(-1.0f);
+            target.EndEpisode();
             return;
         }
         else if (collision.collider.tag == "Torpedo")
@@ -209,21 +235,25 @@ public class Warship : Agent
                  && !collision.collider.tag.EndsWith(teamId.ToString()))
         {
             float damage = collision.rigidbody?.velocity.magnitude ?? 0f;
-            Debug.Log($"[{teamId}-{playerId}] OnCollisionEnter(collision: {collision.collider.name}) ({collision.collider.tag} / {damage})");
+            // Debug.Log($"[{teamId}-{playerId}] OnCollisionEnter(collision: {collision.collider.name}) ({collision.collider.tag} / {damage})");
             currentHealth -= damage;
+
+            AddReward(-damage / m_Durability);
+            target.AddReward(damage / m_Durability);
         }
         else if (collision.collider.tag == "Terrain")
         {
             float damage = rb.velocity.magnitude * rb.mass;
-            Debug.Log($"[{teamId}-{playerId}] OnCollisionEnter(collision: {collision.collider.name}) ({collision.collider.tag} / {damage})");
+            // Debug.Log($"[{teamId}-{playerId}] OnCollisionEnter(collision: {collision.collider.name}) ({collision.collider.tag} / {damage})");
             currentHealth -= damage;
         }
 
         if (currentHealth <= 0f + Mathf.Epsilon)
         {
             SetReward(-10.0f);
-            target.SetReward(10.0f);
             EndEpisode();
+            target.SetReward(10.0f);
+            target.EndEpisode();
         }
     }
 

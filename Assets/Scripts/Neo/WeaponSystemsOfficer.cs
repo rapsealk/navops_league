@@ -32,6 +32,8 @@ public class WeaponSystemsOfficer : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        m_Batteries = GetComponentsInChildren<Artillery>();
+
         Reset();
     }
 
@@ -48,10 +50,12 @@ public class WeaponSystemsOfficer : MonoBehaviour
             }
         }
 
+        /*
         if (torpedoInstance != null)
         {
             Debug.Log($"WSO: Torpedo: {torpedoInstance.transform.position}");
         }
+        */
     }
 
     public void Assign(int teamId, int playerId)
@@ -90,6 +94,8 @@ public class WeaponSystemsOfficer : MonoBehaviour
             return;
         }
 
+        isTorpedoReady = false;
+
         Vector3 releasePoint = transform.position + (position - transform.position).normalized * 8f;
         releasePoint.y = 0f;
 
@@ -97,8 +103,6 @@ public class WeaponSystemsOfficer : MonoBehaviour
         Vector3 rotation = new Vector3(90f, y, 0f);
 
         torpedoInstance = Instantiate(torpedoPrefab, releasePoint, Quaternion.Euler(rotation));
-
-        isTorpedoReady = false;
     }
 
     public class BatterySummary

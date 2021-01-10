@@ -30,7 +30,12 @@ public class Torpedo : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
-        Debug.Log($"Torpedo.OnCollisionEnter(collision: {collision})");
+        if (collision.collider.name.StartsWith("Water"))
+        {
+            return;
+        }
+
+        // Debug.Log($"Torpedo.OnCollisionEnter(collision: {collision.collider.name})");
 
         Destroy(gameObject);
     }
