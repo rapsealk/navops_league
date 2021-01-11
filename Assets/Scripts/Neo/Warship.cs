@@ -170,11 +170,8 @@ public class Warship : Agent
 
         // Penalty
         float distance = Vector3.Distance(transform.position, target.transform.position);
-        if (distance >= 200f)
-        {
-            float penalty = -Mathf.Pow(distance - 200f, 2f) / 10000f;
-            AddReward(penalty);
-        }
+        float penalty = -Mathf.Pow(distance, 2f) / 10000f;
+        AddReward(penalty);
         
         float fuelLoss = 1 / 10000f;
         AddReward(fuelLoss);
@@ -221,9 +218,9 @@ public class Warship : Agent
 
         if (collision.collider.tag == "Player")
         {
-            SetReward(-1.0f);
+            SetReward(-10.0f);
             EndEpisode();
-            target.SetReward(-1.0f);
+            target.SetReward(-10.0f);
             target.EndEpisode();
             return;
         }
