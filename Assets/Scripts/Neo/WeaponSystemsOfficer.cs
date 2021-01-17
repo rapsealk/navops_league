@@ -47,6 +47,7 @@ public class WeaponSystemsOfficer : MonoBehaviour
             if (torpedoCooldown >= m_TorpedoReloadTime)
             {
                 isTorpedoReady = true;
+                torpedoCooldown = 0f;
             }
         }
 
@@ -79,11 +80,18 @@ public class WeaponSystemsOfficer : MonoBehaviour
         }
     }
 
-    public void FireMainBattery()
+    /*
+    public void ForceAimOffset(float offset)
+    {
+        throw new System.NotImplementedException();
+    }
+    */
+
+    public void FireMainBattery(float xOffset = 0f, float yOffset = 0f)
     {
         for (int i = 0; i < m_Batteries.Length; i++)
         {
-            m_Batteries[i].Fire();
+            m_Batteries[i].Fire(xOffset, yOffset);
         }
     }
 
