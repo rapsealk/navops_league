@@ -1,8 +1,13 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
+import abc
 import random
 
 import numpy as np
+
+
+class ReplayMemory(abc.ABC):
+    pass
 
 
 class ReplayBuffer:

@@ -29,7 +29,7 @@ class RimpacEnv(gym.Env):
         file_name = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'Build', 'Rimpac')
         self._env = UnityEnvironment(file_name, worker_id=worker_id, base_port=base_port, seed=seed, no_graphics=no_graphics)
 
-        self._action_space = gym.spaces.Box(-1.0, 1.0, shape=(4,))
+        self._action_space = gym.spaces.Box(-1.0, 1.0, shape=(6,))
         self._observation_space = gym.spaces.Box(-1.0, 1.0, shape=(61,))
 
         self.steps = []
@@ -48,7 +48,8 @@ class RimpacEnv(gym.Env):
 
                 for i, behavior_name in enumerate(self.behavior_names):
                     continuous_action = ActionTuple()
-                    continuous_action.add_continuous(action[i][np.newaxis, :])
+                    action_ = action[i][np.newaxis, :]
+                    continuous_action.add_continuous(action_)
                     self._env.set_actions(behavior_name, continuous_action)
                 # self._env.set_actions(behavior_name='Rimpac?team=1', action=action[0])
                 # self._env.set_actions(behavior_name='Rimpac?team=2', action=action[1])
