@@ -27,6 +27,8 @@ public class Artillery : MonoBehaviour
     private TurretType m_TurretType;
     private float m_InitialEulerRotation;
     private Vector2 m_FirePower = new Vector2(8000f, 100f);
+    private float m_OffsetX = 5f;
+    private float m_OffsetY = 15f;
 
     public void Reset()
     {
@@ -104,11 +106,58 @@ public class Artillery : MonoBehaviour
         }
     }
 
-    public void Fire()
+    public void Fire(float xOffset = 0f, float yOffset = 0f)
     {
         if (!isReloaded || isDamaged)
         {
             return;
+        }
+
+        Vector3 rotation = transform.rotation.eulerAngles;
+        rotation.x = (rotation.x + xOffset * m_OffsetX + 360) % 360;
+        if (rotation.x < 180f)
+        {
+            rotation.x = 0f;
+        }
+        else if (360 - rotation.x > 60f)
+        {
+            rotation.x = -60f;
+        }
+        rotation.y = (rotation.y + yOffset * m_OffsetY + 360) % 360;
+        transform.rotation = Quaternion.Euler(rotation);
+
+        Vector3 localRotation = transform.localRotation.eulerAngles;
+        localRotation.y = (localRotation.y > 180f) ? (localRotation.y - 360f) : localRotation.y;
+        switch (m_TurretType)
+        {
+            case TurretType.FRONTAL:
+                if (Mathf.Abs(localRotation.y) >= m_Traverse + Mathf.Epsilon)
+                {
+                    localRotation.y = Mathf.Sign(localRotation.y) * m_Traverse;
+                    transform.localRotation = Quaternion.Euler(localRotation);
+                }
+                break;
+            case TurretType.REAR:
+                if (Mathf.Abs(localRotation.y) <= 180f - (m_Traverse + Mathf.Epsilon))
+                {
+                    localRotation.y = 180f - Mathf.Sign(localRotation.y) * m_Traverse;
+                    transform.localRotation = Quaternion.Euler(localRotation);
+                }
+                break;
+            case TurretType.LEFT:
+                if (Mathf.Abs(localRotation.y + 90f) >= m_Traverse + Mathf.Epsilon)
+                {
+                    localRotation.y = -90f + Mathf.Sign(localRotation.y + 90f) * m_Traverse;
+                    transform.localRotation = Quaternion.Euler(localRotation);
+                }
+                break;
+            case TurretType.RIGHT:
+                if (Mathf.Abs(localRotation.y - 90f) >= m_Traverse + Mathf.Epsilon)
+                {
+                    localRotation.y = 90f + Mathf.Sign(localRotation.y - 90f) * m_Traverse;
+                    transform.localRotation = Quaternion.Euler(localRotation);
+                }
+                break;
         }
 
         muzzleFlash.Play();

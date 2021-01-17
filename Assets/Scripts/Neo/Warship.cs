@@ -182,15 +182,17 @@ public class Warship : Agent
         // Interpret signals
         float enginePower = Mathf.Clamp(vectorAction[0], -1f, 1f);
         float rudderPower = Mathf.Clamp(vectorAction[1], -1f, 1f);
-        bool fireMainBattery = (vectorAction[2] >= 0.5f);
-        bool launchTorpedo = (vectorAction[3] >= 0.5f);
+        float fireOffsetX = Mathf.Clamp(vectorAction[2], -1f, 1f);
+        float fireOffsetY = Mathf.Clamp(vectorAction[3], -1f, 1f);
+        bool fireMainBattery = (vectorAction[4] >= 0.5f);
+        bool launchTorpedo = (vectorAction[5] >= 0.5f);
 
         m_Engine.Combust(enginePower);
         m_Engine.Steer(rudderPower);
 
         if (fireMainBattery)
         {
-            weaponSystemsOfficer.FireMainBattery();
+            weaponSystemsOfficer.FireMainBattery(fireOffsetX, fireOffsetY);
         }
 
         if (launchTorpedo)
