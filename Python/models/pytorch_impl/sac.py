@@ -51,8 +51,8 @@ class QNetwork(nn.Module):
         self.apply(weights_init_)
 
     def forward(self, state, action):
-        # xu = torch.cat([state, action], dim=1)
-        xu = torch.cat([state, action], dim=2)
+        xu = torch.cat([state, action], dim=1)
+        # xu = torch.cat([state, action], dim=2)
 
         x1 = F.relu(self.linear1(xu))
         x1 = F.relu(self.linear2(x1))
@@ -151,7 +151,7 @@ class SoftActorCriticAgent:
         """
 
     def select_action(self, state, evaluate=False):
-        state = torch.FloatTensor(state).to(self.device).unsqueeze(0)
+        state = torch.FloatTensor([state]).to(self.device)  # .unsqueeze(0)
         if not evaluate:
             action, _, _ = self.policy.sample(state)
         else:
@@ -172,13 +172,11 @@ class SoftActorCriticAgent:
 
         with torch.no_grad():
             next_state_action, next_state_log_pi, _ = self.policy.sample(next_states)
-            print(updates, 'next_states:', next_states.shape, 'next_state_action:', next_state_action.shape)
             qf1_next_target, qf2_next_target = self.critic_target(next_states, next_state_action.to(self.device))
             min_qf_next_target = torch.min(qf1_next_target, qf2_next_target) - self.alpha * next_state_log_pi
             next_q_value = rewards + masks * self.gamma * min_qf_next_target
 
-        print(updates, 'states:', states.shape, 'action:', actions.shape)
-        qf1, qf2 = self.critic(states, actions.unsqueeze(1)) # Two Q-functions to mitigate positive bias in the policy improvement step
+        qf1, qf2 = self.critic(states, actions) # Two Q-functions to mitigate positive bias in the policy improvement step
         qf1_loss = F.mse_loss(qf1, next_q_value)  # JQ = 𝔼(st,at)~D[0.5(Q1(st,at) - r(st,at) - γ(𝔼st+1~p[V(st+1)]))^2]
         qf2_loss = F.mse_loss(qf2, next_q_value)  # JQ = 𝔼(st,at)~D[0.5(Q1(st,at) - r(st,at) - γ(𝔼st+1~p[V(st+1)]))^2]
         qf_loss = qf1_loss + qf2_loss
@@ -239,6 +237,13 @@ class SoftActorCriticAgent:
             if critic_path is not None:
                 self.critic.load_state_dict(torch.load(critic_path))
         """
+
+    def get_state_dict(self):
+        return self.policy.state_dict(), self.critic.state_dict()
+
+    def set_state_dict(self, state_dicts):
+        self.policy.load_state_dict(state_dicts[0])
+        self.critic.load_state_dict(state_dicts[1])
 
 
 if __name__ == "__main__":

@@ -1,6 +1,8 @@
 # Unity
 
 ## Backgrounds
+### Reinforcement Learning
+* [Part 1: Key Concepts in RL](https://spinningup.openai.com/en/latest/spinningup/rl_intro.html)
 ### Games
 * [ELO Rating System](https://en.wikipedia.org/wiki/Elo_rating_system)
 ### Unity
