@@ -1,12 +1,12 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
+import argparse
 import time
-# import queue
 import random
 from datetime import datetime
 from itertools import count
-from threading import Thread, Lock, get_ident
-from multiprocessing import cpu_count   # , Queue
+from threading import Thread
+from multiprocessing import cpu_count
 
 import numpy as np
 import gym
@@ -14,6 +14,13 @@ from torch.utils.tensorboard import SummaryWriter
 
 from models.pytorch_impl import SoftActorCriticAgent, ReplayBuffer
 # from models.pytorch_impl import MPReplayBuffer as ReplayBuffer
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--env', type=str, default='LunarLanderContinuous-v2',
+                    help='Gym environment for experiment.')
+args = parser.parse_args()
+
+ENVIRONMENT = args.env  # 'MountainCarContinuous-v0'
 
 
 def epsilon():
@@ -30,14 +37,13 @@ def epsilon():
 class Learner:
 
     def __init__(self):
-        env = gym.make('MountainCarContinuous-v0')
+        env = gym.make(ENVIRONMENT)
         self.global_agent = SoftActorCriticAgent(env.observation_space.shape[0], env.action_space)
         env.close()
         del env
 
         self._buffer = ReplayBuffer(1000000)
-        # print('[{}] Buffer.id: {}'.format(datetime.now().isoformat(), id(self._buffer)))
-        self._writer = SummaryWriter('runs/{}'.format(datetime.now().strftime('%Y-%m-%d_%H-%M-%S')))
+        self._writer = SummaryWriter('runs/{}-{}'.format(datetime.now().strftime('%Y-%m-%d_%H-%M-%S'), ENVIRONMENT))
 
         self.num_workers = cpu_count()
 
@@ -64,16 +70,9 @@ class Learner:
         t = 1
         batch_size = 2048
         while True:
-            # time.sleep(10)
-            # print('[{}] len(_buffer): {}'.format(datetime.now().isoformat(), len(buffer)))
             if len(buffer) < batch_size:
                 time.sleep(1)
                 continue
-            """
-            if len(self._buffer) < 128:
-                time.sleep(1)
-                continue
-            """
 
             q1, q2, pi, alpha, alpha_tlog = self.global_agent.update_parameters(buffer, batch_size, t)
 
@@ -94,9 +93,9 @@ class Worker(Thread):
     def __init__(self, global_agent, buffer=None, writer=None):
         Thread.__init__(self, daemon=True)
 
-        self._buffer = buffer   # or ReplayBuffer(1000000)
+        self._buffer = buffer
         # self._lock = Lock()
-        self._env = gym.make('MountainCarContinuous-v0')
+        self._env = gym.make(ENVIRONMENT)
 
         self.global_agent = global_agent
         # self.max_episodes = 0
