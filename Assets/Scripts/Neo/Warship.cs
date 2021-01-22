@@ -173,7 +173,7 @@ public class Warship : Agent
         float penalty = -Mathf.Pow(distance, 2f) / 10000f;
         AddReward(penalty);
         
-        float fuelLoss = 1 / 10000f;
+        float fuelLoss = -1 / 10000f;
         AddReward(fuelLoss);
     }
 
@@ -220,9 +220,9 @@ public class Warship : Agent
 
         if (collision.collider.tag == "Player")
         {
-            SetReward(-10.0f);
+            SetReward(-10000.0f);
             EndEpisode();
-            target.SetReward(-10.0f);
+            target.SetReward(-10000.0f);
             target.EndEpisode();
             return;
         }
@@ -237,8 +237,8 @@ public class Warship : Agent
             // Debug.Log($"[{teamId}-{playerId}] OnCollisionEnter(collision: {collision.collider.name}) ({collision.collider.tag} / {damage})");
             currentHealth -= damage;
 
-            AddReward(-damage / m_Durability);
-            target.AddReward(damage / m_Durability);
+            AddReward(-damage / m_Durability * 1000f);
+            target.AddReward(damage / m_Durability * 1000f);
         }
         else if (collision.collider.tag == "Terrain")
         {
@@ -249,9 +249,9 @@ public class Warship : Agent
 
         if (currentHealth <= 0f + Mathf.Epsilon)
         {
-            SetReward(-10.0f);
+            SetReward(-1000.0f);
             EndEpisode();
-            target.SetReward(10.0f);
+            target.SetReward(1000.0f);
             target.EndEpisode();
         }
     }
