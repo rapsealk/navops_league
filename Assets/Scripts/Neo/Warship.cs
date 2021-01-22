@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
 using Unity.MLAgents;
 using Unity.MLAgents.Sensors;
+using UnityEngine.UI;
+using System.Collections;
 
 public class Warship : Agent
 {
@@ -34,21 +36,7 @@ public class Warship : Agent
     // Start is called before the first frame update
     void Start()
     {
-        weaponSystemsOfficer = GetComponent<WeaponSystemsOfficer>();
-        weaponSystemsOfficer.Assign(teamId, playerId);
-
-        rb = GetComponent<Rigidbody>();
-        rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
-
-        m_Engine = GetComponent<Engine>();
-
-        MeshRenderer[] meshRenderers = GetComponentsInChildren<MeshRenderer>();
-        for (int i = 0; i < meshRenderers.Length; i++)
-        {
-            meshRenderers[i].material.color = rendererColor;
-        }
-
-        Reset();
+        
     }
 
     // Update is called once per frame
@@ -71,11 +59,9 @@ public class Warship : Agent
                 target.EndEpisode();
             }
         }
-
-        KeepTrackOnTarget();
     }
 
-    private void KeepTrackOnTarget()
+    void FixedUpdate()
     {
         Vector3 rotation = Vector3.zero;
         rotation.y = Geometry.GetAngleBetween(transform.position, target.transform.position);
@@ -95,7 +81,6 @@ public class Warship : Agent
     #region MLAgent
     public override void Initialize()
     {
-        /*
         weaponSystemsOfficer = GetComponent<WeaponSystemsOfficer>();
         weaponSystemsOfficer.Assign(teamId, playerId);
 
@@ -111,7 +96,6 @@ public class Warship : Agent
         }
 
         Reset();
-        */
 
         // Academy.Instance.AutomaticSteppingEnabled = false;
     }

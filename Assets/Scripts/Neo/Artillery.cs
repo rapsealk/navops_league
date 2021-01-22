@@ -29,9 +29,17 @@ public class Artillery : MonoBehaviour
     private Vector2 m_FirePower = new Vector2(8000f, 100f);
     private float m_OffsetX = 5f;
     private float m_OffsetY = 15f;
+    private bool initialized = false;
 
     public void Reset()
     {
+        if (!initialized)
+        {
+            initialized = true;
+
+            Initialize();
+        }
+
         cooldownTimer = 0f;
         isReloaded = true;
         repairTimer = 0f;
@@ -57,8 +65,7 @@ public class Artillery : MonoBehaviour
         transform.localRotation = Quaternion.Euler(localRotation);
     }
 
-    // Start is called before the first frame update
-    void Start()
+    private void Initialize()
     {
         m_InitialEulerRotation = (transform.localRotation.eulerAngles.y + 360) % 360;
 
@@ -78,6 +85,31 @@ public class Artillery : MonoBehaviour
         {
             m_TurretType = TurretType.LEFT;
         }
+    }
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        /*
+        m_InitialEulerRotation = (transform.localRotation.eulerAngles.y + 360) % 360;
+
+        if (m_InitialEulerRotation <= Mathf.Epsilon)
+        {
+            m_TurretType = TurretType.FRONTAL;
+        }
+        else if (m_InitialEulerRotation <= 90f + Mathf.Epsilon)
+        {
+            m_TurretType = TurretType.RIGHT;
+        }
+        else if (m_InitialEulerRotation <= 180f + Mathf.Epsilon)
+        {
+            m_TurretType = TurretType.REAR;
+        }
+        else
+        {
+            m_TurretType = TurretType.LEFT;
+        }
+        */
 
         // Debug.Log($"{GetType().Name}({name} {TurretType}) InitialEulerRotation: {InitialEulerRotation}");
         Reset();
