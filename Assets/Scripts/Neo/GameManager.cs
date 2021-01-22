@@ -18,8 +18,10 @@ public class GameManager : MonoBehaviour
     void Update()
     {
         Vector3 position1 = player1.transform.position;
-        player1Text.text = string.Format("Player: ({0:F2}, {1:F2}) / {2:F}", position1.x, position1.z, player1.currentHealth);
+        Vector3 rotation1 = player1.transform.rotation.eulerAngles;
+        player1Text.text = string.Format("Player: ({0:F2}, {1:F2}) [{2:F2}] / {3:F}", position1.x, position1.z, rotation1.y, player1.currentHealth);
         Vector3 position2 = player2.transform.position;
-        player2Text.text = string.Format("Opponent: ({0:F2}, {1:F2}) / {2:F}", position2.x, position2.z, player2.currentHealth);
+        Vector3 rotation2 = player2.transform.rotation.eulerAngles;
+        player2Text.text = string.Format("Opponent: ({0:F2}, {1:F2}) [{2:F2}] / {3:F}", position2.x, position2.z, rotation2.y, player2.currentHealth);
     }
 }

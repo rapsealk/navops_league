@@ -27,8 +27,8 @@ public class Artillery : MonoBehaviour
     private TurretType m_TurretType;
     private float m_InitialEulerRotation;
     private Vector2 m_FirePower = new Vector2(8000f, 100f);
-    private float m_OffsetX = 5f;
-    private float m_OffsetY = 15f;
+    private float offsetX = 3f;
+    private float offsetY = 5f;
     private bool initialized = false;
 
     public void Reset()
@@ -138,7 +138,7 @@ public class Artillery : MonoBehaviour
         }
     }
 
-    public void Fire(float xOffset = 0f, float yOffset = 0f)
+    public void Fire(Vector2 offset = new Vector2())
     {
         if (!isReloaded || isDamaged)
         {
@@ -146,7 +146,7 @@ public class Artillery : MonoBehaviour
         }
 
         Vector3 rotation = transform.rotation.eulerAngles;
-        rotation.x = (rotation.x + xOffset * m_OffsetX + 360) % 360;
+        rotation.x = (rotation.x + offset.x * offsetX + 360) % 360;
         if (rotation.x < 180f)
         {
             rotation.x = 0f;
@@ -155,7 +155,7 @@ public class Artillery : MonoBehaviour
         {
             rotation.x = -60f;
         }
-        rotation.y = (rotation.y + yOffset * m_OffsetY + 360) % 360;
+        rotation.y = (rotation.y + offset.y * offsetY + 360) % 360;
         transform.rotation = Quaternion.Euler(rotation);
 
         Vector3 localRotation = transform.localRotation.eulerAngles;

@@ -87,12 +87,11 @@ public class WeaponSystemsOfficer : MonoBehaviour
     }
     */
 
-    public void FireMainBattery(float xOffset = 0f, float yOffset = 0f)
+    private Vector2 mainBatteryOffset = Vector2.zero;
+
+    public void FireMainBattery(int id, Vector2 offset = new Vector2())
     {
-        for (int i = 0; i < m_Batteries.Length; i++)
-        {
-            m_Batteries[i].Fire(xOffset, yOffset);
-        }
+        m_Batteries[id].Fire(offset);
     }
 
     public void FireTorpedoAt(Vector3 position)

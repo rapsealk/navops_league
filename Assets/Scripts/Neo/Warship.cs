@@ -1,8 +1,6 @@
 ﻿using UnityEngine;
 using Unity.MLAgents;
 using Unity.MLAgents.Sensors;
-using UnityEngine.UI;
-using System.Collections;
 
 public class Warship : Agent
 {
@@ -42,6 +40,7 @@ public class Warship : Agent
     // Update is called once per frame
     void Update()
     {
+        /*
         if (Application.platform == RuntimePlatform.WindowsEditor)
         {
             if (Input.GetKeyDown(KeyCode.Mouse0))
@@ -59,6 +58,7 @@ public class Warship : Agent
                 target.EndEpisode();
             }
         }
+        */
     }
 
     void FixedUpdate()
@@ -166,23 +166,36 @@ public class Warship : Agent
         // Interpret signals
         float enginePower = Mathf.Clamp(vectorAction[0], -1f, 1f);
         float rudderPower = Mathf.Clamp(vectorAction[1], -1f, 1f);
-        float fireOffsetX = Mathf.Clamp(vectorAction[2], -1f, 1f);
-        float fireOffsetY = Mathf.Clamp(vectorAction[3], -1f, 1f);
-        bool fireMainBattery = (vectorAction[4] >= 0.5f);
-        bool launchTorpedo = (vectorAction[5] >= 0.5f);
-
-        m_Engine.Combust(enginePower);
-        m_Engine.Steer(rudderPower);
-
-        if (fireMainBattery)
+        bool[] fireMainBatteryCommands = new bool[6];
+        for (int i = 0; i < 6; i++)
         {
-            weaponSystemsOfficer.FireMainBattery(fireOffsetX, fireOffsetY);
+            fireMainBatteryCommands[i] = (vectorAction[2+i] >= 0.5f);
+        }
+        Vector2[] aimOffsets = new Vector2[6];
+        for (int i = 0; i < 6; i++)
+        {
+            aimOffsets[i].x = Mathf.Clamp(vectorAction[i*2+8], -1f, 1f);
+            aimOffsets[i].y = Mathf.Clamp(vectorAction[i*2+9], -1f, 1f);
+        }
+        // bool launchTorpedo = (vectorAction[5] >= 0.5f);
+
+        for (int i = 0; i < 6; i++)
+        {
+            if (fireMainBatteryCommands[i])
+            {
+                weaponSystemsOfficer.FireMainBattery(i, aimOffsets[i]);
+            }
         }
 
+        /*
         if (launchTorpedo)
         {
             weaponSystemsOfficer.FireTorpedoAt(target.transform.position);
         }
+        */
+
+        m_Engine.Combust(enginePower);
+        m_Engine.Steer(rudderPower);
     }
 
     public override void Heuristic(float[] actionsOut)

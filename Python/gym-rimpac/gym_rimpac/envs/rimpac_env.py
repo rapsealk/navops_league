@@ -51,6 +51,11 @@ class RimpacEnv(gym.Env):
                     done = True
                     info['win'] = int(terminal_steps.reward[0] == 1.0)
 
+                #print('rimpac({}):'.format(team_id), decision_steps.reward.shape, terminal_steps.reward.shape, done)
+
+                if done:
+                    break
+
                 for i, behavior_name in enumerate(self.behavior_names):
                     if not done:
                         continuous_action = ActionTuple()
@@ -63,13 +68,14 @@ class RimpacEnv(gym.Env):
                 # self._env.set_actions(behavior_name='Rimpac?team=1', action=action[0])
                 # self._env.set_actions(behavior_name='Rimpac?team=2', action=action[1])
 
-                if done:
-                    break
+                # if done:
+                #     break
 
             if done:
                 break
 
         if done:
+            self._update_environment_state()
             observation = np.array([obs.terminal_steps.obs for obs in self.observation])
             # if 0 in observation.shape:
             #     observation = self.observation_cache
@@ -79,14 +85,20 @@ class RimpacEnv(gym.Env):
         else:
             self._env.step()
             observation = self._update_environment_state()
-            # if 0 in observation.shape:
-            #     observation = self.observation_cache
-            # self.observation_cache = observation
+            # print('rimpac.obs:', observation.shape, done)
+            if 0 in observation.shape:
+                observation = self.observation_cache
+            self.observation_cache = observation
             reward = np.array([obs.decision_steps.reward for obs in self.observation])
-            # if 0 in reward.shape:
-            #     reward = np.zeros((1,))
+            if 0 in reward.shape:
+                reward = np.array([obs.terminal_steps.reward for obs in self.observation])
+            #    # reward = np.zeros((1,))
 
             # reward -= 0.001
+
+        #reward = np.array([obs.decision_steps.reward for obs in self.observation] + \
+        #                  [obs.terminal_steps.reward for obs in self.observation])
+        #print('rimpac.reward:', reward.shape)
 
         return np.squeeze(observation, axis=1), np.squeeze(reward), done, info
 
