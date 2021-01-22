@@ -23,6 +23,7 @@ def convert_to_tensor(device, *args):
     )
 
 
+"""
 class Encoder(nn.Module):
 
     def __init__(self):
@@ -33,6 +34,7 @@ class Decoder(nn.Module):
 
     def __init__(self):
         super(Decoder, self).__init__()
+"""
 
 
 class QNetwork(nn.Module):
@@ -84,7 +86,7 @@ class GaussianPolicyNetwork(nn.Module):
             self.action_bias = torch.tensor(0.0)
         else:
             self.action_scale = torch.FloatTensor((action_space.high - action_space.low) / 2)
-            self.action_bias = torch.FloatTensor((action_space.high - action_space.low) / 2)
+            self.action_bias = torch.FloatTensor((action_space.high + action_space.low) / 2)
 
     def forward(self, state):
         x = F.relu(self.linear1(state))
@@ -124,7 +126,7 @@ class SoftActorCriticAgent:
         self.alpha = alpha
 
         self.target_update_interval = 1
-        self.automatic_entropy_tuning = False
+        self.automatic_entropy_tuning = True    # False
         # self.replay_size = 1e6
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -137,7 +139,7 @@ class SoftActorCriticAgent:
 
         # Gaussian
         if self.automatic_entropy_tuning:
-            self.target_entropy = -torch.prod(torch.Tensor(action_space).to(self.device)).item()
+            self.target_entropy = -torch.prod(torch.Tensor(action_space.shape).to(self.device)).item()
             self.log_alpha = torch.zeros(1, requires_grad=True, device=self.device)
             self.alpha_optim = optim.Adam([self.log_alpha], lr=lr)
         self.policy = GaussianPolicyNetwork(num_inputs, action_space.shape[0], hidden_dim, action_space).to(self.device)
