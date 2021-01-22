@@ -1,6 +1,7 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
 import os
+import json
 from collections import namedtuple
 
 import numpy as np
@@ -13,6 +14,10 @@ from mlagents_envs.base_env import ActionTuple
 
 Observation = namedtuple('Observation',
                          ('decision_steps', 'terminal_steps'))
+
+with open(os.path.join(os.path.dirname(__file__), '..', '..', 'config.json')) as f:
+    config = ''.join(f.readlines())
+    config = json.loads(config)
 
 
 class RimpacEnv(gym.Env):
@@ -29,8 +34,8 @@ class RimpacEnv(gym.Env):
         file_name = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'Build', 'Rimpac')
         self._env = UnityEnvironment(file_name, worker_id=worker_id, base_port=base_port, seed=seed, no_graphics=no_graphics)
 
-        self._action_space = gym.spaces.Box(-1.0, 1.0, shape=(6,))
-        self._observation_space = gym.spaces.Box(-1.0, 1.0, shape=(61,))
+        self._action_space = gym.spaces.Box(-1.0, 1.0, shape=tuple(config["action_space"]["shape"]))
+        self._observation_space = gym.spaces.Box(-1.0, 1.0, shape=tuple(config["observation_space"]["shape"]))
 
         self.steps = []
         self.observation = []
@@ -47,12 +52,19 @@ class RimpacEnv(gym.Env):
                     info['win'] = int(terminal_steps.reward[0] == 1.0)
 
                 for i, behavior_name in enumerate(self.behavior_names):
-                    continuous_action = ActionTuple()
-                    action_ = action[i][np.newaxis, :]
-                    continuous_action.add_continuous(action_)
+                    if not done:
+                        continuous_action = ActionTuple()
+                        action_ = action[i][np.newaxis, :]
+                        continuous_action.add_continuous(action_)
+                    else:
+                        continuous_action = ActionTuple()
+                        continuous_action.add_continuous(np.zeros((0, 6)))
                     self._env.set_actions(behavior_name, continuous_action)
                 # self._env.set_actions(behavior_name='Rimpac?team=1', action=action[0])
                 # self._env.set_actions(behavior_name='Rimpac?team=2', action=action[1])
+
+                if done:
+                    break
 
             if done:
                 break
