@@ -221,8 +221,8 @@ public class Warship : Agent
         if (collision.collider.tag == "Player")
         {
             SetReward(-10000.0f);
-            EndEpisode();
             target.SetReward(-10000.0f);
+            EndEpisode();
             target.EndEpisode();
             return;
         }
@@ -250,8 +250,8 @@ public class Warship : Agent
         if (currentHealth <= 0f + Mathf.Epsilon)
         {
             SetReward(-1000.0f);
-            EndEpisode();
             target.SetReward(1000.0f);
+            EndEpisode();
             target.EndEpisode();
         }
     }
