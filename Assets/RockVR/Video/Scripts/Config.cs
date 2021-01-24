@@ -21,6 +21,14 @@ namespace RockVR.Video
         {
             get
             {
+                if (String.IsNullOrEmpty(saveFolder))
+                {
+                    saveFolder = Application.streamingAssetsPath + "/VideoRecorder/";
+                    Debug.Log("SaveFolder: " + saveFolder);
+                }
+                return saveFolder;
+
+                /*
 #if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
                 if (saveFolder == "")
                 {
@@ -34,6 +42,7 @@ namespace RockVR.Video
                 }
                 return saveFolder;
 #endif
+                */
             }
             set
             {
