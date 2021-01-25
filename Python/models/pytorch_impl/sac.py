@@ -123,6 +123,7 @@ class SoftActorCriticAgent:
         self.gamma = gamma
         self.tau = tau
         self.alpha = alpha
+        self.lr = lr
 
         self.target_update_interval = 1
         self.automatic_entropy_tuning = True    # False
@@ -245,6 +246,44 @@ class SoftActorCriticAgent:
     def set_state_dict(self, state_dicts):
         self.policy.load_state_dict(state_dicts[0])
         self.critic.load_state_dict(state_dicts[1])
+
+    def save(self, path: str):
+        torch.save({
+            # "cuda": torch.cuda.is_available(),
+            "state_dict": self.policy.state_dict(),
+            "optimizer_state_dict": self.policy_optim.state_dict(),
+            "critic_state_dict": self.critic.state_dict(),
+            "critic_optimizer_state_dict": self.critic_optim.state_dict(),
+
+            "gamma": self.gamma,
+            "tau": self.tau,
+            "alpha": self.alpha,
+            "lr": self.lr,
+            "target_update_interval": self.target_update_interval,
+            "automatic_entropy_tuning": self.automatic_entropy_tuning,
+            "target_entropy": (self.automatic_entropy_tuning or None) and self.target_entropy,
+            "log_alpha": (self.automatic_entropy_tuning or None) and self.log_alpha,    # .item()
+            "alpha_optim": (self.automatic_entropy_tuning or None) and self.alpha_optim.state_dict()
+        }, path)
+
+    def load(self, path: str):
+        checkpoint = torch.load(path)
+        self.policy.load_state_dict(checkpoint["state_dict"])
+        self.policy_optim.load_state_dict(checkpoint["optimizer_state_dict"])
+        self.critic_target.load_state_dict(checkpoint["critic_state_dict"])
+        self.critic_optim.load_state_dict(checkpoint["critic_optimizer_state_dict"])
+        # ...
+        self.gamma = checkpoint["gamma"]
+        self.tau = checkpoint["tau"]
+        self.alpha = checkpoint["alpha"]
+        self.lr = checkpoint["lr"]
+
+        self.target_update_interval = checkpoint["target_update_interval"]
+        self.automatic_entropy_tuning = checkpoint["automatic_entropy_tuning"]
+        if self.automatic_entropy_tuning:
+            self.target_entropy = checkpoint["target_entropy"]
+            self.log_alpha = checkpoint["log_alpha"]
+            self.alpha_optim.load_state_dict(checkpoint["alpha_optim"])
 
 
 if __name__ == "__main__":
