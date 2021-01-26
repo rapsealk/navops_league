@@ -57,6 +57,12 @@ public class Warship : Agent
                 EndEpisode();
                 target.EndEpisode();
             }
+
+            float vertical = Input.GetAxisRaw("Vertical");
+            float horizontal = Input.GetAxisRaw("Horizontal");
+
+            // engine.Steer(horizontal);
+            // engine.Combust(vertical);
         }
         */
     }

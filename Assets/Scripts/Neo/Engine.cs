@@ -15,14 +15,7 @@ public class Engine : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Application.platform == RuntimePlatform.WindowsEditor)
-        {
-            float vertical = Input.GetAxisRaw("Vertical");
-            float horizontal = Input.GetAxisRaw("Horizontal");
-
-            Steer(horizontal);
-            Combust(vertical);
-        }
+        
     }
 
     public void Combust(float fuel = 1.0f)

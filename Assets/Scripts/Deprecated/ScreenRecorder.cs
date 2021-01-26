@@ -137,10 +137,10 @@ public class ScreenRecorder : MonoBehaviour
 
 	void OnRenderImage(RenderTexture source, RenderTexture destination)
 	{
-		if (frameNumber <= maxFrames)
+		if (/*frameNumber <= maxFrames*/ true)
 		{
 			// Check if render target size has changed, if so, terminate
-			if(source.width != screenWidth || source.height != screenHeight)
+			if (source.width != screenWidth || source.height != screenHeight)
 			{
 				threadIsProcessing = false;
 				this.enabled = false;
