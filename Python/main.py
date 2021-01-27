@@ -1,6 +1,7 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
 import argparse
+import os
 from datetime import datetime
 from itertools import count
 
@@ -90,6 +91,10 @@ def main():
             if done:
                 writer.add_scalar('reward/b', total_rewards[0], episode)
                 writer.add_scalar('reward/r', total_rewards[1], episode)
+
+                if episode % 1000 == 0:
+                    agent1.save(os.path.join(os.path.dirname(__file__), 'checkpoints', 'sac1-{}.ckpt'.format(episode)))
+                    agent2.save(os.path.join(os.path.dirname(__file__), 'checkpoints', 'sac2-{}.ckpt'.format(episode)))
                 break
 
     env.close()
