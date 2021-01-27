@@ -2,6 +2,9 @@
 __pycache__/
 *.egg-info
 
+# Checkpoint
+*.ckpt
+
 # Tensorboard
 summary/
 runs/
@@ -20,6 +23,8 @@ firebase.json
 
 # Node.js
 node_modules/
+# Typescript
+*.js
 
 # This .gitignore file should be placed at the root of your Unity project directory
 #

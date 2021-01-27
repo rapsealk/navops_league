@@ -1,5 +1,7 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
+import os
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -248,17 +250,20 @@ class SoftActorCriticAgent:
         self.critic.load_state_dict(state_dicts[1])
 
     def save(self, path: str):
+        if not os.path.exists(os.path.dirname(path)):
+            os.mkdir(os.path.dirname(path))
         torch.save({
             # "cuda": torch.cuda.is_available(),
             "state_dict": self.policy.state_dict(),
             "optimizer_state_dict": self.policy_optim.state_dict(),
             "critic_state_dict": self.critic.state_dict(),
             "critic_optimizer_state_dict": self.critic_optim.state_dict(),
-
+            # ...
             "gamma": self.gamma,
             "tau": self.tau,
             "alpha": self.alpha,
             "lr": self.lr,
+
             "target_update_interval": self.target_update_interval,
             "automatic_entropy_tuning": self.automatic_entropy_tuning,
             "target_entropy": (self.automatic_entropy_tuning or None) and self.target_entropy,

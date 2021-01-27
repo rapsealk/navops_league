@@ -1,6 +1,7 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
 import argparse
+import os
 import time
 import random
 from datetime import datetime
@@ -13,7 +14,6 @@ import gym
 from torch.utils.tensorboard import SummaryWriter
 
 from models.pytorch_impl import SoftActorCriticAgent, ReplayBuffer
-# from models.pytorch_impl import MPReplayBuffer as ReplayBuffer
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--env', type=str, default='LunarLanderContinuous-v2',
@@ -85,6 +85,8 @@ class Learner:
 
             if t % 100 == 0:
                 print('[{}] Episode {}: Q({}, {}), PI({})'.format(datetime.now().isoformat(), t, q1, q2, pi))
+            if t % 1000 == 0:
+                self.global_agent.save(os.path.join(os.path.dirname(__file__), 'checkpoints', '{}-sac-{}.ckpt'.format(ENVIRONMENT, t)))
             t += 1
 
 
@@ -103,11 +105,12 @@ class Worker(Thread):
         # self.gamma = gamma
         self.writer = writer
 
-        self.update()
+        self.load_learner_parameters()
 
     def run(self):
         eps = epsilon()
         for episode in count(1):
+            # self.load_learner_parameters()
             observation = self._env.reset()
             total_rewards = 0
 
@@ -127,7 +130,6 @@ class Worker(Thread):
 
                 # with self._lock:
                 self._buffer.push(observation, action, reward, next_observation, done)
-                # print('[{}] tid: {} - {}({})'.format(datetime.now().isoformat(), get_ident(), len(self._buffer), id(self._buffer)))
 
                 observation = next_observation
                 total_rewards += reward
@@ -136,12 +138,12 @@ class Worker(Thread):
                     if self.writer is not None:
                         self.writer.add_scalar('reward', total_rewards, episode)
                         print('[{}] Reward Ep. {}: {}'.format(datetime.now().isoformat(), episode, total_rewards))
-                    self.update()
+                    self.load_learner_parameters()
                     break
 
         self._env.close()
 
-    def update(self):
+    def load_learner_parameters(self):
         self.agent.set_state_dict(self.global_agent.get_state_dict())
 
 

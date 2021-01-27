@@ -17,6 +17,14 @@ parser.add_argument('--no-graphics', action='store_true', default=False)
 args = parser.parse_args()
 
 
+def discount_rewards(rewards, dones, gamma=0.99):
+    rewards = np.array(rewards, dtype=np.float32)
+    returns = np.append(np.zeros_like(rewards), np.zeros((1, 1))).reshape((-1, 1))
+    for t in reversed(range(rewards.shape[0])):
+        returns[t] = rewards[t] + gamma * returns[t+1] * (1 - dones[t])
+    return returns[:-1]
+
+
 def epsilon():
     eps = 1.0
     eps_discount = 0.001
@@ -55,14 +63,9 @@ def main():
             action = np.stack(actions, axis=0)  # .squeeze(0)
             next_observation, reward, done, info = env.step(action)
 
-            # rewards.append(reward)
-            # print('observation:', observation.shape, next_observation.shape, done)
             memory.push(observation[0, 0], actions[0], reward[0], next_observation[0, 0], done)
             memory.push(observation[1, 0], actions[1], reward[1], next_observation[1, 0], done)
 
-            #print('reward:', reward.shape, done)
-            # if 0 in reward.shape:
-            #     print('- reward:', reward, done)
             total_rewards[0] += reward[0].item()
             total_rewards[1] += reward[1].item()
 
@@ -70,7 +73,6 @@ def main():
 
             if len(memory) % batch_size == 0:
                 step += 1
-                # qf1_loss.item(), qf2_loss.item(), policy_loss.item(), alpha_loss.item(), alpha_tlogs.item()
                 q1_1, q2_1, pi_1, alpha_1, alpha_tlog_1 = agent1.update_parameters(memory, batch_size, step)
                 q1_2, q2_2, pi_2, alpha_2, alpha_tlog_2 = agent2.update_parameters(memory, batch_size, step)
 
