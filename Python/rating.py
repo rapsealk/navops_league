@@ -17,11 +17,22 @@ class ELORating(Rating):
         q_a = pow(10, r_a / P)
         q_b = pow(10, r_b / P)
         prob_a = q_a / (q_a + q_b)
-        # prob_b = q_b / (q_a + q_b)
-        change = round(K * (a_wins - prob_a))
-        r_a_ = r_a + change
-        r_b_ = r_b - change
+        prob_b = q_b / (q_a + q_b)
+        b_wins = 1 - a_wins
+        # change = round(K * (a_wins - prob_a))
+        # r_a_ = r_a + change
+        # r_b_ = r_b - change
+        r_a_ = r_a + round(ELORating.k(r_a) * (a_wins - prob_a))
+        r_b_ = r_b + round(ELORating.k(r_b) * (b_wins - prob_b))
         return r_a_, r_b_
+
+    @staticmethod
+    def k(rating: int):
+        if rating > 2400:
+            return 16
+        elif rating > 2100:
+            return 24
+        return 32
 
 
 if __name__ == "__main__":
