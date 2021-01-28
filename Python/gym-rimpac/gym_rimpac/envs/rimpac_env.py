@@ -49,7 +49,9 @@ class RimpacEnv(gym.Env):
                 #     action = np.zeros((0, 6))
                 if terminal_steps.reward.shape[0] > 0:
                     done = True
-                    info['win'] = int(terminal_steps.reward[0] == 1.0)
+                    # info['win'] = int(terminal_steps.reward[0] == 1.0)
+                    # info['win'] = int(terminal_steps.reward[0] < terminal_steps.reward[1])
+                    info['win'] = team_id if terminal_steps.reward[0] > 0 else (1 - team_id)
 
                 #print('rimpac({}):'.format(team_id), decision_steps.reward.shape, terminal_steps.reward.shape, done)
 

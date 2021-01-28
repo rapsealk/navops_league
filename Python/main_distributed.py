@@ -3,7 +3,6 @@
 import argparse
 import os
 import time
-import random
 from datetime import datetime
 from itertools import count
 from threading import Thread
@@ -41,6 +40,25 @@ def epsilon():
         if i % eps_discount_step == 0:
             eps = max(eps - eps_discount, eps_minimum)
         yield eps
+
+
+def reevaluate_ratings(r_a: int, r_b: int, a_wins: bool, p=400):
+    q_a = pow(10, r_a / p)
+    q_b = pow(10, r_b / p)
+    prob_a = q_a / (q_a + q_b)
+    prob_b = q_b / (q_a + q_b)
+    b_wins = 1 - a_wins
+    r_a_ = r_a + round(k(r_a) * (a_wins - prob_a))
+    r_b_ = r_b + round(k(r_b) * (b_wins - prob_b))
+    return r_a_, r_b_
+
+
+def k(rating: int):
+    if rating > 2400:
+        return 16
+    elif rating > 2100:
+        return 24
+    return 32
 
 
 class Learner:
@@ -124,6 +142,7 @@ class Worker(Thread):
 
     def run(self):
         eps = epsilon()
+        ratings = np.array([1200, 1200])
         for episode in count(1):
             observation = self._env.reset()
             # total_rewards = [0, 0]
@@ -155,6 +174,9 @@ class Worker(Thread):
                 # print('[{}] tid: {} - {}({})'.format(datetime.now().isoformat(), get_ident(), len(self._buffer), id(self._buffer)))
 
                 if done:
+                    ratings = reevaluate_ratings(ratings[0], ratings[1], info['win'] == 0)
+                    self.writer.add_scalar('rating/worker_{}/m1'.format(self._worker_id), ratings[0], episode)
+                    self.writer.add_scalar('rating/worker_{}/m2'.format(self._worker_id), ratings[1], episode)
                     # TODO: discount
                     mem1 = np.array(memory1)
                     mem1[:, 2] = discount_rewards(mem1[:, 2], mem1[:, 4]).squeeze()
