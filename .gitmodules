@@ -1,0 +1,3 @@
+[submodule "Python/gym-rimpac"]
+	path = Python/gym-rimpac
+	url = https://github.com/rapsealk/gym-rimpac.git
