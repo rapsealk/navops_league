@@ -36,6 +36,56 @@ class Decoder(nn.Module):
         super(Decoder, self).__init__()
 """
 
+"""
+class ActorCriticModel(nn.Module):
+
+    def __init__(
+        self,
+        inputs_size,
+        outputs_size,
+        hidden_size=256,
+        batch_size=256,
+        num_layers=256
+    ):
+        super(ActorCriticModel, self).__init__()
+        self.lstm = nn.LSTM(inputs_size, hidden_size, num_layers=num_layers)
+        self.fc1 = nn.Linear(hidden_size, hidden_size)
+        self.fc2 = nn.Linear(hidden_size, hidden_size)
+
+        self.mean_linear = nn.Linear(hidden_dim, num_actions)
+        self.log_std_linear = nn.Linear(hidden_dim, num_actions)
+
+        self.head = nn.Linear(hidden_size, outputs_size)
+
+        self.q1_fc1 = nn.Linear(inputs_size + outputs_size, hidden_size)
+        self.q1_fc2 = nn.Linear(hidden_size, hidden_size)
+        self.q1_fc3 = nn.Linear(hidden_size, 1)
+        self.q2_fc1 = nn.Linear(inputs_size + outputs_size, hidden_size)
+        self.q2_fc2 = nn.Linear(hidden_size, hidden_size)
+        self.q2_fc3 = nn.Linear(hidden_size, 1)
+
+        self.apply(weights_init_)
+
+        self.hidden = (torch.randn((num_layers, batch_size, hidden_size)),
+                       torch.randn((num_layers, batch_size, hidden_size)))
+
+    def forward(self, x):
+        x, self.hidden = self.lstm(x, self.hidden)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        pi = self.head(x)
+
+        x = torch.cat([x, pi], dim=1)
+        q1 = F.relu(self.q1_fc1(x))
+        q1 = F.relu(self.q1_fc2(q1))
+        q1 = self.q1_fc3(q1)
+        q2 = F.relu(self.q2_fc1(x))
+        q2 = F.relu(self.q2_fc2(q2))
+        q2 = self.q2_fc3(q2)
+
+        return pi, q1, q2
+"""
+
 
 class QNetwork(nn.Module):
 
@@ -68,16 +118,28 @@ class QNetwork(nn.Module):
 
 class GaussianPolicyNetwork(nn.Module):
 
-    def __init__(self, num_inputs, num_actions, hidden_dim, action_space=None):
+    def __init__(
+        self,
+        num_inputs,
+        num_actions,
+        hidden_dim,
+        action_space=None,
+        num_layers=256,
+        batch_size=256
+    ):
         super(GaussianPolicyNetwork, self).__init__()
 
-        self.linear1 = nn.Linear(num_inputs, hidden_dim)
+        self.lstm = nn.LSTM(num_inputs, hidden_dim, num_layers=num_layers)
+        self.linear1 = nn.Linear(hidden_dim, hidden_dim)
         self.linear2 = nn.Linear(hidden_dim, hidden_dim)
 
         self.mean_linear = nn.Linear(hidden_dim, num_actions)
         self.log_std_linear = nn.Linear(hidden_dim, num_actions)
 
         self.apply(weights_init_)
+
+        self.hidden = (torch.randn((num_layers, batch_size, hidden_dim)),
+                       torch.randn((num_layers, batch_size, hidden_dim)))
 
         # action rescaling
         if action_space is None:
@@ -88,7 +150,8 @@ class GaussianPolicyNetwork(nn.Module):
             self.action_bias = torch.FloatTensor((action_space.high + action_space.low) / 2)
 
     def forward(self, state):
-        x = F.relu(self.linear1(state))
+        x, self.hidden = self.lstm(x, self.hidden)
+        x = F.relu(self.linear1(x))
         x = F.relu(self.linear2(x))
         mean = self.mean_linear(x)
         log_std = self.log_std_linear(x)
@@ -142,7 +205,13 @@ class SoftActorCriticAgent:
             self.target_entropy = -torch.prod(torch.Tensor(action_space.shape).to(self.device)).item()
             self.log_alpha = torch.zeros(1, requires_grad=True, device=self.device)
             self.alpha_optim = optim.Adam([self.log_alpha], lr=lr)
-        self.policy = GaussianPolicyNetwork(num_inputs, action_space.shape[0], hidden_dim, action_space).to(self.device)
+        self.policy = GaussianPolicyNetwork(
+            num_inputs,
+            action_space.shape[0],
+            hidden_dim,
+            action_space
+        )
+        self.policy = self.policy.to(self.device)
         self.policy_optim = optim.Adam(self.policy.parameters(), lr=lr)
 
         """Deterministic
@@ -204,11 +273,13 @@ class SoftActorCriticAgent:
             global_param._grad = local_param.grad
         self.policy_optim.step()
 
+        """
         if self.automatic_entropy_tuning:
             self.alpha_optim.zero_grad()
             alpha_loss.backward()
             self.log_alpha._grad = local.log_alpha.grad
             self.alpha_optim.step()
+        """
 
     def update_parameters(self, memory, batch_size, updates):
         # Sample a batch from memory

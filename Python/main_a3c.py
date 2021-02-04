@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import argparse
 import os
+from collections import deque
 from datetime import datetime
 from itertools import count
 from threading import Thread, Lock
@@ -83,7 +84,7 @@ class Learner:
         writers = (self._writer,) + (None,) * self.num_workers
         for i in range(self.num_workers):
             workers.append(
-                Worker(self.global_agent, i+1, self._buffer, writers[i]),
+                Worker(self, self.global_agent, i+1, self._buffer, writers[i]),
             )
 
         for worker in workers:
@@ -98,71 +99,94 @@ class Learner:
         with self._lock:
             self._step += 1
             self.global_agent.descent_gradient(worker_model, q_loss, pi_loss, self._step)
-            self._writer.add_scalar('Q Loss', q_loss, self._step)
-            self._writer.add_scalar('Policy Loss', pi_loss, self._step)
-            self._writer.add_scalar('Alpha Loss', alpha_loss, self._step)
+            self._writer.add_scalar('loss/value', q_loss, self._step)
+            self._writer.add_scalar('loss/policy', pi_loss, self._step)
+            self._writer.add_scalar('loss/alpha', alpha_loss, self._step)
 
 
 class Worker(Thread):
 
-    def __init__(self, global_agent, worker_id=0, buffer=None, writer=None):
+    def __init__(self, learner, global_agent, worker_id=0, buffer=None, writer=None):
         Thread.__init__(self, daemon=True)
 
         self._worker_id = worker_id
+        self._learner = learner
         self._buffer = buffer
         self._writer = writer
         self._env = gym.make(ENVIRONMENT, worker_id=worker_id, no_graphics=args.no_graphics)
+        self._observation_shape = self._env.observation_space.shape[0]
 
         self.global_agent = global_agent
-        self.agent1 = SoftActorCriticAgent(self._env.observation_space.shape[0], self._env.action_space)
-        self.agent2 = SoftActorCriticAgent(self._env.observation_space.shape[0], self._env.action_space)
+        self.agent1 = SoftActorCriticAgent(self._observation_shape, self._env.action_space)
+        self.agent2 = SoftActorCriticAgent(self._observation_shape, self._env.action_space)
         # self.gamma = gamma
 
         self.load_learner_parameters()
 
     def run(self):
         ratings = (1200, 1200)
-        best_score = 0
+        results = deque(maxlen=100)
+        # best_score = 0
+        best_rate = 0
+        timestep = 128
         eps = epsilon()
         for episode in count(1):
-            observation = self._env.reset()
+            observation1 = np.zeros((timestep, self._observation_shape))
+            observation2 = np.zeros((timestep, self._observation_shape))
+            env_obs = self._env.reset()
+            observation1 = np.concatenate((observation1[1:], env_obs[0]))
+            observation2 = np.concatenate((observation2[1:], env_obs[1]))
             memory1, memory2 = [], []
 
             while True:
-                if np.random.random() > next(eps):
-                    actions = (self.agent1.select_action(observation[0])[0],
-                               self.agent2.select_action(observation[1])[0])
+                if self._writer is not None or np.random.random() > next(eps):
+                    actions = (self.agent1.select_action(observation1).squeeze()[-1],
+                               self.agent2.select_action(observation2).squeeze()[-1])
                 else:
                     actions = (np.random.uniform(0.0, 1.0, size=(2,)+self._env.action_space.shape))
                     actions[:, :2] = (actions[:, :2] - 0.5) * 2
                     actions[:, 8:] = (actions[:, 8:] - 0.5) * 2
                 action = np.stack(actions, axis=0)  # .squeeze(0)
-                next_observation, reward, done, info = self._env.step(action)
+                next_env_obs, reward, done, info = self._env.step(action)
 
-                memory1.append((observation[0, 0], actions[0], reward[0], next_observation[0, 0], done))
-                memory2.append((observation[1, 0], actions[1], reward[1], next_observation[1, 0], done))
+                next_observation1 = np.concatenate((observation1[1:], next_env_obs[0]))
+                next_observation2 = np.concatenate((observation2[1:], next_env_obs[1]))
 
-                observation = next_observation
+                memory1.append((observation1, actions[0], reward[0], next_observation1, done))
+                memory2.append((observation2, actions[1], reward[1], next_observation2, done))
+
+                observation1 = next_observation1
+                observation2 = next_observation2
 
                 if done:
                     mem1 = np.array(memory1)
-                    mem1[:, 2] = discount_rewards(mem1[:, 2], mem1[:, 4]).squeeze()
+                    mem1[:, 2] = 1 - info['win']
+                    # mem1[:, 2] = discount_rewards(mem1[:, 2], mem1[:, 4]).squeeze()
                     mem2 = np.array(memory2)
-                    mem2[:, 2] = discount_rewards(mem2[:, 2], mem2[:, 4]).squeeze()
+                    mem2[:, 2] = info['win']
+                    # mem2[:, 2] = discount_rewards(mem2[:, 2], mem2[:, 4]).squeeze()
                     for s, a, r, s_, d in np.concatenate([mem1, mem2]):
                         self._buffer.push(s, a, r, s_, d)
                     if len(self._buffer) >= BATCH_SIZE:
                         qf_loss, policy_loss, alpha_loss = self.agent1.compute_gradient(self._buffer, BATCH_SIZE, episode)
-                        self.global_agent.update_parameters_by_worker_gradient(self.agent1, qf_loss, policy_loss, alpha_loss)
+                        self._learner.update_parameters_by_worker_gradient(self.agent1, qf_loss, policy_loss, alpha_loss)
                     print(f'[Worker-{self._worker_id}] Episode #{episode}: {np.sum(mem1[:, 2])} {np.sum(mem2[:, 2])}')
+                    results.append(1 - info['win'])
                     if self._writer is not None:
                         ratings = reevaluate_ratings(ratings[0], ratings[1], info['win'] == 0)
-                        returns = np.sum(mem1[:, 2])
-                        if returns > best_score:
-                            self.agent1.save(os.path.join(os.path.dirname(__file__), 'checkpoints', f'{ENVIRONMENT}-sac-ep-{episode}-score-{int(returns)}.ckpt'))
-                            best_score = returns
-                        self._writer.add_scalar('Reward', returns, episode)
-                        self._writer.add_scalar('Rating', ratings[0], episode)
+                        # returns = np.sum(mem1[:, 2])
+                        # if returns > best_score:
+                        #     self.agent1.save(os.path.join(os.path.dirname(__file__), 'checkpoints', f'{ENVIRONMENT}-sac-ep-{episode}-score-{int(returns)}.ckpt'))
+                        #     best_score = returns
+                        # self._writer.add_scalar('r/reward', returns, episode)
+                        self._writer.add_scalar('r/rating', ratings[0], episode)
+                        if episode % 100 == 0:
+                            rate = np.sum(results) / 100
+                            if rate > best_rate:
+                                self.agent1.save(os.path.join(os.path.dirname(__file__), 'checkpoints', f'{ENVIRONMENT}-sac-ep{episode}-r{np.sum(results)}.ckpt'))
+                                best_rate = rate
+                            self._writer.add_scalar('r/winnings', rate, episode)
+                            results.clear()
                         self.agent1.set_state_dict(self.global_agent.get_state_dict())
                     else:
                         self.load_learner_parameters()
