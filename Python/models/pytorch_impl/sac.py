@@ -20,9 +20,7 @@ def weights_init_(m):
 
 
 def convert_to_tensor(device, *args):
-    return tuple(
-        map(lambda tensor: tensor.to(device), map(torch.FloatTensor, args))
-    )
+    return map(lambda tensor: tensor.to(device), map(torch.FloatTensor, args))
 
 
 """
@@ -161,6 +159,56 @@ class SoftActorCriticAgent:
         else:
             _, _, action = self.policy.sample(state)
         return action.detach().cpu().numpy()[0]
+
+    def compute_gradient(self, buffer, batch_size, updates):
+        s, a, r, s_, dones = buffer.sample(batch_size)
+        s, a, r, s_, dones = convert_to_tensor(self.device, s, a, r, s_, dones)
+        r = r.unsqueeze(1)
+        dones = dones.unsqueeze(1)
+
+        with torch.no_grad():
+            next_state_action, next_state_log_pi, _ = self.policy.sample(s_)
+            qf1_next_target, qf2_next_target = self.critic_target(s_, next_state_action.to(self.device))
+            min_qf_next_target = torch.min(qf1_next_target, qf2_next_target) - self.alpha * next_state_log_pi
+            next_q_value = r + dones * self.gamma * min_qf_next_target
+
+        qf1, qf2 = self.critic(s, a)
+        qf1_loss = F.mse_loss(qf1, next_q_value)
+        qf2_loss = F.mse_loss(qf2, next_q_value)
+        qf_loss = qf1_loss + qf2_loss
+
+        pi, log_pi, _ = self.policy.sample(s)
+
+        qf1_pi, qf2_pi = self.critic(s, pi)
+        min_qf_pi = torch.min(qf1_pi, qf2_pi)
+
+        policy_loss = (self.alpha * log_pi - min_qf_pi).mean()
+
+        if self.automatic_entropy_tuning:
+            alpha_loss = -(self.log_alpha * (log_pi + self.target_entropy).detach()).mean()
+        else:
+            alpha_loss = None
+
+        return qf_loss, policy_loss, alpha_loss
+
+    def descent_gradient(self, local, q_loss, pi_loss, alpha_loss=None):
+        self.critic_optim.zero_grad()
+        q_loss.backward()
+        for local_param, global_param in zip(local.critic.parameters(), self.critic.parameters()):
+            global_param._grad = local_param.grad
+        self.critic_optim.step()
+
+        self.policy_optim.zero_grad()
+        pi_loss.backward()
+        for local_param, global_param in zip(local.policy.parameters(), self.policy.parameters()):
+            global_param._grad = local_param.grad
+        self.policy_optim.step()
+
+        if self.automatic_entropy_tuning:
+            self.alpha_optim.zero_grad()
+            alpha_loss.backward()
+            self.log_alpha._grad = local.log_alpha.grad
+            self.alpha_optim.step()
 
     def update_parameters(self, memory, batch_size, updates):
         # Sample a batch from memory
