@@ -1,6 +1,7 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
 import argparse
+import os
 from datetime import datetime
 from itertools import count
 from threading import Thread, Lock
@@ -121,6 +122,7 @@ class Worker(Thread):
 
     def run(self):
         ratings = (1200, 1200)
+        best_score = 0
         eps = epsilon()
         for episode in count(1):
             observation = self._env.reset()
@@ -155,7 +157,11 @@ class Worker(Thread):
                     print(f'[Worker-{self._worker_id}] Episode #{episode}: {np.sum(mem1[:, 2])} {np.sum(mem2[:, 2])}')
                     if self._writer is not None:
                         ratings = reevaluate_ratings(ratings[0], ratings[1], info['win'] == 0)
-                        self._writer.add_scalar('Reward', np.sum(mem1[:, 2]), episode)
+                        returns = np.sum(mem1[:, 2])
+                        if returns > best_score:
+                            self.agent1.save(os.path.join(os.path.dirname(__file__), 'checkpoints', f'{ENVIRONMENT}-sac-ep-{episode}-score-{int(returns)}.ckpt'))
+                            best_score = returns
+                        self._writer.add_scalar('Reward', returns, episode)
                         self._writer.add_scalar('Rating', ratings[0], episode)
                         self.agent1.set_state_dict(self.global_agent.get_state_dict())
                     else:

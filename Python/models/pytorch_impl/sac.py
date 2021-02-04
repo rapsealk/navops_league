@@ -298,6 +298,8 @@ class SoftActorCriticAgent:
         self.critic.load_state_dict(state_dicts[1])
 
     def save(self, path: str):
+        if not path.endswith('.ckpt'):
+            path += '.ckpt'
         if not os.path.exists(os.path.dirname(path)):
             os.mkdir(os.path.dirname(path))
         torch.save({
