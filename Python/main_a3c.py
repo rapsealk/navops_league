@@ -21,7 +21,7 @@ args = parser.parse_args()
 
 ENVIRONMENT = 'Rimpac-v0'
 DISCOUNT_FACTOR = 0.998
-BATCH_SIZE = 2048
+BATCH_SIZE = 128
 
 
 def discount_rewards(rewards, dones, gamma=DISCOUNT_FACTOR):
@@ -93,8 +93,6 @@ class Learner:
         for worker in workers:
             worker.join()
 
-        self._env.close()
-
     def update_parameters_by_worker_gradient(self, worker_model, q_loss, pi_loss, alpha_loss):
         with self._lock:
             self._step += 1
@@ -140,13 +138,14 @@ class Worker(Thread):
 
             while True:
                 if self._writer is not None or np.random.random() > next(eps):
-                    actions = (self.agent1.select_action(observation1).squeeze()[-1],
-                               self.agent2.select_action(observation2).squeeze()[-1])
+                    actions = (self.agent1.select_action(observation1),
+                               self.agent2.select_action(observation2))
+                    action = np.stack([actions[0][-1, -1], actions[1][-1, -1]], axis=0)
                 else:
                     actions = (np.random.uniform(0.0, 1.0, size=(2,)+self._env.action_space.shape))
                     actions[:, :2] = (actions[:, :2] - 0.5) * 2
                     actions[:, 8:] = (actions[:, 8:] - 0.5) * 2
-                action = np.stack(actions, axis=0)  # .squeeze(0)
+                    action = np.stack(actions, axis=0)  # .squeeze(0)
                 next_env_obs, reward, done, info = self._env.step(action)
 
                 next_observation1 = np.concatenate((observation1[1:], next_env_obs[0]))

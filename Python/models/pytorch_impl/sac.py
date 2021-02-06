@@ -102,14 +102,12 @@ class QNetwork(nn.Module):
 
         self.apply(weights_init_)
 
-    def forward(self, state, action):
-        xu = torch.cat([state, action], dim=1)
-
-        x1 = F.relu(self.linear1(xu))
+    def forward(self, x):
+        x1 = F.relu(self.linear1(x))
         x1 = F.relu(self.linear2(x1))
         x1 = self.linear3(x1)
 
-        x2 = F.relu(self.linear4(xu))
+        x2 = F.relu(self.linear4(x))
         x2 = F.relu(self.linear5(x2))
         x2 = self.linear6(x2)
 
@@ -149,7 +147,7 @@ class GaussianPolicyNetwork(nn.Module):
             self.action_scale = torch.FloatTensor((action_space.high - action_space.low) / 2)
             self.action_bias = torch.FloatTensor((action_space.high + action_space.low) / 2)
 
-    def forward(self, state):
+    def forward(self, x):
         x, self.hidden = self.lstm(x, self.hidden)
         x = F.relu(self.linear1(x))
         x = F.relu(self.linear2(x))
@@ -227,7 +225,8 @@ class SoftActorCriticAgent:
             action, _, _ = self.policy.sample(state)
         else:
             _, _, action = self.policy.sample(state)
-        return action.detach().cpu().numpy()[0]
+        # return action.detach().cpu().numpy()[-1]
+        return action.detach().cpu().numpy()
 
     def compute_gradient(self, buffer, batch_size, updates):
         s, a, r, s_, dones = buffer.sample(batch_size)
@@ -241,14 +240,14 @@ class SoftActorCriticAgent:
             min_qf_next_target = torch.min(qf1_next_target, qf2_next_target) - self.alpha * next_state_log_pi
             next_q_value = r + dones * self.gamma * min_qf_next_target
 
-        qf1, qf2 = self.critic(s, a)
+        qf1, qf2 = self.critic(torch.cat([s, a], dim=2))
         qf1_loss = F.mse_loss(qf1, next_q_value)
         qf2_loss = F.mse_loss(qf2, next_q_value)
         qf_loss = qf1_loss + qf2_loss
 
         pi, log_pi, _ = self.policy.sample(s)
 
-        qf1_pi, qf2_pi = self.critic(s, pi)
+        qf1_pi, qf2_pi = self.critic(torch.cat([s, pi], dim=2))
         min_qf_pi = torch.min(qf1_pi, qf2_pi)
 
         policy_loss = (self.alpha * log_pi - min_qf_pi).mean()
@@ -299,7 +298,7 @@ class SoftActorCriticAgent:
             min_qf_next_target = torch.min(qf1_next_target, qf2_next_target) - self.alpha * next_state_log_pi
             next_q_value = rewards + masks * self.gamma * min_qf_next_target
 
-        qf1, qf2 = self.critic(states, actions) # Two Q-functions to mitigate positive bias in the policy improvement step
+        qf1, qf2 = self.critic(torch.cat([states, actions], dim=2)) # Two Q-functions to mitigate positive bias in the policy improvement step
         qf1_loss = F.mse_loss(qf1, next_q_value)  # JQ = 𝔼(st,at)~D[0.5(Q1(st,at) - r(st,at) - γ(𝔼st+1~p[V(st+1)]))^2]
         qf2_loss = F.mse_loss(qf2, next_q_value)  # JQ = 𝔼(st,at)~D[0.5(Q1(st,at) - r(st,at) - γ(𝔼st+1~p[V(st+1)]))^2]
         qf_loss = qf1_loss + qf2_loss
@@ -310,7 +309,7 @@ class SoftActorCriticAgent:
 
         pi, log_pi, _ = self.policy.sample(states)
 
-        qf1_pi, qf2_pi = self.critic(states, pi)
+        qf1_pi, qf2_pi = self.critic(torch.cat([states, pi], dim=2))
         min_qf_pi = torch.min(qf1_pi, qf2_pi)
 
         policy_loss = (self.alpha * log_pi - min_qf_pi).mean()  # Jπ = 𝔼st∼D,εt∼N[α * logπ(f(εt;st)|st) − Q(st,f(εt;st))]
