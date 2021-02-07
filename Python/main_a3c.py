@@ -68,7 +68,6 @@ class Learner:
     def __init__(self):
         env = gym.make(ENVIRONMENT, no_graphics=args.no_graphics)
         self.global_agent = SoftActorCriticAgent(env.observation_space.shape[0], env.action_space)
-        self._opponent = SoftActorCriticAgent(env.observation_space.shape[0], env.action_space)
         env.close()
         del env
 

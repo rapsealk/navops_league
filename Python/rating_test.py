@@ -2,18 +2,18 @@
 # -*- coding: utf-8 -*-
 import unittest
 
-from rating import ELORating
+from rating import EloRating
 
 
-class ELORatingTestCase(unittest.TestCase):
+class TestEloRating(unittest.TestCase):
 
     def test_new_rating(self):
         alpha = 2600
         beta = 2300
-        new_alpha, new_beta = ELORating.calc(alpha, beta, True)
+        new_alpha, new_beta = EloRating.calc(alpha, beta, True)
         self.assertEqual(new_alpha, 2602)
         self.assertEqual(new_beta, 2298)
-        new_alpha, new_beta = ELORating.calc(alpha, beta, False)
+        new_alpha, new_beta = EloRating.calc(alpha, beta, False)
         self.assertEqual(new_alpha, 2586)
         self.assertEqual(new_beta, 2314)
 

@@ -7,7 +7,7 @@ from uuid import uuid4
 import numpy as np
 
 
-class ELORatingManager:
+class EloRatingManager:
 
     def __init__(self):
         self.p = 400
@@ -89,7 +89,7 @@ if __name__ == "__main__":
     entities = generate_entities()
 
     # 1. Play
-    rating = ELORatingManager()
+    rating = EloRatingManager()
     match_history = MatchHistory()
 
     for _ in range(4):
