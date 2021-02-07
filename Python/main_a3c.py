@@ -22,6 +22,7 @@ args = parser.parse_args()
 ENVIRONMENT = 'Rimpac-v0'
 DISCOUNT_FACTOR = 0.998
 BATCH_SIZE = 128
+TIME_SEQUENCE = 64
 
 
 def discount_rewards(rewards, dones, gamma=DISCOUNT_FACTOR):
@@ -126,11 +127,10 @@ class Worker(Thread):
         results = deque(maxlen=100)
         # best_score = 0
         best_rate = 0
-        timestep = 128
         eps = epsilon()
         for episode in count(1):
-            observation1 = np.zeros((timestep, self._observation_shape))
-            observation2 = np.zeros((timestep, self._observation_shape))
+            observation1 = np.zeros((TIME_SEQUENCE, self._observation_shape))
+            observation2 = np.zeros((TIME_SEQUENCE, self._observation_shape))
             env_obs = self._env.reset()
             observation1 = np.concatenate((observation1[1:], env_obs[0]))
             observation2 = np.concatenate((observation2[1:], env_obs[1]))
