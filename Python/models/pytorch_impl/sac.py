@@ -139,6 +139,10 @@ class GaussianPolicyNetwork(nn.Module):
 
         self.apply(weights_init_)
 
+        self._num_layers = num_layers
+        self._batch_size = batch_size
+        self._hidden_dim = hidden_dim
+
         self.hidden = (torch.randn((num_layers, batch_size, hidden_dim)),
                        torch.randn((num_layers, batch_size, hidden_dim)))
 
@@ -159,6 +163,10 @@ class GaussianPolicyNetwork(nn.Module):
         log_std = torch.clamp(log_std, min=LOG_SIG_MIN, max=LOG_SIG_MAX)
 
         return mean, log_std
+
+    def reset(self):
+        self.hidden = (torch.randn((self._num_layers, self._batch_size, self._hidden_dim)),
+                       torch.randn((self._num_layers, self._batch_size, self._hidden_dim)))
 
     def sample(self, state):
         mean, log_std = self.forward(state)
@@ -192,7 +200,8 @@ class SoftActorCriticAgent:
         gamma=0.99,
         tau=0.05,
         alpha=0.2,
-        lr=0.0003
+        lr=0.0003,
+        force_cpu=False
     ):
         self._batch_size = batch_size
 
@@ -205,7 +214,10 @@ class SoftActorCriticAgent:
         self.automatic_entropy_tuning = True    # False
         # self.replay_size = 1e6
 
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if force_cpu:
+            self.device = torch.device("cpu")
+        else:
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.critic = QNetwork(num_inputs, action_space.shape[0], hidden_dim).to(self.device)
         self.critic_optim = optim.Adam(self.critic.parameters(), lr=lr)
@@ -236,13 +248,15 @@ class SoftActorCriticAgent:
         self.policy_optim = optim.Adam(self.policy.parameters(), lr=lr)
         """
 
+    def reset(self):
+        self.policy.reset()
+
     def select_action(self, state, evaluate=False):
         state = torch.FloatTensor(state).to(self.device)
         if not evaluate:
             action, _, _ = self.policy.sample(state)
         else:
             _, _, action = self.policy.sample(state)
-        # return action.detach().cpu().numpy()[-1]
         return action.detach().cpu().numpy()
 
     def get_trajectory_batch(self, buffer, batch_size):
@@ -273,21 +287,15 @@ class SoftActorCriticAgent:
 
         with torch.no_grad():
             next_state_action, next_state_log_pi, _ = self.policy.sample(s_)
-            print(f'cat - s_: {s_.shape}, next_state_action: {next_state_action.shape}')
             s_a = torch.cat([s_, next_state_action.to(self.device)], axis=2)
             qf1_next_target, qf2_next_target = self.critic_target(s_a)
-            # qf1_next_target, qf2_next_target = self.critic_target(s_, next_state_action.to(self.device))
             min_qf_next_target = torch.min(qf1_next_target, qf2_next_target) - self.alpha * next_state_log_pi
-            # min_qf_next_target = min_qf_next_target[-1, -1]
             min_qf_next_target = min_qf_next_target[:, -1, -1:]
-            print('min_qf_next_target:', min_qf_next_target.shape)
             next_q_value = r + dones * self.gamma * min_qf_next_target
 
-        print(f'critic - s: {s.shape}, a: {a.shape}')
         qf1, qf2 = self.critic(torch.cat([s, a], dim=2))
         qf1 = qf1[:, -1]
         qf2 = qf2[:, -1]
-        print(f'qf1: {qf1.shape}, qf2: {qf2.shape}, next_q_value: {next_q_value.shape}')
         qf1_loss = F.mse_loss(qf1, next_q_value)
         qf2_loss = F.mse_loss(qf2, next_q_value)
         qf_loss = qf1_loss + qf2_loss
@@ -313,28 +321,20 @@ class SoftActorCriticAgent:
         s, a, r, s_, dones = convert_to_tensor(self.device, s, a, r, s_, dones)
         r = r.unsqueeze(1)
         dones = dones.unsqueeze(1)
-        print('compute_gradient')
-        print(f's: {s.shape}, a: {a.shape}, r: {r.shape}, s_: {s_.shape}, dones: {dones.shape}')
 
         # Value Loss
 
         with torch.no_grad():
             next_state_action, next_state_log_pi, _ = self.policy.sample(s_)
-            print(f'cat - s_: {s_.shape}, next_state_action: {next_state_action.shape}')
             s_a = torch.cat([s_, next_state_action.to(self.device)], axis=2)
             qf1_next_target, qf2_next_target = self.critic_target(s_a)
-            # qf1_next_target, qf2_next_target = self.critic_target(s_, next_state_action.to(self.device))
             min_qf_next_target = torch.min(qf1_next_target, qf2_next_target) - self.alpha * next_state_log_pi
-            # min_qf_next_target = min_qf_next_target[-1, -1]
             min_qf_next_target = min_qf_next_target[:, -1, -1:]
-            print('min_qf_next_target:', min_qf_next_target.shape)
             next_q_value = r + dones * self.gamma * min_qf_next_target
 
-        print(f'critic - s: {s.shape}, a: {a.shape}')
         qf1, qf2 = self.critic(torch.cat([s, a], dim=2))
         qf1 = qf1[:, -1]
         qf2 = qf2[:, -1]
-        print(f'qf1: {qf1.shape}, qf2: {qf2.shape}, next_q_value: {next_q_value.shape}')
         qf1_loss = F.mse_loss(qf1, next_q_value)
         qf2_loss = F.mse_loss(qf2, next_q_value)
         qf_loss = qf1_loss + qf2_loss
@@ -390,10 +390,8 @@ class SoftActorCriticAgent:
 
         with torch.no_grad():
             next_state_action, next_state_log_pi, _ = self.policy.sample(next_states)
-            # print(f'cat - s_: {s_.shape}, next_state_action: {next_state_action.shape}')
             s_a = torch.cat([next_states, next_state_action.to(self.device)], axis=2)
             qf1_next_target, qf2_next_target = self.critic_target(s_a)
-            # qf1_next_target, qf2_next_target = self.critic_target(next_states, next_state_action.to(self.device))
             min_qf_next_target = torch.min(qf1_next_target, qf2_next_target) - self.alpha * next_state_log_pi
             next_q_value = rewards + masks * self.gamma * min_qf_next_target
 

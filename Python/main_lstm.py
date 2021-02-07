@@ -60,7 +60,7 @@ class Learner:
         self._writer = SummaryWriter('runs/%s-%s' % (datetime.now().strftime('%Y-%m-%d_%H-%M-%S'), ENVIRONMENT))
 
         self._lock = Lock()
-        self._num_workers = 4   # cpu_count()
+        self._num_workers = cpu_count() - 2
         self._value_step = 0
         self._policy_step = 0
 
@@ -121,14 +121,16 @@ class Worker(Thread):
             self._env.action_space,
             hidden_dim=64,
             num_layers=32,
-            batch_size=BATCH_SIZE
+            batch_size=BATCH_SIZE,
+            force_cpu=True
         )
         self._agent2 = SoftActorCriticAgent(
             self._observation_shape,
             self._env.action_space,
             hidden_dim=64,
             num_layers=32,
-            batch_size=BATCH_SIZE
+            batch_size=BATCH_SIZE,
+            force_cpu=True
         )
 
         self.load_learner_parameters()
@@ -144,8 +146,12 @@ class Worker(Thread):
             obs_batch1, obs_batch2 = process_raw_observation(obs_batch1, obs_batch2, obs)
 
             while True:
-                action1 = self._agent1.select_action(obs_batch1)
-                action2 = self._agent2.select_action(obs_batch2)
+                if next(eps) > np.random.random():
+                    action1 = np.random.uniform(-1.0, 1.0, (BATCH_SIZE, TIME_SEQUENCE, self._env.action_space.shape[0]))
+                    action2 = np.random.uniform(-1.0, 1.0, (BATCH_SIZE, TIME_SEQUENCE, self._env.action_space.shape[0]))
+                else:
+                    action1 = self._agent1.select_action(obs_batch1)
+                    action2 = self._agent2.select_action(obs_batch2)
                 actual_action = np.concatenate((action1[-1, -1:], action2[-1, -1:]))
 
                 next_obs, reward, done, info = self._env.step(actual_action)
@@ -178,6 +184,8 @@ class Worker(Thread):
                         self._learner.update_parameters_by_worker_gradient(self._agent2, pi_loss=policy_loss)
 
                     self.load_learner_parameters()
+                    self._agent1.reset()
+                    self._agent2.reset()
 
                     memory1, memory2 = [], []
 
@@ -209,14 +217,16 @@ class Validator(Thread):
             self._env.action_space,
             hidden_dim=64,
             num_layers=32,
-            batch_size=BATCH_SIZE
+            batch_size=BATCH_SIZE,
+            force_cpu=True
         )
         self._opponent = SoftActorCriticAgent(
             self._observation_shape,
             self._env.action_space,
             hidden_dim=64,
             num_layers=32,
-            batch_size=BATCH_SIZE
+            batch_size=BATCH_SIZE,
+            force_cpu=True
         )
 
         self.load_learner_parameters()
@@ -258,6 +268,7 @@ class Validator(Thread):
                         self._writer.add_scalar('r/winnings', rate, episode // 100)
                         results.clear()
                     self.load_learner_parameters()
+                    self._target_agent.reset()
                     break
 
         self._env.close()
