@@ -360,13 +360,13 @@ class SoftActorCriticAgent:
             self.critic_optim.zero_grad()
             q_loss.backward()
             for local_param, global_param in zip(local.critic.parameters(), self.critic.parameters()):
-                global_param._grad = local_param.grad
+                global_param._grad = local_param.grad.to(self.device)
             self.critic_optim.step()
         elif pi_loss is not None:
             self.policy_optim.zero_grad()
             pi_loss.backward()
             for local_param, global_param in zip(local.policy.parameters(), self.policy.parameters()):
-                global_param._grad = local_param.grad
+                global_param._grad = local_param.grad.to(self.device)
             self.policy_optim.step()
         """
         if self.automatic_entropy_tuning:
