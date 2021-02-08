@@ -1,7 +1,6 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
 import os
-import sys
 import argparse
 from collections import deque
 from datetime import datetime
@@ -14,7 +13,8 @@ import gym_rimpac   # noqa: F401
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
-from models.pytorch_impl import SoftActorCriticAgent, ReplayBuffer
+from models.pytorch_impl import SoftActorCriticAgent
+from memory import MongoReplayBuffer as ReplayBuffer
 from utils import epsilon
 from rating import EloRating
 
@@ -24,9 +24,9 @@ parser.add_argument('--mock', action='store_true', default=False)
 args = parser.parse_args()
 
 ENVIRONMENT = 'Rimpac-v0'
-# MOCK_ENVIRONMENT = 'Mock-Rimpac-v0'
-BATCH_SIZE = 16
+BATCH_SIZE = 1024
 TIME_SEQUENCE = 4
+HIDDEN_SIZE = 256
 
 
 def process_raw_observation(obs1, obs2, next_obs):
@@ -49,20 +49,19 @@ class Learner:
         self.global_agent = SoftActorCriticAgent(
             env.observation_space.shape[0],
             env.action_space,
-            hidden_dim=64,
+            hidden_dim=HIDDEN_SIZE,
             num_layers=32,
             batch_size=BATCH_SIZE
         )
         env.close()
         del env
 
-        self._buffer = ReplayBuffer(1_000_000)
+        self._buffer = ReplayBuffer()
         self._writer = SummaryWriter('runs/%s-%s' % (datetime.now().strftime('%Y-%m-%d_%H-%M-%S'), ENVIRONMENT))
 
         self._lock = Lock()
         self._num_workers = cpu_count()
-        self._value_step = 0
-        self._policy_step = 0
+        self._step = 0
 
     def run(self):
         workers = []
@@ -82,16 +81,12 @@ class Learner:
 
         thread.join()
 
-    def update_parameters_by_worker_gradient(self, worker_model, q_loss=None, pi_loss=None, alpha_loss=None):
+    def descent(self, gradient, q_loss, pi_loss, worker=None):
         with self._lock:
-            if q_loss is not None:
-                self._value_step += 1
-                self.global_agent.descent_gradient(worker_model, q_loss=q_loss)
-                self._writer.add_scalar('loss/value', q_loss, self._value_step)
-            elif pi_loss is not None:
-                self._policy_step += 1
-                self.global_agent.descent_gradient(worker_model, pi_loss=pi_loss)
-                self._writer.add_scalar('loss/policy', pi_loss, self._value_step)
+            self._step += 1
+            self.global_agent.descent(gradient, worker)
+            self._writer.add_scalar('loss/value', q_loss, self._step)
+            self._writer.add_scalar('loss/policy', pi_loss, self._step)
 
 
 class Worker(Thread):
@@ -119,7 +114,7 @@ class Worker(Thread):
         self._agent1 = SoftActorCriticAgent(
             self._observation_shape,
             self._env.action_space,
-            hidden_dim=64,
+            hidden_dim=HIDDEN_SIZE,
             num_layers=32,
             batch_size=BATCH_SIZE,
             force_cpu=True
@@ -127,7 +122,7 @@ class Worker(Thread):
         self._agent2 = SoftActorCriticAgent(
             self._observation_shape,
             self._env.action_space,
-            hidden_dim=64,
+            hidden_dim=HIDDEN_SIZE,
             num_layers=32,
             batch_size=BATCH_SIZE,
             force_cpu=True
@@ -171,17 +166,10 @@ class Worker(Thread):
                     for s, a, r, s_, d in np.concatenate((memory1, memory2)):
                         self._buffer.push(s, a, r, s_, d)
                     if len(self._buffer) >= BATCH_SIZE:
-                        s, a, r, s_, dones = self._agent1.get_trajectory_batch(self._buffer, BATCH_SIZE)
-                        q_loss = self._agent1.get_value_gradient(s, a, r, s_, dones)
-                        self._learner.update_parameters_by_worker_gradient(self._agent1, q_loss=q_loss)
-                        policy_loss = self._agent1.get_policy_gradient(s, a, r, s_, dones)
-                        self._learner.update_parameters_by_worker_gradient(self._agent1, pi_loss=policy_loss)
-
-                        s, a, r, s_, dones = self._agent2.get_trajectory_batch(self._buffer, BATCH_SIZE)
-                        q_loss = self._agent2.get_value_gradient(s, a, r, s_, dones)
-                        self._learner.update_parameters_by_worker_gradient(self._agent2, q_loss=q_loss)
-                        policy_loss = self._agent2.get_policy_gradient(s, a, r, s_, dones)
-                        self._learner.update_parameters_by_worker_gradient(self._agent2, pi_loss=policy_loss)
+                        gradient, q_loss, pi_loss = self._agent1.compute_gradient(self._buffer, BATCH_SIZE)
+                        self._global_agent.descent(gradient, q_loss, pi_loss, self._agent1)
+                        gradient, q_loss, pi_loss = self._agent2.compute_gradient(self._buffer, BATCH_SIZE)
+                        self._global_agent.descent(gradient, q_loss, pi_loss, self._agent2)
 
                     self.load_learner_parameters()
                     self._agent1.reset()
@@ -215,7 +203,7 @@ class Validator(Thread):
         self._target_agent = SoftActorCriticAgent(
             self._observation_shape,
             self._env.action_space,
-            hidden_dim=64,
+            hidden_dim=HIDDEN_SIZE,
             num_layers=32,
             batch_size=BATCH_SIZE,
             force_cpu=True
@@ -223,7 +211,7 @@ class Validator(Thread):
         self._opponent = SoftActorCriticAgent(
             self._observation_shape,
             self._env.action_space,
-            hidden_dim=64,
+            hidden_dim=HIDDEN_SIZE,
             num_layers=32,
             batch_size=BATCH_SIZE,
             force_cpu=True

@@ -38,7 +38,7 @@ def main():
         batch_size=batch_size,
         force_cpu=True
     )
-    buffer = ReplayBuffer(1000)
+    buffer = ReplayBuffer()
 
     obs_batch1 = np.zeros((batch_size, seq_len, *env.observation_space.shape))
     obs_batch2 = np.zeros((batch_size, seq_len, *env.observation_space.shape))

@@ -49,7 +49,7 @@ class ReplayBuffer:
 class MongoReplayBuffer:
 
     def __init__(self, username=MONGO_USERNAME, password=MONGO_PASSWORD):
-        client = pymongo.MongoClient(f"mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@localhost:27017/")
+        client = pymongo.MongoClient(f"mongodb://{username}:{password}@localhost:27017/")
         database = client["rimpac"]
         self._collection = database["trajectory"]
 
