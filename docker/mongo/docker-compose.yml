@@ -1,0 +1,14 @@
+version: "3.7"
+
+services:
+  mongodb:
+    image: mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: 1111
+    volumes:  # container:local (mount)
+      - ./data/db:/data/db
+    container_name: "mongodb"
