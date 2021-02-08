@@ -6,8 +6,8 @@ import gym
 import gym_rimpac   # noqa: F401
 import numpy as np
 
-from models.pytorch_impl import ReplayBuffer
 from models.pytorch_impl.model import SoftActorCriticAgent
+from memory import MongoReplayBuffer as ReplayBuffer
 
 
 def process_raw_observation(next_obs, *obs):
@@ -47,7 +47,7 @@ def main():
 
     memory1, memory2 = [], []
 
-    for _ in range(100):
+    for _ in range(batch_size*2):
         action1 = agent.get_action(obs_batch1)
         action2 = agent.get_action(obs_batch2)
         action = np.concatenate((action1[-1, -1:], action2[-1, -1:]))
