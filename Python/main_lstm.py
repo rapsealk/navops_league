@@ -60,7 +60,7 @@ class Learner:
         self._writer = SummaryWriter('runs/%s-%s' % (datetime.now().strftime('%Y-%m-%d_%H-%M-%S'), ENVIRONMENT))
 
         self._lock = Lock()
-        self._num_workers = cpu_count() - 2
+        self._num_workers = cpu_count()
         self._value_step = 0
         self._policy_step = 0
 
@@ -243,8 +243,8 @@ class Validator(Thread):
             obs_batch1, obs_batch2 = process_raw_observation(obs_batch1, obs_batch2, obs)
 
             while True:
-                action1 = self._target_agent.select_action(obs_batch1)
-                action2 = self._opponent.select_action(obs_batch2)
+                action1 = self._target_agent.select_action(obs_batch1, evaluate=True)
+                action2 = self._opponent.select_action(obs_batch2, evaluate=True)
                 actual_action = np.concatenate((action1[-1, -1:], action2[-1, -1:]))
 
                 next_obs, reward, done, info = self._env.step(actual_action)
