@@ -48,8 +48,9 @@ class Learner:
         env = gym.make(ENVIRONMENT, mock=True)
         self.global_agent = SoftActorCriticAgent(
             env.observation_space.shape[0],
-            env.action_space,
-            hidden_dim=HIDDEN_SIZE,
+            env.action_space.shape[0],
+            hidden_size=HIDDEN_SIZE,
+            action_space=env.action_space,
             num_layers=32,
             batch_size=BATCH_SIZE
         )
@@ -60,7 +61,7 @@ class Learner:
         self._writer = SummaryWriter('runs/%s-%s' % (datetime.now().strftime('%Y-%m-%d_%H-%M-%S'), ENVIRONMENT))
 
         self._lock = Lock()
-        self._num_workers = cpu_count()
+        self._num_workers = cpu_count() // 2
         self._step = 0
 
     def run(self):
@@ -113,16 +114,18 @@ class Worker(Thread):
         self._global_agent = global_agent
         self._agent1 = SoftActorCriticAgent(
             self._observation_shape,
-            self._env.action_space,
-            hidden_dim=HIDDEN_SIZE,
+            self._env.action_space.shape[0],
+            hidden_size=HIDDEN_SIZE,
+            action_space=self._env.action_space,
             num_layers=32,
             batch_size=BATCH_SIZE,
             force_cpu=True
         )
         self._agent2 = SoftActorCriticAgent(
             self._observation_shape,
-            self._env.action_space,
-            hidden_dim=HIDDEN_SIZE,
+            self._env.action_space.shape[0],
+            hidden_size=HIDDEN_SIZE,
+            action_space=self._env.action_space,
             num_layers=32,
             batch_size=BATCH_SIZE,
             force_cpu=True
@@ -145,8 +148,8 @@ class Worker(Thread):
                     action1 = np.random.uniform(-1.0, 1.0, (BATCH_SIZE, TIME_SEQUENCE, self._env.action_space.shape[0]))
                     action2 = np.random.uniform(-1.0, 1.0, (BATCH_SIZE, TIME_SEQUENCE, self._env.action_space.shape[0]))
                 else:
-                    action1 = self._agent1.select_action(obs_batch1)
-                    action2 = self._agent2.select_action(obs_batch2)
+                    action1 = self._agent1.get_action(obs_batch1)
+                    action2 = self._agent2.get_action(obs_batch2)
                 actual_action = np.concatenate((action1[-1, -1:], action2[-1, -1:]))
 
                 next_obs, reward, done, info = self._env.step(actual_action)
@@ -167,9 +170,9 @@ class Worker(Thread):
                         self._buffer.push(s, a, r, s_, d)
                     if len(self._buffer) >= BATCH_SIZE:
                         gradient, q_loss, pi_loss = self._agent1.compute_gradient(self._buffer, BATCH_SIZE)
-                        self._global_agent.descent(gradient, q_loss, pi_loss, self._agent1)
+                        self._learner.descent(gradient, q_loss, pi_loss, self._agent1)
                         gradient, q_loss, pi_loss = self._agent2.compute_gradient(self._buffer, BATCH_SIZE)
-                        self._global_agent.descent(gradient, q_loss, pi_loss, self._agent2)
+                        self._learner.descent(gradient, q_loss, pi_loss, self._agent2)
 
                     self.load_learner_parameters()
                     self._agent1.reset()
@@ -202,16 +205,18 @@ class Validator(Thread):
         self._global_agent = global_agent
         self._target_agent = SoftActorCriticAgent(
             self._observation_shape,
-            self._env.action_space,
-            hidden_dim=HIDDEN_SIZE,
+            self._env.action_space.shape[0],
+            hidden_size=HIDDEN_SIZE,
+            action_space=self._env.action_space,
             num_layers=32,
             batch_size=BATCH_SIZE,
             force_cpu=True
         )
         self._opponent = SoftActorCriticAgent(
             self._observation_shape,
-            self._env.action_space,
-            hidden_dim=HIDDEN_SIZE,
+            self._env.action_space.shape[0],
+            hidden_size=HIDDEN_SIZE,
+            action_space=self._env.action_space,
             num_layers=32,
             batch_size=BATCH_SIZE,
             force_cpu=True
@@ -231,8 +236,8 @@ class Validator(Thread):
             obs_batch1, obs_batch2 = process_raw_observation(obs_batch1, obs_batch2, obs)
 
             while True:
-                action1 = self._target_agent.select_action(obs_batch1, evaluate=True)
-                action2 = self._opponent.select_action(obs_batch2, evaluate=True)
+                action1 = self._target_agent.get_action(obs_batch1, evaluate=True)
+                action2 = self._opponent.get_action(obs_batch2, evaluate=True)
                 actual_action = np.concatenate((action1[-1, -1:], action2[-1, -1:]))
 
                 next_obs, reward, done, info = self._env.step(actual_action)
