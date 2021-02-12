@@ -25,7 +25,7 @@ parser.add_argument('--mock', action='store_true', default=False)
 args = parser.parse_args()
 
 ENVIRONMENT = 'Rimpac-v0'
-BATCH_SIZE = 256
+BATCH_SIZE = 32
 TIME_SEQUENCE = 4
 HIDDEN_SIZE = 256
 LAYERS = 32
@@ -63,7 +63,7 @@ class Learner:
         self._writer = SummaryWriter('runs/%s-%s' % (datetime.now().strftime('%Y-%m-%d_%H-%M-%S'), ENVIRONMENT))
 
         self._lock = Lock()
-        self._num_workers = cpu_count() // 2
+        self._num_workers = cpu_count()
         self._step = 0
 
     def run(self):
@@ -164,12 +164,15 @@ class Worker(Thread):
                 obs_batch1, obs_batch2 = next_obs_batch1, next_obs_batch2
 
                 if done:
-                    memory1 = np.array(memory1.tolist())
-                    memory1[:, 2] = 1 - info.get('win', 0)
-                    memory2 = np.array(memory2.tolist())
-                    memory2[:, 2] = info.get('win', 0)
+                    m1 = np.array(memory1.tolist())
+                    m1[:, 2] = 1 - info.get('win', 0)
+                    m2 = np.array(memory2.tolist())
+                    m2[:, 2] = info.get('win', 0)
 
-                    for s, a, r, s_, d in np.concatenate((memory1, memory2)):
+                    memory1.clear()
+                    memory2.clear()
+
+                    for s, a, r, s_, d in np.concatenate((m1, m2)):
                         self._buffer.push(s, a, r, s_, d)
                     if len(self._buffer) >= BATCH_SIZE:
                         gradient, q_loss, pi_loss = self._agent1.compute_gradient(self._buffer, BATCH_SIZE)
@@ -180,9 +183,6 @@ class Worker(Thread):
                     self.load_learner_parameters()
                     self._agent1.reset()
                     self._agent2.reset()
-
-                    memory1.clear()
-                    memory2.clear()
 
         self._env.close()
 

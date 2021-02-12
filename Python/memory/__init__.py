@@ -90,9 +90,9 @@ class MongoReplayBuffer:
         return (
             np.array(row["state"]),
             np.array(row["action"]),
-            np.array(row["reward"]),
+            row["reward"],
             np.array(row["next_state"]),
-            np.array(row["done"])
+            row["done"]
         )
 
 
@@ -130,7 +130,7 @@ class MongoLocalMemory:
         data = {
             "state": state.tolist(),
             "action": action.tolist(),
-            "reward": reward,
+            "reward": reward.tolist(),  # TODO
             "next_state": next_state.tolist(),
             "done": done
         }
@@ -147,9 +147,9 @@ class MongoLocalMemory:
         return (
             np.array(row["state"]),
             np.array(row["action"]),
-            np.array(row["reward"]),
+            row["reward"],
             np.array(row["next_state"]),
-            np.array(row["done"])
+            row["done"]
         )
 
     @property
