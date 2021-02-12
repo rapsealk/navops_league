@@ -16,7 +16,7 @@ from torch.utils.tensorboard import SummaryWriter
 from models.pytorch_impl import SoftActorCriticAgent
 from memory import MongoReplayBuffer as ReplayBuffer
 from memory import MongoLocalMemory as LocalMemory
-from utils import epsilon
+from utils import epsilon, LogErrorTrace
 from rating import EloRating
 
 parser = argparse.ArgumentParser()
@@ -276,6 +276,7 @@ class Validator(Thread):
         )
 
 
+@LogErrorTrace
 def main():
     learner = Learner()
     learner.run()
