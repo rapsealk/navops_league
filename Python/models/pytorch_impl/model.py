@@ -219,6 +219,12 @@ class SoftActorCriticAgent:
 
         return loss
 
+    def get_state_dict(self):
+        return self._model.state_dict()
+
+    def set_state_dict(self, state_dict):
+        self._model.load_state_dict(state_dict)
+
     @property
     def model(self):
         return self._model
