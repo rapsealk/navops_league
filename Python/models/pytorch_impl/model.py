@@ -178,11 +178,14 @@ class SoftActorCriticAgent:
         return action.detach().cpu().numpy()
 
     def descent(self, gradient, worker=None):
+        worker.optim.zero_grad()
         self._optim.zero_grad()
         gradient.backward()
         for local_param, global_param in zip(worker.model.parameters(), self._model.parameters()):
             global_param._grad = local_param.grad.to(self.device)
         self._optim.step()
+        del gradient
+        torch.cuda.empty_cache()
 
     def compute_gradient(self, memory, batch_size, updates=0):
         s, a, r, s_, dones = memory.sample(batch_size)
@@ -207,6 +210,7 @@ class SoftActorCriticAgent:
         pi_loss = (self._alpha * log_pi - torch.min(qf1, qf2)).mean()
 
         loss = qf_loss + pi_loss
+        del s, a, r, s_, dones
         return loss, qf_loss.item(), pi_loss.item()
 
         """
@@ -228,6 +232,10 @@ class SoftActorCriticAgent:
     @property
     def model(self):
         return self._model
+
+    @property
+    def optim(self):
+        return self._optim
 
 
 if __name__ == "__main__":
