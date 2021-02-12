@@ -15,6 +15,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from models.pytorch_impl import SoftActorCriticAgent
 from memory import MongoReplayBuffer as ReplayBuffer
+from memory import MongoLocalMemory as LocalMemory
 from utils import epsilon
 from rating import EloRating
 
@@ -24,9 +25,10 @@ parser.add_argument('--mock', action='store_true', default=False)
 args = parser.parse_args()
 
 ENVIRONMENT = 'Rimpac-v0'
-BATCH_SIZE = 1024
+BATCH_SIZE = 256
 TIME_SEQUENCE = 4
 HIDDEN_SIZE = 256
+LAYERS = 32
 
 
 def process_raw_observation(obs1, obs2, next_obs):
@@ -51,7 +53,7 @@ class Learner:
             env.action_space.shape[0],
             hidden_size=HIDDEN_SIZE,
             action_space=env.action_space,
-            num_layers=32,
+            num_layers=LAYERS,
             batch_size=BATCH_SIZE
         )
         env.close()
@@ -117,7 +119,7 @@ class Worker(Thread):
             self._env.action_space.shape[0],
             hidden_size=HIDDEN_SIZE,
             action_space=self._env.action_space,
-            num_layers=32,
+            num_layers=LAYERS,
             batch_size=BATCH_SIZE,
             force_cpu=True
         )
@@ -126,7 +128,7 @@ class Worker(Thread):
             self._env.action_space.shape[0],
             hidden_size=HIDDEN_SIZE,
             action_space=self._env.action_space,
-            num_layers=32,
+            num_layers=LAYERS,
             batch_size=BATCH_SIZE,
             force_cpu=True
         )
@@ -138,7 +140,8 @@ class Worker(Thread):
         for episode in count(1):
             obs_batch1 = np.zeros((BATCH_SIZE, TIME_SEQUENCE, *self._env.observation_space.shape))  # 0.2 MB
             obs_batch2 = np.zeros((BATCH_SIZE, TIME_SEQUENCE, *self._env.observation_space.shape))
-            memory1, memory2 = [], []
+            # memory1, memory2 = [], []
+            memory1, memory2 = LocalMemory(), LocalMemory()
 
             obs = self._env.reset()
             obs_batch1, obs_batch2 = process_raw_observation(obs_batch1, obs_batch2, obs)
@@ -161,9 +164,9 @@ class Worker(Thread):
                 obs_batch1, obs_batch2 = next_obs_batch1, next_obs_batch2
 
                 if done:
-                    memory1 = np.array(memory1)
+                    memory1 = np.array(memory1.tolist())
                     memory1[:, 2] = 1 - info.get('win', 0)
-                    memory2 = np.array(memory2)
+                    memory2 = np.array(memory2.tolist())
                     memory2[:, 2] = info.get('win', 0)
 
                     for s, a, r, s_, d in np.concatenate((memory1, memory2)):
@@ -178,7 +181,8 @@ class Worker(Thread):
                     self._agent1.reset()
                     self._agent2.reset()
 
-                    memory1, memory2 = [], []
+                    memory1.clear()
+                    memory2.clear()
 
         self._env.close()
 
@@ -208,7 +212,7 @@ class Validator(Thread):
             self._env.action_space.shape[0],
             hidden_size=HIDDEN_SIZE,
             action_space=self._env.action_space,
-            num_layers=32,
+            num_layers=LAYERS,
             batch_size=BATCH_SIZE,
             force_cpu=True
         )
@@ -217,7 +221,7 @@ class Validator(Thread):
             self._env.action_space.shape[0],
             hidden_size=HIDDEN_SIZE,
             action_space=self._env.action_space,
-            num_layers=32,
+            num_layers=LAYERS,
             batch_size=BATCH_SIZE,
             force_cpu=True
         )
@@ -279,6 +283,9 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # env = gym.make('Rimpac-v0', mock=True)
+    # obs = np.zeros((BATCH_SIZE, TIME_SEQUENCE, *env.observation_space.shape))
+    # print(sys.getsizeof(obs) / 1000)
     """
     env = gym.make(ENVIRONMENT)
     agent = SoftActorCriticAgent(
