@@ -52,6 +52,7 @@ class SlackNotification:
             self._function(*args, **kwargs)
         except Exception as e:
             message = f'[{socket.gethostname()}]\n{e}\n{traceback.format_exc()}'
+            sys.stderr.write(f'[Exception]\n{message}\n')
             self._send_slack_message(message)
 
     def _send_slack_message(self, message):
@@ -60,7 +61,7 @@ class SlackNotification:
                 channel='#notification',
                 text=message
             )
-            sys.stdout.write(f'[SlackApi] response: {response}')
+            # sys.stdout.write(f'[SlackApi] response: {response}')
         except SlackApiError as e:
             assert e.response["ok"] is False
             assert e.response["error"]

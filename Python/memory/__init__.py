@@ -101,6 +101,7 @@ class FirebaseReplayBuffer:
     pass    # TODO: raise NotImplementedError()
 
 
+"""
 class MongoLocalMemory:
 
     def __init__(self, username=MONGO_USERNAME, password=MONGO_PASSWORD):
@@ -114,19 +115,17 @@ class MongoLocalMemory:
     #     self._collection.drop()
     #     print(11)
 
-    def __iter__(self):
-        for data in self._collection.find():
-            yield self._decode(data)
+    # def __iter__(self):
+    #     for data in self._collection.find():
+    #         yield self._decode(data)
 
     def append(self, data):
-        """
-        Args:
-            data: dict | list[dict]
-            {
-                "timestamp": datetime.datetime,
-                ...
-            }
-        """
+        # Args:
+        #     data: dict | list[dict]
+        #     {
+        #         "timestamp": datetime.datetime,
+        #         ...
+        #     }
         state, action, reward, next_state, done = data
         data = {
             "state": state.tolist(),
@@ -138,7 +137,11 @@ class MongoLocalMemory:
         _ = self._collection.insert_one(data)
 
     def tolist(self):
-        return tuple(map(self._decode, self._collection.find()))
+        items = []
+        for item in self._collection.find():
+            items.append(self._decode(item))
+        return items
+        # return tuple(map(self._decode, self._collection.find()))
 
     def clear(self):
         self._collection.drop()
@@ -156,6 +159,7 @@ class MongoLocalMemory:
     @property
     def id(self):
         return self._id
+"""
 
 
 if __name__ == "__main__":
@@ -163,7 +167,7 @@ if __name__ == "__main__":
     # buffer.clear()
     # print(len(buffer))
 
-    memory = MongoLocalMemory()
+    # memory = MongoLocalMemory()
 
     for _ in range(16):
         obs = np.random.uniform(-1.0, 1.0, (16, 4, 51))

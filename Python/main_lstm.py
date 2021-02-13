@@ -6,19 +6,19 @@ import time
 import argparse
 from collections import deque
 from datetime import datetime
-from threading import Lock
+from threading import Thread, Lock
 
 import gym
 import gym_rimpac   # noqa: F401
 import numpy as np
 import torch.multiprocessing as mp
-from torch.multiprocessing import cpu_count
+from torch.multiprocessing import cpu_count, Queue
 from torch.utils.tensorboard import SummaryWriter
 
 from models.pytorch_impl import SoftActorCriticAgent
 from memory import MongoReplayBuffer as ReplayBuffer
-from memory import MongoLocalMemory as LocalMemory
-from utils import epsilon, SlackNotification
+# from memory import MongoLocalMemory as LocalMemory
+from utils import SlackNotification
 from rating import EloRating
 
 os.environ['OMP_NUM_THREADS'] = '1'
@@ -63,7 +63,7 @@ class Learner:
             action_space=env.action_space,
             num_layers=LAYERS,
             batch_size=BATCH_SIZE,
-            force_cpu=(sys.platform=='win32')
+            force_cpu=(sys.platform=='win32')   # Windows
         )
         env.close()
         del env
@@ -71,26 +71,32 @@ class Learner:
         self.global_agent.share_memory()
 
         self._buffer = ReplayBuffer()
+        self._queue = Queue()
         self._writer = SummaryWriter('runs/%s-%s' % (datetime.now().strftime('%Y-%m-%d_%H-%M-%S'), ENVIRONMENT))
 
         self._lock = Lock()
-        self._num_workers = cpu_count()
+        self._num_workers = 1   # cpu_count()
         self._step = 0
 
     def run(self):
         workers = [
-            Worker(self, self.global_agent, 0, self._buffer, True)
+            Worker(self, 0, self._queue, True)
         ]
         for i in range(self._num_workers):
             workers.append(
-                Worker(self, self.global_agent, i+1, self._buffer)
+                Worker(self, i+1, self._queue)
             )
 
         for worker in workers:
             worker.start()
 
+        queue_thread = Thread(target=self._digest_queue, args=(self._queue, self._buffer), daemon=True)
+        queue_thread.start()
+
         for worker in workers:
             worker.join()
+
+        queue_thread.join()
 
     def descent(self, gradient, q_loss, pi_loss, worker=None):
         """FIXME: mp.Queue"""
@@ -112,21 +118,25 @@ class Learner:
     def update_random_action_rate_on_tensorboard(self, random_rate, step):
         self._writer.add_scalar('r/random_action', random_rate, step)
 
+    def _digest_queue(self, queue, buffer):
+        while True:
+            s, a, r, s_, d = queue.get()
+            buffer.push(s, a, r, s_, d)
+
 
 class Worker(mp.Process):
 
     def __init__(
         self,
         learner,
-        global_agent,
         worker_id=0,
-        buffer=None,
+        queue=None,
         evaluate=False
     ):
         super(Worker, self).__init__(daemon=True)
         self._worker_id = worker_id
         self._learner = learner
-        self._buffer = buffer
+        self._queue = queue
         self._evaluate = evaluate
         self._env = gym.make(
             ENVIRONMENT,
@@ -136,7 +146,7 @@ class Worker(mp.Process):
         )
         self._observation_shape = self._env._observation_space.shape[0]
 
-        self._global_agent = global_agent
+        self._global_agent = learner.global_agent
         self._agent1 = SoftActorCriticAgent(
             self._observation_shape,
             self._env.action_space.shape[0],
@@ -144,7 +154,7 @@ class Worker(mp.Process):
             action_space=self._env.action_space,
             num_layers=LAYERS,
             batch_size=BATCH_SIZE,
-            optim_=global_agent.optim,
+            optim_=self._global_agent.optim,
             force_cpu=True
         )
         self._agent2 = SoftActorCriticAgent(
@@ -154,7 +164,7 @@ class Worker(mp.Process):
             action_space=self._env.action_space,
             num_layers=LAYERS,
             batch_size=BATCH_SIZE,
-            optim_=global_agent.optim,
+            optim_=self._global_agent.optim,
             force_cpu=True
         )
 
@@ -173,8 +183,7 @@ class Worker(mp.Process):
             episode += 1
             obs_batch1 = np.zeros((BATCH_SIZE, TIME_SEQUENCE, *self._env.observation_space.shape))  # 0.2 MB
             obs_batch2 = np.zeros((BATCH_SIZE, TIME_SEQUENCE, *self._env.observation_space.shape))
-            # memory1, memory2 = [], []
-            memory1, memory2 = LocalMemory(), LocalMemory()
+            memory1, memory2 = [], []
 
             obs = self._env.reset()
             obs_batch1, obs_batch2 = process_raw_observation(obs_batch1, obs_batch2, obs)
@@ -204,6 +213,8 @@ class Worker(mp.Process):
 
                 memory1.append((obs_batch1[-1], action1[-1], reward[0], next_obs_batch1[-1], done))
                 memory2.append((obs_batch2[-1], action2[-1], reward[1], next_obs_batch2[-1], done))
+                # self._queue.put((obs_batch1[-1], action1[-1], reward[0], next_obs_batch1[-1], done))
+                # self._queue.put((obs_batch2[-1], action2[-1], reward[1], next_obs_batch2[-1], done))
 
                 obs_batch1, obs_batch2 = next_obs_batch1, next_obs_batch2
 
@@ -229,21 +240,22 @@ class Worker(mp.Process):
                             results.clear()
                     else:
                         # Reward shaping
-                        m1 = np.array(memory1.tolist())
+                        m1 = np.array(memory1)
                         m1[:, 2] = 1 - info.get('win', 0)
-                        m2 = np.array(memory2.tolist())
+                        m2 = np.array(memory2)
                         m2[:, 2] = info.get('win', 0)
 
                         memory1.clear()
                         memory2.clear()
 
                         for s, a, r, s_, d in np.concatenate((m1, m2)):
-                            self._buffer.push(s, a, r, s_, d)
-                        if len(self._buffer) >= BATCH_SIZE:
-                            gradient, q_loss, pi_loss = self._agent1.compute_gradient(self._buffer, BATCH_SIZE)
-                            self._learner.descent(gradient, q_loss, pi_loss, self._agent1)
-                            gradient, q_loss, pi_loss = self._agent2.compute_gradient(self._buffer, BATCH_SIZE)
-                            self._learner.descent(gradient, q_loss, pi_loss, self._agent2)
+                            # self._buffer.push(s, a, r, s_, d)
+                            self._queue.put((s, a, r, s_, d))
+                        # if len(self._buffer) >= BATCH_SIZE:
+                        gradient, q_loss, pi_loss = self._agent1.compute_gradient(self._buffer, BATCH_SIZE)
+                        self._learner.descent(gradient, q_loss, pi_loss, self._agent1)
+                        gradient, q_loss, pi_loss = self._agent2.compute_gradient(self._buffer, BATCH_SIZE)
+                        self._learner.descent(gradient, q_loss, pi_loss, self._agent2)
 
                     self.load_learner_parameters()
                     self._agent1.reset()
