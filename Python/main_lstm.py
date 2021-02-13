@@ -162,8 +162,9 @@ class Worker(Thread):
         for episode in count(1):
             obs_batch1 = np.zeros((BATCH_SIZE, TIME_SEQUENCE, *self._env.observation_space.shape))  # 0.2 MB
             obs_batch2 = np.zeros((BATCH_SIZE, TIME_SEQUENCE, *self._env.observation_space.shape))
-            # memory1, memory2 = [], []
-            memory1, memory2 = LocalMemory(), LocalMemory()
+            if not self._evaluate:
+                # memory1, memory2 = [], []
+                memory1, memory2 = LocalMemory(), LocalMemory()
 
             obs = self._env.reset()
             obs_batch1, obs_batch2 = process_raw_observation(obs_batch1, obs_batch2, obs)
@@ -184,8 +185,9 @@ class Worker(Thread):
                 next_obs, reward, done, info = self._env.step(actual_action)
                 next_obs_batch1, next_obs_batch2 = process_raw_observation(obs_batch1, obs_batch2, next_obs)
 
-                memory1.append((obs_batch1[-1], action1[-1], reward[0], next_obs_batch1[-1], done))
-                memory2.append((obs_batch2[-1], action2[-1], reward[1], next_obs_batch2[-1], done))
+                if not self._evaluate:
+                    memory1.append((obs_batch1[-1], action1[-1], reward[0], next_obs_batch1[-1], done))
+                    memory2.append((obs_batch2[-1], action2[-1], reward[1], next_obs_batch2[-1], done))
 
                 obs_batch1, obs_batch2 = next_obs_batch1, next_obs_batch2
 
