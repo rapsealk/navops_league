@@ -6,7 +6,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.distributions import Normal
 
-from share import SharedAdam
+from .share import SharedAdam
 
 LOG_STD_MIN = -20
 LOG_STD_MAX = 2

@@ -1,6 +1,7 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
 import os
+import sys
 import time
 import argparse
 from collections import deque
@@ -34,6 +35,10 @@ TIME_SEQUENCE = 4
 HIDDEN_SIZE = 256
 LAYERS = 32
 
+EPSILON_DISCOUNT = 1e-3
+EPSILON_STEP = 100
+EPSILON_MIN = 5e-3
+
 
 def process_raw_observation(obs1, obs2, next_obs):
     next_obs = np.expand_dims(next_obs, axis=1)
@@ -58,7 +63,8 @@ class Learner:
             hidden_size=HIDDEN_SIZE,
             action_space=env.action_space,
             num_layers=LAYERS,
-            batch_size=BATCH_SIZE
+            batch_size=BATCH_SIZE,
+            force_cpu=(sys.platform=='win32')
         )
         env.close()
         del env
@@ -159,7 +165,9 @@ class Worker(mp.Process):
         ratings = (1200, 1200)
         results = deque(maxlen=100)
         best_rate = 0
-        eps = epsilon()
+        # eps = epsilon()
+        eps = 1.0
+        total_timestep = 0
         for episode in count(1):
             obs_batch1 = np.zeros((BATCH_SIZE, TIME_SEQUENCE, *self._env.observation_space.shape))  # 0.2 MB
             obs_batch2 = np.zeros((BATCH_SIZE, TIME_SEQUENCE, *self._env.observation_space.shape))
@@ -173,7 +181,12 @@ class Worker(mp.Process):
             random_action = 0
 
             for timestep in count(1):
-                if next(eps) > np.random.random():
+                total_timestep += 1
+                if total_timestep % EPSILON_STEP == 0:
+                    eps = max(eps - EPSILON_DISCOUNT, EPSILON_MIN)
+                    total_timestep = 0
+                # if next(eps) > np.random.random():
+                if eps > np.random.random():
                     random_action += 1
                     action1 = np.random.uniform(-1.0, 1.0, (BATCH_SIZE, TIME_SEQUENCE, self._env.action_space.shape[0]))
                     action2 = np.random.uniform(-1.0, 1.0, (BATCH_SIZE, TIME_SEQUENCE, self._env.action_space.shape[0]))
