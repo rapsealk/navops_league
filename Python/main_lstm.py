@@ -6,7 +6,6 @@ import time
 import argparse
 from collections import deque
 from datetime import datetime
-from itertools import count
 from threading import Lock
 
 import gym
@@ -168,7 +167,10 @@ class Worker(mp.Process):
         # eps = epsilon()
         eps = 1.0
         total_timestep = 0
-        for episode in count(1):
+        episode = 0
+        # for episode in count(1):
+        while True:
+            episode += 1
             obs_batch1 = np.zeros((BATCH_SIZE, TIME_SEQUENCE, *self._env.observation_space.shape))  # 0.2 MB
             obs_batch2 = np.zeros((BATCH_SIZE, TIME_SEQUENCE, *self._env.observation_space.shape))
             # memory1, memory2 = [], []
@@ -179,8 +181,10 @@ class Worker(mp.Process):
 
             time_ = time.time()
             random_action = 0
-
-            for timestep in count(1):
+            timestep = 0
+            # for timestep in count(1):
+            while True:
+                timestep += 1
                 total_timestep += 1
                 if total_timestep % EPSILON_STEP == 0:
                     eps = max(eps - EPSILON_DISCOUNT, EPSILON_MIN)
