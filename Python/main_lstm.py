@@ -12,12 +12,13 @@ from multiprocessing import cpu_count
 import gym
 import gym_rimpac   # noqa: F401
 import numpy as np
+import torch.multiprocessing as mp
 from torch.utils.tensorboard import SummaryWriter
 
 from models.pytorch_impl import SoftActorCriticAgent
 from memory import MongoReplayBuffer as ReplayBuffer
 from memory import MongoLocalMemory as LocalMemory
-from utils import epsilon, LogErrorTrace
+from utils import epsilon, SlackNotification
 from rating import EloRating
 
 parser = argparse.ArgumentParser()
@@ -59,6 +60,8 @@ class Learner:
         )
         env.close()
         del env
+
+        self.global_agent.share_memory()
 
         self._buffer = ReplayBuffer()
         self._writer = SummaryWriter('runs/%s-%s' % (datetime.now().strftime('%Y-%m-%d_%H-%M-%S'), ENVIRONMENT))
@@ -235,7 +238,7 @@ class Worker(Thread):
             self._agent2.set_state_dict(state_dict)
 
 
-@LogErrorTrace
+@SlackNotification
 def main():
     learner = Learner()
     learner.run()

@@ -4,6 +4,7 @@ import os
 import abc
 import json
 import random
+from datetime import datetime
 from uuid import uuid4
 
 import numpy as np
@@ -141,7 +142,7 @@ class MongoLocalMemory:
 
     def clear(self):
         self._collection.drop()
-        print(f'MongoLocalMemory.clear: collection({self._id}).drop()')
+        print(f'[{datetime.now().isoformat()}] MongoLocalMemory.clear: collection({self._id}).drop()')
 
     def _decode(self, row):
         return (

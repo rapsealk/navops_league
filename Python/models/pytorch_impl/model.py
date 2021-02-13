@@ -175,6 +175,7 @@ class SoftActorCriticAgent:
             _, _, action, _ = self._model(state)
         else:
             action, _, _, _ = self._model(state)
+        del state
         return action.detach().cpu().numpy()
 
     def descent(self, gradient, worker=None):
@@ -229,6 +230,9 @@ class SoftActorCriticAgent:
 
     def set_state_dict(self, state_dict):
         self._model.load_state_dict(state_dict)
+
+    def share_memory(self):
+        self._model.share_memory()
 
     @property
     def model(self):
