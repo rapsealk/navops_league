@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 import time
+import json
 import argparse
 from collections import deque
 from datetime import datetime
@@ -25,6 +26,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--no-graphics', action='store_true', default=True)
 parser.add_argument('--mock', action='store_true', default=False)
 args = parser.parse_args()
+
+with open(os.path.join(os.path.dirname(__file__), 'config.json')) as f:
+    config = json.loads(''.join(f.readlines()))
+    SLACK_API_TOKEN = config["slack"]["token"]
 
 ENVIRONMENT = 'Rimpac-v0'
 BATCH_SIZE = 32
@@ -238,7 +243,7 @@ class Worker(Thread):
             self._agent2.set_state_dict(state_dict)
 
 
-@SlackNotification
+@SlackNotification(SLACK_API_TOKEN)
 def main():
     learner = Learner()
     learner.run()

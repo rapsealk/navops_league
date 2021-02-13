@@ -3,7 +3,6 @@
 import os
 import sys
 import time
-import json
 import socket
 import traceback
 from itertools import count
@@ -13,10 +12,6 @@ import torch
 from torch.autograd import Variable
 from slack import WebClient
 from slack.errors import SlackApiError
-
-with open(os.path.join(os.path.dirname(__file__), 'config.json')) as f:
-    config = json.loads(''.join(f.readlines()))
-    SLACK_API_TOKEN = config["slack"]["token"]
 
 
 def epsilon(discount=1e-3, step=100, minimum=5e-3):
@@ -43,16 +38,18 @@ class LogErrorTrace:
 
 
 class SlackNotification:
-    def __init__(self, function):
-        self._function = function
-        self._client = WebClient(token=SLACK_API_TOKEN)
+    def __init__(self, token: str):
+        self._token = token
 
-    def __call__(self, *args, **kwargs):
-        try:
-            self._function(*args, **kwargs)
-        except Exception as e:
-            message = f'[{socket.gethostname()}]\n{e}\n{traceback.format_exc()}'
-            self._send_slack_message(message)
+    def __call__(self, function):
+        def decorator(*args, **kwargs):
+            try:
+                function(*args, **kwargs)
+            except Exception as e:
+                self._client = WebClient(token=self._token)
+                message = f'[{socket.gethostname()}]\n{e}\n{traceback.format_exc()}'
+                self._send_slack_message(message)
+        return decorator
 
     def _send_slack_message(self, message):
         try:
