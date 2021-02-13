@@ -1,6 +1,7 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
 import os
+import time
 import argparse
 from collections import deque
 from datetime import datetime
@@ -67,7 +68,9 @@ class Learner:
         self._step = 0
 
     def run(self):
-        workers = []
+        workers = [
+            Worker(self, self.global_agent, 0, self._buffer, True)
+        ]
         for i in range(self._num_workers):
             workers.append(
                 Worker(self, self.global_agent, i+1, self._buffer)
@@ -76,13 +79,8 @@ class Learner:
         for worker in workers:
             worker.start()
 
-        thread = Validator(self.global_agent, self._num_workers+1, self._writer)
-        thread.start()
-
         for worker in workers:
             worker.join()
-
-        thread.join()
 
     def descent(self, gradient, q_loss, pi_loss, worker=None):
         with self._lock:
@@ -90,6 +88,18 @@ class Learner:
             self.global_agent.descent(gradient, worker)
             self._writer.add_scalar('loss/value', q_loss, self._step)
             self._writer.add_scalar('loss/policy', pi_loss, self._step)
+
+    def update_rating_on_tensorboard(self, rating, step):
+        self._writer.add_scalar('r/rating', rating, step)
+
+    def update_winning_rate_on_tensorboard(self, rate, step):
+        self._writer.add_scalar('r/winnings', rate, step)
+
+    def update_time_on_tensorboard(self, seconds, step):
+        self._writer.add_scalar('r/time', seconds, step)
+
+    def update_random_action_rate_on_tensorboard(self, random_rate, step):
+        self._writer.add_scalar('r/random_action', random_rate, step)
 
 
 class Worker(Thread):
@@ -99,12 +109,14 @@ class Worker(Thread):
         learner,
         global_agent,
         worker_id=0,
-        buffer=None
+        buffer=None,
+        evaluate=False
     ):
         Thread.__init__(self, daemon=True)
         self._worker_id = worker_id
         self._learner = learner
         self._buffer = buffer
+        self._evaluate = evaluate
         self._env = gym.make(
             ENVIRONMENT,
             worker_id=worker_id,
@@ -136,6 +148,9 @@ class Worker(Thread):
         self.load_learner_parameters()
 
     def run(self):
+        ratings = (1200, 1200)
+        results = deque(maxlen=100)
+        best_rate = 0
         eps = epsilon()
         for episode in count(1):
             obs_batch1 = np.zeros((BATCH_SIZE, TIME_SEQUENCE, *self._env.observation_space.shape))  # 0.2 MB
@@ -146,13 +161,17 @@ class Worker(Thread):
             obs = self._env.reset()
             obs_batch1, obs_batch2 = process_raw_observation(obs_batch1, obs_batch2, obs)
 
-            while True:
+            time_ = time.time()
+            random_action = 0
+
+            for timestep in count(1):
                 if next(eps) > np.random.random():
+                    random_action += 1
                     action1 = np.random.uniform(-1.0, 1.0, (BATCH_SIZE, TIME_SEQUENCE, self._env.action_space.shape[0]))
                     action2 = np.random.uniform(-1.0, 1.0, (BATCH_SIZE, TIME_SEQUENCE, self._env.action_space.shape[0]))
                 else:
-                    action1 = self._agent1.get_action(obs_batch1)
-                    action2 = self._agent2.get_action(obs_batch2)
+                    action1 = self._agent1.get_action(obs_batch1, evaluate=self._evaluate)
+                    action2 = self._agent2.get_action(obs_batch2, evaluate=self._evaluate)
                 actual_action = np.concatenate((action1[-1, -1:], action2[-1, -1:]))
 
                 next_obs, reward, done, info = self._env.step(actual_action)
@@ -164,116 +183,56 @@ class Worker(Thread):
                 obs_batch1, obs_batch2 = next_obs_batch1, next_obs_batch2
 
                 if done:
-                    m1 = np.array(memory1.tolist())
-                    m1[:, 2] = 1 - info.get('win', 0)
-                    m2 = np.array(memory2.tolist())
-                    m2[:, 2] = info.get('win', 0)
+                    if self._evaluate:
+                        a_win = bool(1 - info.get('win', 0))
+                        results.append(a_win)
+                        ratings = EloRating.calc(ratings[0], ratings[1], a_win)
+                        self._learner.update_rating_on_tensorboard(ratings[0], episode)
+                        self._learner.update_time_on_tensorboard(time.time() - time_, episode)
+                        self._learner.update_random_action_rate_on_tensorboard(random_action / timestep, episode)
+                        if episode % 100 == 0:
+                            rate = np.mean(results)
+                            if rate > best_rate:
+                                self._agent1.save(
+                                    os.path.join(
+                                        os.path.dirname(__file__),
+                                        'checkpoints',
+                                        f'{ENVIRONMENT}-lstm-ep{episode}.ckpt')
+                                )
+                                best_rate = rate
+                            self._learner.update_winning_rate_on_tensorboard(rate, episode // 100)
+                            results.clear()
+                    else:
+                        # Reward shaping
+                        m1 = np.array(memory1.tolist())
+                        m1[:, 2] = 1 - info.get('win', 0)
+                        m2 = np.array(memory2.tolist())
+                        m2[:, 2] = info.get('win', 0)
 
-                    memory1.clear()
-                    memory2.clear()
+                        memory1.clear()
+                        memory2.clear()
 
-                    for s, a, r, s_, d in np.concatenate((m1, m2)):
-                        self._buffer.push(s, a, r, s_, d)
-                    if len(self._buffer) >= BATCH_SIZE:
-                        gradient, q_loss, pi_loss = self._agent1.compute_gradient(self._buffer, BATCH_SIZE)
-                        self._learner.descent(gradient, q_loss, pi_loss, self._agent1)
-                        gradient, q_loss, pi_loss = self._agent2.compute_gradient(self._buffer, BATCH_SIZE)
-                        self._learner.descent(gradient, q_loss, pi_loss, self._agent2)
+                        for s, a, r, s_, d in np.concatenate((m1, m2)):
+                            self._buffer.push(s, a, r, s_, d)
+                        if len(self._buffer) >= BATCH_SIZE:
+                            gradient, q_loss, pi_loss = self._agent1.compute_gradient(self._buffer, BATCH_SIZE)
+                            self._learner.descent(gradient, q_loss, pi_loss, self._agent1)
+                            gradient, q_loss, pi_loss = self._agent2.compute_gradient(self._buffer, BATCH_SIZE)
+                            self._learner.descent(gradient, q_loss, pi_loss, self._agent2)
 
                     self.load_learner_parameters()
                     self._agent1.reset()
                     self._agent2.reset()
+
+                    break
 
         self._env.close()
 
     def load_learner_parameters(self):
         state_dict = self._global_agent.get_state_dict()
         self._agent1.set_state_dict(state_dict)
-        self._agent2.set_state_dict(state_dict)
-
-
-class Validator(Thread):
-
-    def __init__(self, global_agent, worker_id=0, writer=None):
-        Thread.__init__(self, daemon=True)
-        self._worker_id = worker_id
-        self._env = gym.make(
-            ENVIRONMENT,
-            worker_id=worker_id,
-            no_graphics=True,
-            mock=args.mock
-        )
-        self._observation_shape = self._env._observation_space.shape[0]
-
-        self._writer = writer
-        self._global_agent = global_agent
-        self._target_agent = SoftActorCriticAgent(
-            self._observation_shape,
-            self._env.action_space.shape[0],
-            hidden_size=HIDDEN_SIZE,
-            action_space=self._env.action_space,
-            num_layers=LAYERS,
-            batch_size=BATCH_SIZE,
-            force_cpu=True
-        )
-        self._opponent = SoftActorCriticAgent(
-            self._observation_shape,
-            self._env.action_space.shape[0],
-            hidden_size=HIDDEN_SIZE,
-            action_space=self._env.action_space,
-            num_layers=LAYERS,
-            batch_size=BATCH_SIZE,
-            force_cpu=True
-        )
-
-        self.load_learner_parameters()
-
-    def run(self):
-        ratings = (1200, 1200)
-        results = deque(maxlen=100)
-        best_rate = 0
-        for episode in count(1):
-            obs_batch1 = np.zeros((BATCH_SIZE, TIME_SEQUENCE, *self._env.observation_space.shape))  # 0.2 MB
-            obs_batch2 = np.zeros((BATCH_SIZE, TIME_SEQUENCE, *self._env.observation_space.shape))
-
-            obs = self._env.reset()
-            obs_batch1, obs_batch2 = process_raw_observation(obs_batch1, obs_batch2, obs)
-
-            while True:
-                action1 = self._target_agent.get_action(obs_batch1, evaluate=True)
-                action2 = self._opponent.get_action(obs_batch2, evaluate=True)
-                actual_action = np.concatenate((action1[-1, -1:], action2[-1, -1:]))
-
-                next_obs, reward, done, info = self._env.step(actual_action)
-                obs_batch1, obs_batch2 = process_raw_observation(obs_batch1, obs_batch2, next_obs)
-
-                if done:
-                    a_win = bool(1 - info['win'])
-                    results.append(a_win)
-                    ratings = EloRating.calc(ratings[0], ratings[1], a_win)
-                    self._writer.add_scalar('r/rating', ratings[0], episode)
-                    if episode % 100 == 0:
-                        rate = np.mean(results)
-                        if rate > best_rate:
-                            self._target_agent.save(
-                                os.path.join(
-                                    os.path.dirname(__file__),
-                                    'checkpoints',
-                                    f'{ENVIRONMENT}-lstm-ep{episode}.ckpt')
-                            )
-                            best_rate = rate
-                        self._writer.add_scalar('r/winnings', rate, episode // 100)
-                        results.clear()
-                    self.load_learner_parameters()
-                    self._target_agent.reset()
-                    break
-
-        self._env.close()
-
-    def load_learner_parameters(self):
-        self._target_agent.set_state_dict(
-            self._global_agent.get_state_dict()
-        )
+        if not self._evaluate:
+            self._agent2.set_state_dict(state_dict)
 
 
 @LogErrorTrace

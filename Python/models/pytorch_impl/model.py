@@ -196,9 +196,10 @@ class SoftActorCriticAgent:
         with torch.no_grad():
             _, next_state_log_pi, _, _ = self._model(s_)
             _, _, _, target_values = self._critic_target(s_)
-            min_q_next_target = torch.min(target_values[0], target_values[1]) - self._alpha * next_state_log_pi
+            min_q_next_target = torch.min(target_values[0].detach(), target_values[1].detach()) - self._alpha * next_state_log_pi.detach()
             min_q_next_target = min_q_next_target[:, -1, -1:]
             next_q_value = r + dones * self._gamma * min_q_next_target
+            next_q_value = next_q_value.detach()
 
         pi, log_pi, _, (qf1, qf2) = self._model(s)
         qf1 = qf1[:, -1]
@@ -211,7 +212,7 @@ class SoftActorCriticAgent:
 
         loss = qf_loss + pi_loss
         del s, a, r, s_, dones
-        return loss, qf_loss.item(), pi_loss.item()
+        return loss, qf_loss.detach().item(), pi_loss.detach().item()
 
         """
         self._optim.zero_grad()
