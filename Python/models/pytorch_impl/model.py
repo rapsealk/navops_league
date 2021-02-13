@@ -6,6 +6,8 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.distributions import Normal
 
+from share import SharedAdam
+
 LOG_STD_MIN = -20
 LOG_STD_MAX = 2
 EPSILON = 1e-6
@@ -108,6 +110,12 @@ class LstmActorCritic(nn.Module):
         self._hidden = (torch.randn((self._num_layers, self._batch_size, self._hidden_size)),
                         torch.randn((self._num_layers, self._batch_size, self._hidden_size)))
 
+    def to(self, device):
+        self._action_scale = self._action_scale.to(device)
+        self._action_bias = self._action_bias.to(device)
+        self._hidden = (hidden.to(device) for hidden in self._hidden)
+        return super(LstmActorCritic, self).to(device)
+
 
 class SoftActorCriticAgent:
 
@@ -123,6 +131,7 @@ class SoftActorCriticAgent:
         tau=0.05,
         alpha=0.2,
         learning_rate=3e-4,
+        optim_=None,
         force_cpu=False
     ):
         self._batch_size = batch_size
@@ -148,7 +157,8 @@ class SoftActorCriticAgent:
             num_layers,
             batch_size
         ).to(self.device)
-        self._optim = optim.Adam(self._model.parameters(), lr=learning_rate)
+        # self._optim = optim.Adam(self._model.parameters(), lr=learning_rate)
+        self._optim = optim_ or SharedAdam(self._model.parameters(), lr=learning_rate)
         self._critic_target = LstmActorCritic(
             input_size,
             output_size,
@@ -179,7 +189,7 @@ class SoftActorCriticAgent:
         return action.detach().cpu().numpy()
 
     def descent(self, gradient, worker=None):
-        worker.optim.zero_grad()
+        # worker.optim.zero_grad()
         self._optim.zero_grad()
         gradient.backward()
         for local_param, global_param in zip(worker.model.parameters(), self._model.parameters()):

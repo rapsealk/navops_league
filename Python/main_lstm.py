@@ -6,13 +6,13 @@ import argparse
 from collections import deque
 from datetime import datetime
 from itertools import count
-from threading import Thread, Lock
-from multiprocessing import cpu_count
+from threading import Lock
 
 import gym
 import gym_rimpac   # noqa: F401
 import numpy as np
 import torch.multiprocessing as mp
+from torch.multiprocessing import cpu_count
 from torch.utils.tensorboard import SummaryWriter
 
 from models.pytorch_impl import SoftActorCriticAgent
@@ -20,6 +20,8 @@ from memory import MongoReplayBuffer as ReplayBuffer
 from memory import MongoLocalMemory as LocalMemory
 from utils import epsilon, SlackNotification
 from rating import EloRating
+
+os.environ['OMP_NUM_THREADS'] = '1'
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--no-graphics', action='store_true', default=True)
@@ -86,6 +88,7 @@ class Learner:
             worker.join()
 
     def descent(self, gradient, q_loss, pi_loss, worker=None):
+        """FIXME: mp.Queue"""
         with self._lock:
             self._step += 1
             self.global_agent.descent(gradient, worker)
@@ -105,7 +108,7 @@ class Learner:
         self._writer.add_scalar('r/random_action', random_rate, step)
 
 
-class Worker(Thread):
+class Worker(mp.Process):
 
     def __init__(
         self,
@@ -115,7 +118,7 @@ class Worker(Thread):
         buffer=None,
         evaluate=False
     ):
-        Thread.__init__(self, daemon=True)
+        super(Worker, self).__init__(daemon=True)
         self._worker_id = worker_id
         self._learner = learner
         self._buffer = buffer
@@ -136,6 +139,7 @@ class Worker(Thread):
             action_space=self._env.action_space,
             num_layers=LAYERS,
             batch_size=BATCH_SIZE,
+            optim_=global_agent.optim,
             force_cpu=True
         )
         self._agent2 = SoftActorCriticAgent(
@@ -145,6 +149,7 @@ class Worker(Thread):
             action_space=self._env.action_space,
             num_layers=LAYERS,
             batch_size=BATCH_SIZE,
+            optim_=global_agent.optim,
             force_cpu=True
         )
 

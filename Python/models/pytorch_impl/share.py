@@ -1,18 +1,38 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
-from datetime import datetime
-
 import torch
-import torch.nn as nn
-# import torch.optim as optim
+import torch.optim as optim
 import torch.multiprocessing as mp  # noqa: F401
-from torch.utils.tensorboard import SummaryWriter
-import numpy as np
-
-from sac import SoftActorCriticAgent
-from memory import ReplayBuffer
 
 
+class SharedAdam(optim.Adam):
+
+    def __init__(
+        self,
+        params,
+        lr=1e-3,
+        betas=(0.9, 0.99),
+        eps=1e-8,
+        weight_decay=0
+    ):
+        super(SharedAdam, self).__init__(
+            params,
+            lr=lr,
+            betas=betas,
+            eps=eps,
+            weight_decay=weight_decay
+        )
+        for param_group in self.param_groups:
+            for param in param_group['params']:
+                self.state[param]['step'] = 0
+                self.state[param]['exp_avg'] = torch.zeros_like(param.data)
+                self.state[param]['exp_avg_sq'] = torch.zeros_like(param.data)
+                # share in memory
+                self.state[param]['exp_avg'].share_memory_()
+                self.state[param]['exp_avg_sq'].share_memory_()
+
+
+"""
 class MockBoxSpace:
 
     def __init__(self, shape: tuple):
@@ -81,3 +101,12 @@ if __name__ == "__main__":
 
         global_model.descent_gradient(worker_model, qf_loss, policy_loss, alpha_loss)
         worker_model.set_state_dict(global_model.get_state_dict())
+"""
+
+
+def main():
+    pass
+
+
+if __name__ == "__main__":
+    main()
