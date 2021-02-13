@@ -2,11 +2,12 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
-import time
 import socket
 import traceback
+from datetime import datetime
 from itertools import count
 
+import psutil
 import numpy as np
 import torch
 from torch.autograd import Variable
@@ -22,6 +23,7 @@ def epsilon(discount=1e-3, step=100, minimum=5e-3):
         yield value
 
 
+"""
 class LogErrorTrace:
     def __init__(self, function):
         self._function = function
@@ -35,6 +37,7 @@ class LogErrorTrace:
                 os.mkdir(dirname)
             with open(os.path.join(dirname, f'{int(time.time() * 1000)}.log'), 'w') as f:
                 f.write(str(e) + '\n' + traceback.format_exc())
+"""
 
 
 class SlackNotification:
@@ -64,6 +67,17 @@ class SlackNotification:
             sys.stderr.write(f'[SlackApiError] {e.response["error"]}')
 
 
+def print_memory_usage():
+    memory_usage_dict = psutil.virtual_memory()._asdict()
+    memory_usage_percent = memory_usage_dict['percent']
+    print(f'[{datetime.now().isoformat()}] Total memory_usage_percent: {memory_usage_percent}%')
+
+    pid = os.getpid()
+    current_process = psutil.Process(pid)
+    current_process_memory_usage_as_KB = current_process.memory_info()[0] / 2.0 ** 20
+    print(f'[{datetime.now().isoformat()}] Current-Process memory_usage: {current_process_memory_usage_as_KB: 9.3f} KB')
+
+
 class SizeEstimator(object):
     """
     PyTorch Model Size Estimator (https://github.com/jacobkimmel/pytorch_modelsize)
@@ -82,7 +96,7 @@ class SizeEstimator(object):
         '''Get sizes of all parameters in `model`'''
         mods = list(self.model.modules())
         sizes = []
-        
+
         for i in range(1,len(mods)):
             m = mods[i]
             p = list(m.parameters())
@@ -145,9 +159,8 @@ class SizeEstimator(object):
         return total_megabytes, total
 
 
-@SlackNotification
 def main():
-    raise Exception("Hi")
+    print_memory_usage()
 
 
 if __name__ == "__main__":

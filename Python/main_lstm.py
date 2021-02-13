@@ -13,13 +13,12 @@ from multiprocessing import cpu_count
 import gym
 import gym_rimpac   # noqa: F401
 import numpy as np
-import torch.multiprocessing as mp
 from torch.utils.tensorboard import SummaryWriter
 
 from models.pytorch_impl import SoftActorCriticAgent
 from memory import MongoReplayBuffer as ReplayBuffer
 from memory import MongoLocalMemory as LocalMemory
-from utils import epsilon, SlackNotification
+from utils import epsilon, print_memory_usage, SlackNotification
 from rating import EloRating
 
 parser = argparse.ArgumentParser()
@@ -219,6 +218,7 @@ class Worker(Thread):
 
                         memory1.clear()
                         memory2.clear()
+                        print_memory_usage()
 
                         for s, a, r, s_, d in np.concatenate((m1, m2)):
                             self._buffer.push(s, a, r, s_, d)
