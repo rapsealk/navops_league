@@ -1,5 +1,6 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -19,6 +20,79 @@ def weights_init_(m):
 
 def convert_to_tensor(device, *args):
     return map(lambda tensor: tensor.to(device), map(torch.FloatTensor, args))
+
+
+class Model(nn.Module):
+
+    def __init__(self, input_size, output_size):
+        super(Model, self).__init__()
+        self.linear1 = nn.Linear(input_size, 512)
+        self.linear2 = nn.Linear(512, 1024)
+        self.linear3 = nn.Linear(1024, 1024)
+        self.linear4 = nn.Linear(1024, 256)
+        self.linear5 = nn.Linear(256, output_size)
+
+        self.apply(weights_init_)
+
+    def forward(self, x):
+        x = F.relu(self.linear1(x))
+        x = F.relu(self.linear2(x))
+        x = F.relu(self.linear3(x))
+        x = F.relu(self.linear4(x))
+        x = self.linear5(x)
+        return x
+
+
+class DQNAgent:
+
+    def __init__(self, input_size, output_size, batch_size=1024, force_cpu=False):
+        if force_cpu:
+            self._device = torch.device("cpu")
+        else:
+            self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self._model = Model(input_size, output_size).to(self._device)
+        self._optim = optim.RMSprop(self._model.parameters())
+        self._batch_size = batch_size
+
+    def get_action(self, inputs):
+        action = self._model(torch.FloatTensor(inputs).to(self._device))
+        return torch.argmax(action).detach().cpu().numpy()
+
+    def train(self, memory):
+        s, a, r, s_, dones = self._make_batch(memory, self._batch_size)
+        y_j = self._model(s).gather(dim=1, index=a.type(torch.int64).unsqueeze(1))
+        loss = F.smooth_l1_loss(y_j, r.unsqueeze(1))
+
+        self._optim.zero_grad()
+        loss.backward()
+        for param in self._model.parameters():
+            param.grad.data.clamp_(-1, 1)
+        self._optim.step()
+
+        return loss.detach().cpu().numpy()
+
+    def _make_batch(self, memory, batch_size=1024):
+        s, a, r, s_, dones = memory.sample(batch_size)
+        s, a, r, s_, dones = convert_to_tensor(self._device, s, a, r, s_, dones)
+        return s, a, r, s_, dones
+
+    def state_dict(self):
+        return self._model.state_dict()
+
+    def set_state_dict(self, state_dict):
+        self._model.load_state_dict(state_dict)
+
+    def save(self, path: str):
+        torch.save({
+            "params": self._model.parameters(),
+            "optim": self._optim.parameters(),
+            # TODO: epsilon
+        }, path)
+
+    def load(self, path: str):
+        state_dict = torch.load(path)
+        self._model.load(state_dict["params"])
+        self._optim.load(state_dict["optim"])
 
 
 class LstmActorCritic(nn.Module):
@@ -105,8 +179,15 @@ class LstmActorCritic(nn.Module):
         return action, log_prob, mean, (q1, q2)
 
     def reset(self):
+        del self._hidden
         self._hidden = (torch.randn((self._num_layers, self._batch_size, self._hidden_size)),
                         torch.randn((self._num_layers, self._batch_size, self._hidden_size)))
+
+    def to(self, device):
+        self._hidden = tuple(hidden.to(device) for hidden in self._hidden)
+        self._action_scale = self._action_scale.to(device)
+        self._action_bias = self._action_bias.to(device)
+        return super(LstmActorCritic, self).to(device)
 
 
 class SoftActorCriticAgent:
@@ -244,4 +325,14 @@ class SoftActorCriticAgent:
 
 
 if __name__ == "__main__":
-    pass
+    import gym
+    import gym_rimpac   # noqa: F401
+
+    env = gym.make('RimpacDiscrete-v0', mock=True)
+    agent = DQNAgent(env.observation_space.shape[0], env.action_space.n)
+
+    inputs = np.random.uniform(-1.0, 1.0, env.observation_space.shape)
+    action = agent.get_action(inputs)
+
+    print('inputs:', inputs)
+    print('action:', action)

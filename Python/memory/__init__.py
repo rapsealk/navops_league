@@ -79,6 +79,7 @@ class MongoReplayBuffer:
         ]
         batch = map(self._decode, self._collection.aggregate(pipeline))
         state, action, reward, next_state, done = map(np.stack, zip(*batch))
+        del batch
         return state, action, reward, next_state, done
 
     def clear(self):
@@ -115,7 +116,7 @@ class MongoLocalMemory:
     #     print(11)
 
     def __iter__(self):
-        for data in self._collection.find():
+        for data in self._collection.find({}, no_cursor_timeout=True):
             yield self._decode(data)
 
     def append(self, data):
