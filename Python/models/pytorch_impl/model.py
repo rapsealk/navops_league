@@ -85,14 +85,14 @@ class DQNAgent:
     def save(self, path: str):
         torch.save({
             "params": self._model.parameters(),
-            "optim": self._optim.parameters(),
+            # "optim": self._optim.parameters(),
             # TODO: epsilon
         }, path)
 
     def load(self, path: str):
         state_dict = torch.load(path)
         self._model.load(state_dict["params"])
-        self._optim.load(state_dict["optim"])
+        # self._optim.load(state_dict["optim"])
 
 
 class LstmActorCritic(nn.Module):
