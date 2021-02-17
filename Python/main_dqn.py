@@ -94,9 +94,13 @@ class Learner:
                 obs1, obs2 = next_obs1, next_obs2
 
                 if done:
-                    a_win = bool(1 - info.get('win', 0))
-                    results.append(a_win)
-                    ratings = EloRating.calc(ratings[0], ratings[1], a_win)
+                    winner = info.get('win', 0)
+                    if winner == -1:    # Draw
+                        results.append(False)
+                    else:
+                        a_win = bool(1 - winner)
+                        results.append(a_win)
+                        ratings = EloRating.calc(ratings[0], ratings[1], a_win)
                     self._writer.add_scalar('r/rating', ratings[0], episode)
 
                     if ratings[0] > best_rating:
