@@ -1,5 +1,7 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
+import os
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -83,15 +85,18 @@ class DQNAgent:
         self._model.load_state_dict(state_dict)
 
     def save(self, path: str):
+        dirname = os.path.dirname(path)
+        if not os.path.exists(dirname):
+            os.mkdir(dirname)
         torch.save({
-            "params": self._model.parameters(),
+            "params": self._model.state_dict(),
             # "optim": self._optim.parameters(),
             # TODO: epsilon
         }, path)
 
     def load(self, path: str):
         state_dict = torch.load(path)
-        self._model.load(state_dict["params"])
+        self._model.load_state_dict(state_dict["params"])
         # self._optim.load(state_dict["optim"])
 
 
