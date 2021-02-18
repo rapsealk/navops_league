@@ -27,13 +27,17 @@ def discount_rewards(rewards: np.ndarray, gamma=0.998):  # 347 -> 0.5
     discounted[-1] = rewards[-1]
     n = len(rewards) - 1
     for i in range(n):
-        discounted[n-i-1] = discounted[n-i] * gamma
+        discounted[n-i-1] = discounted[n-i] * gamma     # + rewards[n-i-1]
     return discounted
 
 
 ENVIRONMENT = 'RimpacDiscrete-v0'
 BATCH_SIZE = 2048
 SEQUENCE = 64
+
+HITPOINT_FIELD = -1
+AMMO_FIELD = -4
+FUEL_FIELD = -3
 
 
 class Learner:
@@ -121,8 +125,9 @@ class Learner:
                         self._writer.add_scalar('r/result', np.mean(results), episode // 100)
                         results.clear()
 
-                    if episode % 1000 == 0:
+                    if episode % 200 == 0:
                         self._opponent_agent.set_state_dict(self._target_agent.state_dict())
+                        ratings = (ratings[0], ratings[0])
 
                     break
 
@@ -197,6 +202,23 @@ class Worker(Thread):
                 if done:
                     trajectory1 = np.stack(buffer1)
                     trajectory2 = np.stack(buffer2)
+
+                    winner = info.get('win', 0)
+                    if winner == -1:    # Draw
+                        hp_diff = trajectory1[-2, 3][HITPOINT_FIELD] - trajectory2[-2, 3][HITPOINT_FIELD]
+                        if hp_diff > 0:
+                            reward1 = hp_diff * np.mean((trajectory1[-2, 3][AMMO_FIELD], trajectory1[-2, 3][FUEL_FIELD]))  # Resource Loss
+                            reward2 = 0
+                        else:
+                            reward2 = -hp_diff * np.mean((trajectory2[-2, 3][AMMO_FIELD], trajectory2[-2, 3][FUEL_FIELD]))
+                            reward1 = 0
+                    else:
+                        reward1 = 1 - winner
+                        reward2 = winner
+
+                    trajectory1[:, 2] = reward1
+                    trajectory2[:, 2] = reward2
+
                     trajectory1[:, 2] = discount_rewards(trajectory1[:, 2])
                     trajectory2[:, 2] = discount_rewards(trajectory2[:, 2])
                     for s, a, r, s_, d in np.concatenate([trajectory1, trajectory2]):

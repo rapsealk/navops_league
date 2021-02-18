@@ -1,4 +1,4 @@
-#!/usr/local/bin/python3
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 P = 400
 K = 32  # below 2100
@@ -19,11 +19,8 @@ class EloRating(Rating):
         prob_a = q_a / (q_a + q_b)
         prob_b = q_b / (q_a + q_b)
         b_wins = 1 - a_wins
-        change = round(K * (a_wins - prob_a))
-        r_a_ = r_a + change
-        r_b_ = r_b - change
-        # r_a_ = r_a + change
-        # r_b_ = r_b + change
+        r_a_ = r_a + round(EloRating.k(r_a) * (a_wins - prob_a))
+        r_b_ = r_b + round(EloRating.k(r_b) * (b_wins - prob_b))
         return r_a_, r_b_
 
     @staticmethod
