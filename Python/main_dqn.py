@@ -85,7 +85,7 @@ class Learner:
             obs2 = np.zeros((n * SEQUENCE,))
             obs2 = np.concatenate((obs1[n:], new_obs2))
 
-            while True:
+            for timestep in count(1):
                 action1 = self._target_agent.get_action(obs1)
                 action2 = self._opponent_agent.get_action(obs2)
                 action = np.array([action1, action2], dtype=np.uint8)
@@ -128,6 +128,18 @@ class Learner:
                     if episode % 200 == 0:
                         self._opponent_agent.set_state_dict(self._target_agent.state_dict())
                         ratings = (ratings[0], ratings[0])
+
+                    # Logging
+                    hitpoint = obs1[-1, HITPOINT_FIELD]
+                    damage = 1 - obs2[-1, HITPOINT_FIELD]
+                    ammo = 1 - obs1[-1, AMMO_FIELD]
+                    fuel = 1 - obs1[-1, FUEL_FIELD]
+                    self._writer.add_scalar('r/timestep', timestep, episode)
+                    # TODO: DPS
+                    self._writer.add_scalar('r/hitpoint', hitpoint, episode)
+                    self._writer.add_scalar('r/damage', damage, episode)
+                    self._writer.add_scalar('r/ammo', ammo, episode)
+                    self._writer.add_scalar('r/fuel', fuel, episode)
 
                     break
 
