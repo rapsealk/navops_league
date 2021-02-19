@@ -27,14 +27,18 @@ def discount_rewards(rewards: np.ndarray, gamma=0.998):  # 347 -> 0.5
     discounted[-1] = rewards[-1]
     n = len(rewards) - 1
     for i in range(n):
-        discounted[n-i-1] = discounted[n-i] * gamma     # + rewards[n-i-1]
+        discounted[n-i-1] = discounted[n-i] * gamma + rewards[n-i-1]
     return discounted
 
 
 ENVIRONMENT = 'RimpacDiscrete-v0'
+# Hyperparameters
 BATCH_SIZE = 2048
 SEQUENCE = 64
+AGGRESSIVE_FACTOR = 1.0
+DEFENSIVE_FACTOR = 0.7
 
+REWARD_FIELD = 2
 HITPOINT_FIELD = -1
 AMMO_FIELD = -4
 FUEL_FIELD = -3
@@ -176,15 +180,15 @@ class Worker(Thread):
         )
 
     def run(self):
-        n = self._env.observation_space.shape[0]
+        observation_shape = self._env.observation_space.shape[0]
         eps = epsilon()
         for episode in count(1):
             new_obs1, new_obs2 = self._env.reset()
 
-            obs1 = np.zeros((n * SEQUENCE,))
-            obs1 = np.concatenate((obs1[n:], new_obs1))
-            obs2 = np.zeros((n * SEQUENCE,))
-            obs2 = np.concatenate((obs1[n:], new_obs2))
+            obs1 = np.zeros((observation_shape * SEQUENCE,))
+            obs1 = np.concatenate((obs1[observation_shape:], new_obs1))
+            obs2 = np.zeros((observation_shape * SEQUENCE,))
+            obs2 = np.concatenate((obs1[observation_shape:], new_obs2))
 
             state_dict = self._target_agent.state_dict()
             self._agent1.set_state_dict(state_dict)
@@ -203,8 +207,24 @@ class Worker(Thread):
 
                 next_obs, reward, done, info = self._env.step(action)
 
-                next_obs1 = np.concatenate((obs1[n:], next_obs[0]))
-                next_obs2 = np.concatenate((obs2[n:], next_obs[1]))
+                # Reward shaping
+                # - Blade & Soul (https://arxiv.org/abs/1904.03821)
+                hp_change = [
+                    next_obs[0][HITPOINT_FIELD] - obs1[HITPOINT_FIELD],
+                    next_obs[1][HITPOINT_FIELD] - obs2[HITPOINT_FIELD]
+                ]
+                reward[0] = (DEFENSIVE_FACTOR * hp_change[0] - AGGRESSIVE_FACTOR * hp_change[1]) \
+                            * np.mean((next_obs[0][FUEL_FIELD], next_obs[0][AMMO_FIELD])) \
+                            + 10 * (info.get('win', -1) == 0)
+                reward[1] = (DEFENSIVE_FACTOR * hp_change[1] - AGGRESSIVE_FACTOR * hp_change[0]) \
+                            * np.mean((next_obs[1][FUEL_FIELD], next_obs[1][AMMO_FIELD])) \
+                            + 10 * (info.get('win', -1) == 1)
+                # reward[0] = hp_change[0] - hp_change[1] + 10 * (info.get('win', -1) == 0)
+                # reward[1] = hp_change[1] - hp_change[0] + 10 * (info.get('win', -1) == 1)
+                # === reward shaping
+
+                next_obs1 = np.concatenate((obs1[observation_shape:], next_obs[0]))
+                next_obs2 = np.concatenate((obs2[observation_shape:], next_obs[1]))
 
                 buffer1.append((obs1, action1, reward[0], next_obs1, done))
                 buffer2.append((obs2, action2, reward[1], next_obs2, done))
@@ -215,6 +235,7 @@ class Worker(Thread):
                     trajectory1 = np.stack(buffer1)
                     trajectory2 = np.stack(buffer2)
 
+                    """
                     winner = info.get('win', 0)
                     if winner == -1:    # Draw
                         hp_diff = trajectory1[-2, 3][HITPOINT_FIELD] - trajectory2[-2, 3][HITPOINT_FIELD]
@@ -228,18 +249,19 @@ class Worker(Thread):
                         reward1 = 1 - winner
                         reward2 = winner
 
-                    trajectory1[:, 2] = reward1
-                    trajectory2[:, 2] = reward2
+                    trajectory1[:, REWARD_FIELD] = reward1
+                    trajectory2[:, REWARD_FIELD] = reward2
+                    """
 
-                    trajectory1[:, 2] = discount_rewards(trajectory1[:, 2])
-                    trajectory2[:, 2] = discount_rewards(trajectory2[:, 2])
+                    trajectory1[:, REWARD_FIELD] = discount_rewards(trajectory1[:, REWARD_FIELD])
+                    trajectory2[:, REWARD_FIELD] = discount_rewards(trajectory2[:, REWARD_FIELD])
                     for s, a, r, s_, d in np.concatenate([trajectory1, trajectory2]):
                         self._buffer.push(s, a, r, s_, d)
 
                     break
 
 
-# @SlackNotification(SLACK_API_TOKEN)
+@SlackNotification(SLACK_API_TOKEN)
 def main():
     Learner().run()
 
