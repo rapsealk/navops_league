@@ -24,6 +24,13 @@ def convert_to_tensor(device, *args):
     return map(lambda tensor: tensor.to(device), map(torch.FloatTensor, args))
 
 
+def make_batch(memory, batch_size=1024, device=None):
+    device = device or torch.device('cpu')
+    s, a, r, s_, dones = memory.sample(batch_size)
+    s, a, r, s_, dones = convert_to_tensor(device, s, a, r, s_, dones)
+    return s, a, r, s_, dones
+
+
 class Model(nn.Module):
 
     def __init__(self, input_size, output_size):
@@ -61,7 +68,7 @@ class DQNAgent:
         return torch.argmax(action).detach().cpu().numpy()
 
     def train(self, memory):
-        s, a, r, s_, dones = self._make_batch(memory, self._batch_size)
+        s, a, r, s_, dones = make_batch(memory, self._batch_size, device=self._device)
         y_j = self._model(s).gather(dim=1, index=a.type(torch.int64).unsqueeze(1))
         loss = F.smooth_l1_loss(y_j, r.unsqueeze(1))
 
@@ -72,11 +79,6 @@ class DQNAgent:
         self._optim.step()
 
         return loss.detach().cpu().numpy()
-
-    def _make_batch(self, memory, batch_size=1024):
-        s, a, r, s_, dones = memory.sample(batch_size)
-        s, a, r, s_, dones = convert_to_tensor(self._device, s, a, r, s_, dones)
-        return s, a, r, s_, dones
 
     def state_dict(self):
         return self._model.state_dict()
@@ -98,6 +100,76 @@ class DQNAgent:
         state_dict = torch.load(path)
         self._model.load_state_dict(state_dict["params"])
         # self._optim.load(state_dict["optim"])
+
+
+class DDQNAgent:    # Double DQN
+
+    def __init__(
+        self,
+        input_size,
+        output_size,
+        batch_size=1024,
+        target_update_interval=16,
+        force_cpu=False
+    ):
+        if force_cpu:
+            self._device = torch.device("cpu")
+        else:
+            self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self._model = Model(input_size, output_size).to(self._device)
+        self._target_model = Model(input_size, output_size).to(self._device)
+        self._optim = optim.RMSprop(self._model.parameters())
+        self._batch_size = batch_size
+        self._target_update_interval = target_update_interval
+
+        self._train_count = 0
+
+    def get_action(self, inputs):
+        action = self._model(torch.FloatTensor(inputs).to(self._device))
+        return torch.argmax(action).detach().cpu().numpy()
+
+    def train(self, memory):
+        s, a, r, s_, dones = make_batch(memory, self._batch_size, device=self._device)
+        y_j = self._model(s).gather(dim=1, index=a.type(torch.int64).unsqueeze(1))
+        y_j_target = self._target_model(s).gather(dim=1, index=a.type(torch.int64).unsqueeze(1)) \
+                   + r.unsqueeze(1)
+        loss = F.smooth_l1_loss(y_j, y_j_target)
+
+        self._optim.zero_grad()
+        loss.backward()
+        for param in self._model.parameters():
+            param.grad.data.clamp_(-1, 1)
+        self._optim.step()
+
+        self._train_count += 1
+        if self._train_count % self._target_update_interval == 0:
+            self._target_model.load_state_dict(self._model.state_dict())
+
+        return loss.detach().cpu().numpy()
+
+    def state_dict(self):
+        return self._model.state_dict()
+
+    def set_state_dict(self, state_dict):
+        self._model.load_state_dict(state_dict)
+        self._target_model.load_state_dict(state_dict)
+
+    def save(self, path: str):
+        dirname = os.path.dirname(path)
+        if not os.path.exists(dirname):
+            os.mkdir(dirname)
+        torch.save({
+            "params": self._model.state_dict(),
+            # "optim": self._optim.parameters(),
+            "target_update_interval": self._target_update_interval,
+            # TODO: epsilon
+        }, path)
+
+    def load(self, path: str):
+        state_dict = torch.load(path)
+        self._model.load_state_dict(state_dict["params"])
+        # self._optim.load(state_dict["optim"])
+        self._target_update_interval = state_dict.get("target_update_interval", 16)
 
 
 class LstmActorCritic(nn.Module):

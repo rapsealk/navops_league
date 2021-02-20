@@ -12,7 +12,7 @@ import gym_rimpac   # noqa: F401
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
-from models.pytorch_impl import DQNAgent
+from models.pytorch_impl import DQNAgent, DDQNAgent
 from memory import ReplayBuffer
 from utils import epsilon, SlackNotification
 from rating import EloRating
@@ -48,12 +48,12 @@ class Learner:
 
     def __init__(self):
         self._env = gym.make(ENVIRONMENT)
-        self._target_agent = DQNAgent(
+        self._target_agent = DDQNAgent(
             self._env.observation_space.shape[0] * SEQUENCE,
             self._env.action_space.n,
             BATCH_SIZE
         )
-        self._opponent_agent = DQNAgent(
+        self._opponent_agent = DDQNAgent(
             self._env.observation_space.shape[0] * SEQUENCE,
             self._env.action_space.n,
             BATCH_SIZE
@@ -90,8 +90,8 @@ class Learner:
             obs2 = np.concatenate((obs1[n:], new_obs2))
 
             for timestep in count(1):
-                action1 = self._target_agent.get_action(obs1)
-                action2 = self._opponent_agent.get_action(obs2)
+                action1 = self._opponent_agent.get_action(obs1)
+                action2 = self._target_agent.get_action(obs2)
                 action = np.array([action1, action2], dtype=np.uint8)
 
                 next_obs, reward, done, info = self._env.step(action)
@@ -107,11 +107,11 @@ class Learner:
                         results.append(False)
                     else:
                         a_win = bool(1 - winner)
-                        results.append(a_win)
+                        results.append(not a_win)
                         ratings = EloRating.calc(ratings[0], ratings[1], a_win)
-                    self._writer.add_scalar('r/rating', ratings[0], episode)
+                    self._writer.add_scalar('r/rating', ratings[1], episode)
 
-                    if ratings[0] > best_rating:
+                    if ratings[1] > best_rating:
                         self._target_agent.save(
                             os.path.join(
                                 os.path.dirname(__file__),
@@ -119,7 +119,7 @@ class Learner:
                                 f'rimpac-discrete-v0-dqn-{episode:05}.ckpt'
                             )
                         )
-                        best_rating = ratings[0]
+                        best_rating = ratings[1]
 
                     if len(self._buffer) >= BATCH_SIZE:
                         loss = self._target_agent.train(self._buffer)
@@ -131,16 +131,17 @@ class Learner:
 
                     if episode % 200 == 0:
                         self._opponent_agent.set_state_dict(self._target_agent.state_dict())
-                        ratings = (ratings[0], ratings[0])
+                        ratings = (ratings[1], ratings[1])
 
                     # Logging
-                    hitpoint = obs1[-1, HITPOINT_FIELD]
-                    damage = 1 - obs2[-1, HITPOINT_FIELD]
-                    ammo = 1 - obs1[-1, AMMO_FIELD]
-                    fuel = 1 - obs1[-1, FUEL_FIELD]
+                    hitpoint = obs2[HITPOINT_FIELD]
+                    damage = 1 - obs1[HITPOINT_FIELD]
+                    ammo = 1 - obs2[AMMO_FIELD]
+                    fuel = 1 - obs2[FUEL_FIELD]
                     self._writer.add_scalar('r/timestep', timestep, episode)
                     # TODO: DPS
                     self._writer.add_scalar('r/hitpoint', hitpoint, episode)
+                    self._writer.add_scalar('r/hitpoint_gap', obs2[HITPOINT_FIELD] - obs1[HITPOINT_FIELD], episode)
                     self._writer.add_scalar('r/damage', damage, episode)
                     self._writer.add_scalar('r/ammo', ammo, episode)
                     self._writer.add_scalar('r/fuel', fuel, episode)
@@ -166,13 +167,13 @@ class Worker(Thread):
             worker_id=worker_id,
             no_graphics=True
         )
-        self._agent1 = DQNAgent(
+        self._agent1 = DDQNAgent(
             self._env.observation_space.shape[0] * SEQUENCE,
             self._env.action_space.n,
             BATCH_SIZE,
             force_cpu=True
         )
-        self._agent2 = DQNAgent(
+        self._agent2 = DDQNAgent(
             self._env.observation_space.shape[0] * SEQUENCE,
             self._env.action_space.n,
             BATCH_SIZE,
@@ -215,10 +216,10 @@ class Worker(Thread):
                 ]
                 reward[0] = (DEFENSIVE_FACTOR * hp_change[0] - AGGRESSIVE_FACTOR * hp_change[1]) \
                             * np.mean((next_obs[0][FUEL_FIELD], next_obs[0][AMMO_FIELD])) \
-                            + 10 * (info.get('win', -1) == 0)
+                            + 10 * (info.get('win', -1) == 0) - 10 * (info.get('win', -1) == 1)
                 reward[1] = (DEFENSIVE_FACTOR * hp_change[1] - AGGRESSIVE_FACTOR * hp_change[0]) \
                             * np.mean((next_obs[1][FUEL_FIELD], next_obs[1][AMMO_FIELD])) \
-                            + 10 * (info.get('win', -1) == 1)
+                            + 10 * (info.get('win', -1) == 1) - 10 * (info.get('win', -1) == 0)
                 # reward[0] = hp_change[0] - hp_change[1] + 10 * (info.get('win', -1) == 0)
                 # reward[1] = hp_change[1] - hp_change[0] + 10 * (info.get('win', -1) == 1)
                 # === reward shaping
