@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package rimpac;
+
+import "google/protobuf/empty.proto";
+
+service RibbonService {
+    rpc GetRibbon(google.protobuf.Empty) returns (Ribbon) {}
+}
+
+message Ribbon {
+    uint32 id = 1;
+}

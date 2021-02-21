@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package rimpac;
+
+//import "google/protobuf/empty.proto";
+//import "state.proto";
+//import "tensor.proto";
+
+service MigrationService {
+    rpc ToMain(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+}
+Grpc vs gRPC vs grpc vs GRPC
+message MigrationRequest {
+    string table_name = 1;
+    bool result = 2;
+}
+
+message MigrationResponse {
+    bool response = 1;
+}
+
+/*
+service LearnerService {
+    rpc Enqueue(History) returns (google.protobuf.Empty) {}
+    rpc Deploy(google.protobuf.Empty) returns (stream Chunk) {}
+}
+
+message History {
+    //repeated float inputs = 1;
+    //int32 output = 2;
+    repeated State inputs = 1;
+    repeated int32 outputs = 2;
+}
+
+message Chunk {
+    bytes data = 1;
+}
+*/

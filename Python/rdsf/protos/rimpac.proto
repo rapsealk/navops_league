@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package rimpac;
+
+import "google/protobuf/empty.proto";
+// import "tensor.proto";
+
+service RimpacLeagueService {
+    // rpc CreateGame(RequestCreateGame) returns (ResponseCreateGame) {}
+    rpc Match(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+    rpc Populate(RequestPopulate) returns (ResponsePopulate) {}
+}
+
+/*
+message RequestCreateGame {
+    double timestamp = 1;
+}
+
+message ResponseCreateGame {
+    double timestamp = 1;
+}
+*/
+
+message RequestMatchMaking {
+    double timestamp = 1;
+    string id = 2;
+}
+
+message ResponseMatchMaking {
+    double timestamp = 1;
+    Model model = 2;
+}
+
+message RequestPopulate {
+    double timestamp = 1;
+}
+
+message ResponsePopulate {
+    double timestamp = 1;
+    string id = 2;
+}
+
+message Model {
+    string id = 1;
+    uint32 rating = 2;
+    string path = 3;
+}

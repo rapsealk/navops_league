@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package rdsf;
+
+import "google/protobuf/empty.proto";
+
+service ModelManagementService {
+    rpc RegisterModel(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+}
+
+message RequestRegisterModel {
+    //
+}
+
+message ResponseRegisterModel {
+    Model model = 1;
+}
+
+message Model {
+    uint32 version = 1;
+    string id = 2;
+    uint32 rating = 3;
+    string path = 4;
+}

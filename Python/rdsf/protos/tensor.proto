@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package rdfs;
+
+import "google/protobuf/empty.proto";
+
+message Tensor {
+    bytes data = 1;
+    repeated uint32 shape = 2;
+    enum Type {
+        FLOAT32 = 0;
+        FLOAT64 = 1;
+        INT32 = 2;
+        INT64 = 3;
+        UINT32 = 4;
+        UINT64 = 5;
+    }
+    Type dtype = 3;
+}
+
+message Weights {
+    repeated Tensor data = 1;
+}

@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package wows;
+
+import "google/protobuf/empty.proto";
+import "state.proto";
+import "tensor.proto";
+
+service LearnerService {
+    rpc Enqueue(History) returns (google.protobuf.Empty) {}
+    rpc Deploy(google.protobuf.Empty) returns (stream Chunk) {}
+}
+
+message History {
+    //repeated float inputs = 1;
+    //int32 output = 2;
+    repeated State inputs = 1;
+    repeated int32 outputs = 2;
+}
+
+message Chunk {
+    bytes data = 1;
+}
+
+/*
+message Game {
+    uint64 id = 1;
+}
+*/
