@@ -149,7 +149,7 @@ class Agent:
                 train_policy, train_value = self.model(tf.convert_to_tensor(batch_states, dtype=tf.float32))
                 train_value = tf.squeeze(train_value)
                 train_advantages = tf.convert_to_tensor(batch_advantages, dtype=tf.float32)
-                train_target_values = tf.convert_to_tensor(batch_target_values, dtype=tf.float32)
+                train_target_values = tf.convert_to_tensor(batch_target_values, dtype=tf.float32)   # TODO: placeholder (detach)
                 train_actions = tf.convert_to_tensor(batch_actions, dtype=tf.uint8)
                 train_old_policy = tf.convert_to_tensor(batch_policy, dtype=tf.float32)
 

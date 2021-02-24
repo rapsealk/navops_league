@@ -10,6 +10,8 @@
 * [Dueling Network Architecture for Deep Reinforcement Learning](https://arxiv.org/abs/1511.06581.pdf)
 * [Prioritized Experience Replay](https://arxiv.org/abs/1511.05952)
 * [Distributed Prioritized Experience Replay](https://arxiv.org/abs/1803.00933)
+* [High-Dimensional Continuous Control Using Generalized Advantage Estimation](https://arxiv.org/abs/1506.02438)
+* [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347)
 * [Grandmaster level in StarCraft II using multi-agent reinforcement learning](https://www.nature.com/articles/s41586-019-1724-z)
 * [Dota 2 with Large Scale Deep Reinforcement Learning](https://arxiv.org/abs/1912.06680)
 
