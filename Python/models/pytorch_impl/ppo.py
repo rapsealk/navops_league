@@ -12,7 +12,11 @@ from torch.distributions import Categorical
 
 def weights_init_(m):
     if isinstance(m, nn.Linear):
-        torch.nn.init.xavier_uniform_(m.weight, gain=1)
+        # ReLU
+        # torch.nn.init.kaiming_normal_(m.weight, gain=1)
+        # torch.nn.init.constant_(m.bias, 0.01)
+        # SiLU
+        torch.nn.init.xavier_normal_(m.weight, gain=1)
         torch.nn.init.constant_(m.bias, 0)
 
 
@@ -36,18 +40,18 @@ class LstmActorCriticModel(nn.Module):
         self.apply(weights_init_)
 
     def get_policy(self, x, hidden):
-        x = F.relu(self.encoder(x))
+        x = F.silu(self.encoder(x))
         x = x.view(-1, 1, self._rnn_input_size)
         x, hidden = self.rnn(x, hidden)
-        x = F.relu(self.linear(x))
+        x = F.silu(self.linear(x))
         policy = F.softmax(self.actor(x), dim=2)
         return policy, hidden
 
     def value(self, x, hidden):
-        x = F.relu(self.encoder(x))
+        x = F.silu(self.encoder(x))
         x = x.view(-1, 1, self._rnn_input_size)
         x, hidden = self.rnn(x, hidden)
-        x = F.relu(self.linear(x))
+        x = F.silu(self.linear(x))
         value = self.critic(x)
         return value
 
@@ -63,7 +67,7 @@ class PPOAgent:
         input_size,
         output_size,
         hidden_size=1024,
-        learning_rate=0.0005
+        learning_rate=0.00001
     ):
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self._model = LstmActorCriticModel(
@@ -102,7 +106,6 @@ class PPOAgent:
             h_in.append(data[5])
             h_out.append(data[6])
             dones.append(data[7])
-        #s, a, r, s_, a_prob, h_in, h_out, dones = map(np.stack, zip(*self._memory))
         self._memory.clear()
 
         s, a, r, s_, a_prob, dones = convert_to_tensor(self._device, s, a, r, s_, a_prob, dones)
@@ -114,7 +117,7 @@ class PPOAgent:
         hiddens = [(h_in[0].detach().to(self._device), h_in[1].detach().to(self._device)),
                    (h_out[0].detach().to(self._device), h_out[1].detach().to(self._device))]
 
-        total_loss = 0
+        losses = []
 
         for _ in range(self._k):
             v_ = self._model.value(s_, hiddens[1]).squeeze(1)
@@ -138,13 +141,13 @@ class PPOAgent:
                           torch.clamp(ratio, 1-self._epsilon_clip, 1+self._epsilon_clip) * advantage)
             loss = -torch.min(*surrogates) + 0.5 * F.smooth_l1_loss(v, td_target.detach())    # detach()
 
-            total_loss += loss.mean().item()
+            losses.append(loss.mean().item())
 
             self._optim.zero_grad()
             loss.mean().backward(retain_graph=True)
             self._optim.step()
 
-        return total_loss
+        return np.mean(losses)
 
     def append(self, data):
         self._memory.append(data)
