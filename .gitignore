@@ -20,3 +20,6 @@ firebase.json
 
 # Docker
 docker/*/data/*
+
+# Unity Demonstraion
+*.demo

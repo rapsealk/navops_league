@@ -23,6 +23,25 @@ def epsilon(discount=1e-3, step=100, minimum=5e-3, initial_value=1.0):
         yield value
 
 
+def discount_rewards(rewards: np.ndarray, gamma=0.998):  # 347 -> 0.5
+    discounted = [0] * len(rewards)
+    # discounted = np.zeros_like(rewards)
+    discounted[-1] = rewards[-1]
+    # print('before:', discounted)
+    n = len(rewards) - 1
+    for i in range(n):
+        # print(f'[{n-i-1}] <- [{n-i}]({discounted[n-i]}) * gamma + [{n-i-1}]({rewards[n-i-1]})')
+        x = discounted[n-i] * gamma
+        # print('x1:', x)
+        x = x + rewards[n-i-1]
+        # print('x2:', x)
+        discounted[n-i-1] = x
+        # discounted[n-i-1] = discounted[n-i] * gamma + rewards[n-i-1]
+        # print(rewards, discounted, discounted[n-i-1], n-i-1, gamma)
+    # print('after:', discounted)
+    return np.array(discounted)
+
+
 """
 class LogErrorTrace:
     def __init__(self, function):

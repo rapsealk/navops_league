@@ -58,8 +58,6 @@ def main():
                            agent2.select_action(observation[1])[0])
             else:
                 actions = (np.random.uniform(0.0, 1.0, size=(2,)+env.action_space.shape))
-                actions[:, :2] = (actions[:, :2] - 0.5) * 2
-                actions[:, 8:] = (actions[:, 8:] - 0.5) * 2
             action = np.stack(actions, axis=0)  # .squeeze(0)
             next_observation, reward, done, info = env.step(action)
 

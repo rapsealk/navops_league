@@ -14,9 +14,11 @@
 * [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347)
 * [Grandmaster level in StarCraft II using multi-agent reinforcement learning](https://www.nature.com/articles/s41586-019-1724-z)
 * [Dota 2 with Large Scale Deep Reinforcement Learning](https://arxiv.org/abs/1912.06680)
+* [Continuous-Discrete Reinforcement Learning for Hybrid Control in Robotics](https://arxiv.org/abs/2001.00449)
 
 ## Keywords
 * Blind Cliffwalk
 
 ## Blog Posts
 * [Replay in biological and artificial neural networks | DeepMind](https://www.deepmind.com/blog/article/replay-in-biological-and-artificial-neural-networks)
+* [Faulty Reward Functions in the Wild](https://openai.com/blog/faulty-reward-functions/)
