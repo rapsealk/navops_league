@@ -34,7 +34,8 @@ def main():
     agent = PPOAgent(
         env.observation_space.shape[0] * args.seq_len,
         env.action_space.n,
-        learning_rate=1e-3
+        learning_rate=1e-3,
+        cuda=False
     )
     s, a, r, d = DemoLoader().load()
     s = generate_observation(s)
@@ -53,7 +54,7 @@ def main():
             loss += agent.supervised_learning(s[x:y], a[x:y], r[x:y])
         print(f'[{_}] Loss: {loss}')
 
-    agent.save(os.path.join(os.path.dirname(__file__), 'checkpoints', 'pretrained', 'supervised.ckpt'))
+    agent.save(os.path.join(os.path.dirname(__file__), 'checkpoints', 'pretrained', f'supervised-seq_{args.seq_len}.ckpt'))
 
 
 if __name__ == "__main__":

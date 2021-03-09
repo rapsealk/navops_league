@@ -179,12 +179,17 @@ class PPOAgent:
         input_size,
         output_size,
         hidden_size=256,
-        learning_rate=0.00001
+        learning_rate=0.00001,
+        cuda=True
     ):
         self._input_size = input_size
         self._output_size = output_size
 
-        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if cuda:
+            self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        else:
+            self._device = torch.device("cpu")
+
         self._model = LstmActorCriticModel(
             input_size,
             output_size,
@@ -254,6 +259,8 @@ class PPOAgent:
                    (h_out[0].detach().to(self._device), h_out[1].detach().to(self._device))]
 
         losses = []
+        pi_losses = []
+        value_losses = []
 
         time_horizon = 128
         while len(s) > 0:
@@ -283,15 +290,20 @@ class PPOAgent:
 
                 surrogates = (ratio * advantage,
                               torch.clamp(ratio, 1-self._epsilon_clip, 1+self._epsilon_clip) * advantage)
-                loss = -torch.min(*surrogates) + 0.5 * F.smooth_l1_loss(v, td_target.detach())    # detach()
+                pi_loss = -torch.min(*surrogates)
+                value_loss = 0.5 * F.smooth_l1_loss(v, td_target.detach())  # detach()
+                loss = pi_loss + value_loss
+                # loss = -torch.min(*surrogates) + 0.5 * F.smooth_l1_loss(v, td_target.detach())    # detach()
 
                 losses.append(loss.mean().item())
+                pi_losses.append(pi_loss.mean().item())
+                value_losses.append(value_loss.mean().item())
 
                 self._optim.zero_grad()
                 loss.mean().backward(retain_graph=True)
                 self._optim.step()
 
-        return np.mean(losses)
+        return np.mean(losses), np.mean(pi_losses), np.mean(value_losses)
 
     def supervised_learning(self, s, a, r):
         s, a, r = convert_to_tensor(self._device, s, a, r)

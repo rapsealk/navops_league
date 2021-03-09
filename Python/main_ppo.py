@@ -24,7 +24,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--env', type=str, default='RimpacDiscrete-v0')
 parser.add_argument('--no-graphics', action='store_true', default=False)
 parser.add_argument('--worker-id', type=int, default=0)
-parser.add_argument('--time-horizon', type=int, default=128)
+parser.add_argument('--time-horizon', type=int, default=4096)
 parser.add_argument('--seq_len', type=int, default=64)
 # parser.add_argument('--aggressive_factor', type=float, default=1.0)
 # parser.add_argument('--defensive_factor', type=float, default=0.7)
@@ -42,14 +42,14 @@ SEQUENCE = args.seq_len
 
 REWARD_FIELD = 2
 HITPOINT_FIELD = -2
-AMMO_FIELD = -6
-FUEL_FIELD = -5
+AMMO_FIELD = -14
+FUEL_FIELD = -13
 
 
 class Learner:
 
     def __init__(self):
-        self._env = gym.make(ENVIRONMENT, no_graphics=args.no_graphics, worker_id=args.worker_id)
+        self._env = gym.make(ENVIRONMENT, no_graphics=args.no_graphics, worker_id=args.worker_id, override_path=os.path.join(os.path.dirname(__file__), 'Rimpac'))
         self._target_agent = PPOAgent(
             self._env.observation_space.shape[0] * SEQUENCE,
             self._env.action_space.n
@@ -63,11 +63,13 @@ class Learner:
             self._env.action_space.n
         )
         """
-        self._writer = SummaryWriter(f'runs/{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}-{ENVIRONMENT}')
+        self._id = f'{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}-{ENVIRONMENT}'
+        self._writer = SummaryWriter(f'runs/{self._id}')
 
     def run(self):
         observation_shape = self._env.observation_space.shape[0]
         results = []
+        rate = 0.0
         ratings = (1200, 1200)
         time_horizons = 0
         # best_rating = 1200
@@ -161,15 +163,24 @@ class Learner:
 
                 obs1, obs2 = next_obs1, next_obs2
 
-            loss = self._target_agent.train()
+            loss, pi_loss, value_loss = self._target_agent.train()
             time_horizons += 1
-            self._writer.add_scalar('loss', loss, time_horizons)
-            print(f'[{datetime.now().isoformat()}] Episode #{time_horizons}: Loss({loss})')
+            self._writer.add_scalar('loss/total', loss, time_horizons)
+            self._writer.add_scalar('loss/policy', pi_loss, time_horizons)
+            self._writer.add_scalar('loss/value', value_loss, time_horizons)
+            print(f'[{datetime.now().isoformat()}] Episode #{time_horizons}: Loss({loss}, {pi_loss}, {value_loss})')
             # _ = self._opponent_agent.train()
 
             if episode % 100 == 0:
-                self._writer.add_scalar('r/result', np.mean(results), episode // 100)
+                new_rate = np.mean(results)
+                self._writer.add_scalar('r/result', new_rate, episode // 100)
                 results.clear()
+                if rate < new_rate:
+                    self._target_agent.save(os.path.join(os.path.dirname(__file__), 'checkpoints', f'{self._id}-r{new_rate}.ckpt'))
+                    rate = new_rate
+
+                if episode % 1000 == 0:
+                    self._target_agent.save(os.path.join(os.path.dirname(__file__), 'checkpoints', f'{self._id}-e{episode}-r{new_rate}.ckpt'))
 
 
 # @SlackNotification(SLACK_API_TOKEN)
