@@ -1,5 +1,10 @@
 {
     "slack": {
         "token": "xoxb-1223634225153-1211033980962-YrHU3FYRi4fEHtzFSKFltjKz"
+    },
+    "mongo": {
+        "hostname": "127.0.0.1",
+        "username": "root",
+        "password": 1111
     }
 }

@@ -8,7 +8,7 @@ from datetime import datetime
 
 import pymongo
 
-with open(os.path.join(os.path.dirname(__file__), 'config.json')) as f:
+with open(os.path.join(os.path.dirname(__file__), '..', 'config.json')) as f:
     config = ''.join(f.readlines())
     config = json.loads(config)
     MONGO_ROOT_USERNAME = config["mongo"]["username"]
