@@ -10,6 +10,8 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.distributions import Categorical
 
+from .mask import BooleanMaskLayer
+
 
 def weights_init_(m):
     if isinstance(m, nn.Linear):
@@ -47,6 +49,9 @@ class LstmActorCriticModel(nn.Module):
         # self.critic_h_bn = nn.BatchNorm1d(hidden_size)
         self.critic = nn.Linear(hidden_size, 1)
 
+        self.mask = BooleanMaskLayer(output_size)
+        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
         self.apply(weights_init_)
 
     def forward(self, x, hidden):
@@ -63,8 +68,8 @@ class LstmActorCriticModel(nn.Module):
         v = self.critic(v)
         return p, v, hidden
 
-    def get_policy(self, x, hidden):
-        x = F.silu(self.encoder(x))
+    def get_policy(self, inputs, hidden):
+        x = F.silu(self.encoder(inputs))
         x = x.view(-1, 1, self._rnn_input_size)
         x, hidden = self.rnn(x, hidden)
         # x = self.flatten(x)
@@ -74,7 +79,9 @@ class LstmActorCriticModel(nn.Module):
         x = F.silu(self.actor_h(x))
         x = F.silu(self.actor_h2(x))
         # x = F.silu(self.actor_h_bn(self.actor_h(x)))
-        policy = F.softmax(self.actor(x), dim=2)
+        x = self.actor(x)
+        x = x + self.mask(inputs).to(self._device)
+        policy = F.softmax(x, dim=2)
         return policy, hidden
 
     def value(self, x, hidden):
@@ -93,6 +100,11 @@ class LstmActorCriticModel(nn.Module):
     @property
     def rnn_output_size(self):
         return self._rnn_output_size
+
+    def to(self, device):
+        self.mask = self.mask.to(device)
+        self._device = device
+        return super(LstmActorCriticModel, self).to(device)
 
 
 class IntrinsicCuriosityModule(nn.Module):
