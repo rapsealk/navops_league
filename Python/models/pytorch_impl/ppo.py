@@ -248,7 +248,7 @@ class PPOAgent:
 
         return intrinsic_reward.data.cpu().numpy()
 
-    def train(self):
+    def train(self, time_horizon=4096):
         s, a, r, s_, a_prob, h_in, h_out, dones = [], [], [], [], [], [], [], []
         for data in self._memory:
             s.append(data[0])
@@ -274,7 +274,6 @@ class PPOAgent:
         pi_losses = []
         value_losses = []
 
-        time_horizon = 128
         while len(s) > 0:
             s_batch, s = s[:time_horizon], s[time_horizon:]
             a_batch, a = a[:time_horizon], a[time_horizon:]

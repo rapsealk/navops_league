@@ -13,21 +13,30 @@ class BooleanMaskLayer(nn.Module):
         self._output_size = output_size
 
     def forward(self, x: torch.Tensor):
-        x = x.clone().detach().cpu().squeeze()
-        mask = np.zeros(self._output_size)
+        x = x.clone().detach().cpu().squeeze().numpy()
         # Steer: -3 ~ -7 (-3, +4)
         # Speed: -8 ~ -12 (+1, -2)
-        if x[-3] == 1.0:
-            mask[4] = float("-inf")
-        elif x[-7] == 1.0:
-            mask[3] = float("-inf")
+        if x.ndim == 1:
+            mask = np.zeros(self._output_size)
+            if x[-3] == 1.0:
+                mask[4] = float("-inf")
+            elif x[-7] == 1.0:
+                mask[3] = float("-inf")
 
-        if x[-8] == 1.0:
-            mask[1] = float("-inf")
-        elif x[-12] == 1.0:
-            mask[2] = float("-inf")
+            if x[-8] == 1.0:
+                mask[1] = float("-inf")
+            elif x[-12] == 1.0:
+                mask[2] = float("-inf")
+            mask = torch.FloatTensor(mask)
+        elif x.ndim == 2:
+            mask = np.zeros((x.shape[0], self._output_size))
+            mask[np.where(x[:, -3] == 1.0), 4] = -np.inf
+            mask[np.where(x[:, -7] == 1.0), 3] = -np.inf
+            mask[np.where(x[:, -8] == 1.0), 1] = -np.inf
+            mask[np.where(x[:, -12] == 1.0), 2] = -np.inf
+            mask = torch.FloatTensor(mask).unsqueeze(1)
 
-        return torch.FloatTensor(mask)
+        return mask
 
 
 def main():

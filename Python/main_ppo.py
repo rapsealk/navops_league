@@ -25,9 +25,10 @@ parser.add_argument('--env', type=str, default='RimpacDiscrete-v0')
 parser.add_argument('--no-graphics', action='store_true', default=False)
 parser.add_argument('--worker-id', type=int, default=0)
 parser.add_argument('--time-horizon', type=int, default=4096)
-parser.add_argument('--seq_len', type=int, default=64)
+parser.add_argument('--seq_len', type=int, default=64)  # 0.1s per state-action
 # parser.add_argument('--aggressive_factor', type=float, default=1.0)
 # parser.add_argument('--defensive_factor', type=float, default=0.7)
+parser.add_argument('--no-logging', action='store_true', default=False)
 args = parser.parse_args()
 
 # TODO: ML-Agents EventSideChannel(uuid.uuid4())
@@ -39,6 +40,7 @@ TIME_HORIZON = args.time_horizon
 SEQUENCE = args.seq_len
 # AGGRESSIVE_FACTOR = args.aggressive_factor
 # DEFENSIVE_FACTOR = args.defensive_factor
+NO_LOGGING = args.no_logging
 
 REWARD_FIELD = 2
 HITPOINT_FIELD = -2
@@ -49,7 +51,7 @@ FUEL_FIELD = -13
 class Learner:
 
     def __init__(self):
-        self._env = gym.make(ENVIRONMENT, no_graphics=args.no_graphics, worker_id=args.worker_id, override_path=os.path.join(os.path.dirname(__file__), 'Rimpac'))
+        self._env = gym.make(ENVIRONMENT, no_graphics=args.no_graphics, worker_id=args.worker_id)
         self._target_agent = PPOAgent(
             self._env.observation_space.shape[0] * SEQUENCE,
             self._env.action_space.n
@@ -64,7 +66,8 @@ class Learner:
         )
         """
         self._id = f'{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}-{ENVIRONMENT}'
-        self._writer = SummaryWriter(f'runs/{self._id}')
+        if not NO_LOGGING:
+            self._writer = SummaryWriter(f'runs/{self._id}')
 
     def run(self):
         observation_shape = self._env.observation_space.shape[0]
@@ -105,6 +108,7 @@ class Learner:
                 # for t in range(TIME_HORIZON):
                 # print(f'obs1: {obs1[-observation_shape:]}')
                 h_in = h_out.copy()
+                # print(f'[{datetime.now().isoformat()}] [main] obs: {obs1} ({obs1.shape})')
                 action1, prob1, h_out[0] = self._target_agent.get_action(obs1, h_in[0])
                 # action2, prob2, h_out[1] = self._opponent_agent.get_action(obs2, h_in[1])
                 action2 = np.random.randint(self._env.action_space.n)
@@ -141,8 +145,9 @@ class Learner:
                         a_win = bool(1 - winner)
                         results.append(a_win)
                         ratings = EloRating.calc(ratings[0], ratings[1], a_win)
-                    self._writer.add_scalar('r/rating', ratings[0], episode)
-                    self._writer.add_scalar('r/rewards', np.sum(rewards), episode)
+                    if not NO_LOGGING:
+                        self._writer.add_scalar('r/rating', ratings[0], episode)
+                        self._writer.add_scalar('r/rewards', np.sum(rewards), episode)
                     rewards = discount_rewards(rewards)
 
                     for traj, r in zip(batch, rewards):
@@ -154,26 +159,29 @@ class Learner:
                     ammo = 1 - obs1[AMMO_FIELD]
                     fuel = 1 - obs1[FUEL_FIELD]
                     # TODO: DPS
-                    self._writer.add_scalar('r/hitpoint', hitpoint, episode)
-                    self._writer.add_scalar('r/hitpoint_gap', obs1[HITPOINT_FIELD] - obs2[HITPOINT_FIELD], episode)
-                    self._writer.add_scalar('r/damage', damage, episode)
-                    self._writer.add_scalar('r/resource/ammo_usage', ammo, episode)
-                    self._writer.add_scalar('r/resource/fuel_usage', fuel, episode)
+                    if not NO_LOGGING:
+                        self._writer.add_scalar('r/hitpoint', hitpoint, episode)
+                        self._writer.add_scalar('r/hitpoint_gap', obs1[HITPOINT_FIELD] - obs2[HITPOINT_FIELD], episode)
+                        self._writer.add_scalar('r/damage', damage, episode)
+                        self._writer.add_scalar('r/resource/ammo_usage', ammo, episode)
+                        self._writer.add_scalar('r/resource/fuel_usage', fuel, episode)
                     break
 
                 obs1, obs2 = next_obs1, next_obs2
 
-            loss, pi_loss, value_loss = self._target_agent.train()
+            loss, pi_loss, value_loss = self._target_agent.train(TIME_HORIZON)
             time_horizons += 1
-            self._writer.add_scalar('loss/total', loss, time_horizons)
-            self._writer.add_scalar('loss/policy', pi_loss, time_horizons)
-            self._writer.add_scalar('loss/value', value_loss, time_horizons)
-            print(f'[{datetime.now().isoformat()}] Episode #{time_horizons}: Loss({loss}, {pi_loss}, {value_loss})')
+            if not NO_LOGGING:
+                self._writer.add_scalar('loss/total', loss, time_horizons)
+                self._writer.add_scalar('loss/policy', pi_loss, time_horizons)
+                self._writer.add_scalar('loss/value', value_loss, time_horizons)
+            # print(f'[{datetime.now().isoformat()}] Episode #{time_horizons}: Loss({loss}, {pi_loss}, {value_loss})')
             # _ = self._opponent_agent.train()
 
             if episode % 100 == 0:
                 new_rate = np.mean(results)
-                self._writer.add_scalar('r/result', new_rate, episode // 100)
+                if not NO_LOGGING:
+                    self._writer.add_scalar('r/result', new_rate, episode // 100)
                 results.clear()
                 if rate < new_rate:
                     self._target_agent.save(os.path.join(os.path.dirname(__file__), 'checkpoints', f'{self._id}-r{new_rate}.ckpt'))
