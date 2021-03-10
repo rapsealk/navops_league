@@ -142,8 +142,8 @@ class Learner:
                         results.append(a_win)
                         ratings = EloRating.calc(ratings[0], ratings[1], a_win)
                     self._writer.add_scalar('r/rating', ratings[0], episode)
+                    self._writer.add_scalar('r/rewards', np.sum(rewards), episode)
                     rewards = discount_rewards(rewards)
-                    self._writer.add_scalar('r/rewards', np.mean(rewards[:-1]), episode)
 
                     for traj, r in zip(batch, rewards):
                         self._target_agent.append(traj[:2] + (r,) + traj[3:])
