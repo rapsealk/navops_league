@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 import pathlib
+from datetime import datetime
 
 import numpy as np
 import torch
@@ -11,6 +12,8 @@ import torch.nn.functional as F
 from torch.distributions import Categorical
 
 from .mask import BooleanMaskLayer
+
+os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 
 
 def weights_init_(m):
@@ -234,6 +237,7 @@ class PPOAgent:
         hidden_out = tuple(h_out.detach().cpu() for h_out in hidden_out)
         return action, probs[action], hidden_out
 
+    """
     def get_intrinsic_curiosity(self, state, next_state, action):
         state = torch.FloatTensor(state).to(self._device)
         next_state = torch.FloatTensor(next_state).to(self._device)
@@ -247,8 +251,9 @@ class PPOAgent:
         intrinsic_reward = self._eta * (next_state_feature - pred_next_state_feature).pow(2).sum(1) / 2
 
         return intrinsic_reward.data.cpu().numpy()
+    """
 
-    def train(self, time_horizon=4096):
+    def get_gradient(self, time_horizon=2048):
         s, a, r, s_, a_prob, h_in, h_out, dones = [], [], [], [], [], [], [], []
         for data in self._memory:
             s.append(data[0])
@@ -262,6 +267,78 @@ class PPOAgent:
         self._memory.clear()
 
         s, a, r, s_, a_prob, dones = convert_to_tensor(self._device, s, a, r, s_, a_prob, dones)
+        a = a.unsqueeze(1)
+        r = r.unsqueeze(1)
+        a_prob = a_prob.unsqueeze(1)
+        dones = dones.unsqueeze(1)
+        h_in, h_out = h_in[0], h_out[0]
+        hiddens = [(h_in[0].detach().to(self._device), h_in[1].detach().to(self._device)),
+                   (h_out[0].detach().to(self._device), h_out[1].detach().to(self._device))]
+
+        while len(s) > 0:
+            s_batch, s = s[:time_horizon], s[time_horizon:]
+            a_batch, a = a[:time_horizon], a[time_horizon:]
+            r_batch, r = r[:time_horizon], r[time_horizon:]
+            s_batch_, s_ = s_[:time_horizon], s_[time_horizon:]
+            a_prob_batch, a_prob = a_prob[:time_horizon], a_prob[time_horizon:]
+            dones_batch, dones = dones[:time_horizon], dones[time_horizon:]
+            for _ in range(self._k):
+                v_ = self._model.value(s_batch_, hiddens[1]).squeeze(1)
+                td_target = r_batch + self.gamma * v_ * dones_batch
+                v = self._model.value(s_batch, hiddens[0]).squeeze(1)
+                delta = (td_target - v).detach().cpu().numpy()
+
+                # GAE: Generalized Advantage Estimation
+                advantages = []
+                advantage = 0.0
+                for item in reversed(delta):
+                    advantage = self.gamma * self.lambda_ * advantage + item[0]
+                    advantages.append([advantage])
+                advantages.reverse()
+
+                pi, _ = self._model.get_policy(s_batch, hiddens[0])
+                pi_a = pi.squeeze(1).gather(1, a_batch.type(torch.int64))
+                ratio = torch.exp(torch.log(pi_a) - torch.log(a_prob_batch))  # a/b == exp(log(a) - log(b))
+
+                surrogates = (ratio * advantage,
+                              torch.clamp(ratio, 1-self._epsilon_clip, 1+self._epsilon_clip) * advantage)
+                pi_loss = -torch.min(*surrogates)
+                value_loss = 0.5 * F.smooth_l1_loss(v, td_target.detach())  # detach()
+                # loss = pi_loss + value_loss
+
+                yield pi_loss, value_loss
+
+    def apply_gradient(self, worker, time_horizon=2048):
+        losses = []
+        pi_losses = []
+        value_losses = []
+        for pi_loss, value_loss in worker.get_gradient(time_horizon=time_horizon):
+            loss = pi_loss + value_loss
+            pi_losses.append(pi_loss.mean().item())
+            value_losses.append(value_loss.mean().item())
+            losses.append(loss.mean().item())
+            self._optim.zero_grad()
+            loss.mean().backward()
+            for param, target_param in zip(worker.parameters, self._model.parameters()):
+                target_param._grad = param.grad.to(self._device)
+            self._optim.step()
+        return np.mean(losses), np.mean(pi_losses), np.mean(value_losses)
+
+    def train(self, time_horizon=2048):
+        s, a, r, s_, a_prob, h_in, h_out, dones = [], [], [], [], [], [], [], []
+        for data in self._memory:
+            s.append(data[0])
+            a.append(data[1])
+            r.append(data[2])
+            s_.append(data[3])
+            a_prob.append(data[4])
+            h_in.append(data[5])
+            h_out.append(data[6])
+            dones.append(data[7])
+        self._memory.clear()
+
+        s, a, r, s_, a_prob, dones = convert_to_tensor(self._device, s, a, r, s_, a_prob, dones)
+        print(f'[{datetime.now().isoformat()}] s.shape: {s.shape}')
         a = a.unsqueeze(1)
         r = r.unsqueeze(1)
         a_prob = a_prob.unsqueeze(1)
@@ -349,7 +426,7 @@ class PPOAgent:
     def set_state_dict(self, state_dict):
         self._model.load_state_dict(state_dict)
 
-    def save(self, path: str):
+    def save(self, path: str, episode: int = 0):
         pathlib.Path(os.path.abspath(os.path.dirname(path))).mkdir(parents=True, exist_ok=True)
         dirname = os.path.dirname(path)
         if not os.path.exists(dirname):
@@ -357,6 +434,7 @@ class PPOAgent:
         torch.save({
             "params": self._model.state_dict(),
             # "optim": self._optim.parameters(),
+            "episode": episode
             # TODO: epsilon
         }, path)
 
@@ -364,6 +442,15 @@ class PPOAgent:
         state_dict = torch.load(path)
         self._model.load_state_dict(state_dict["params"])
         # self._optim.load(state_dict["optim"])
+        return state_dict.get("episode", 0)
+
+    @property
+    def parameters(self):
+        return self._model.parameters()
+
+    @property
+    def optim(self):
+        return self._optim
 
     @property
     def gamma(self):
