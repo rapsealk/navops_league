@@ -1,0 +1,110 @@
+syntax = "proto3";
+
+package rimpac;
+
+import "google/protobuf/empty.proto";
+//import "tensor.proto";
+
+service LeagueManagement {
+    rpc RegisterCgf(RegisterCgfRequest) returns (RegisterCgfResponse) {}
+    
+    /*
+    rpc GetCgfInfo(GetCgfInfoRequest) returns (GetCgfInfoResponse) {}
+    rpc UpdateCgfInfo(UpdateCgfInfoRequest) returns (UpdateCgfInfoResponse) {}
+    rpc DeleteCgfInfo(DeleteCgfInfoRequest) returns (DeleteCgfInfoResponse) {}
+    */
+
+    rpc GetRandomCgf(google.protobuf.Empty) returns (GetRandomCgfResponse) {}
+
+    rpc UploadCheckpoint(stream UploadCheckpointRequest) returns (UploadCheckpointResponse) {}
+    rpc DownloadCheckpoint(DownloadCheckpointRequest) returns (stream DownloadCheckpointResponse) {}
+}
+
+/*
+message CgfRequest {
+    //
+}
+
+message CgfResponse {
+    //
+}
+
+message CgfInfo {
+    // optional
+}
+*/
+
+message RegisterCgfRequest {
+    Cgf cgf = 1;
+}
+
+message RegisterCgfResponse {
+    StatusCode code = 1;
+    string id = 2;
+}
+/*
+message GetCgfInfoRequest {
+    string id = 1;
+}
+
+message GetCgfInfoResponse {
+    StatusCode code = 1;
+    Cgf cgf = 2;
+}
+
+message UpdateCgfInfoRequest {
+    string id = 1;
+    string path = 2;
+    uint32 rating = 3;
+}
+
+message UpdateCgfInfoResponse {
+    StatusCode code = 1;
+}
+
+message DeleteCgfInfoRequest {
+    string id = 1;
+}
+
+message DeleteCgfInfoResponse {
+    StatusCode code = 1;
+}
+*/
+message GetRandomCgfResponse {
+    StatusCode code = 1;
+    Cgf cgf = 2;
+}
+
+message Cgf {
+    string id = 1;
+    string path = 2;
+    uint32 rating = 3;
+}
+
+message UploadCheckpointRequest {
+    Chunk chunk = 1;
+}
+
+message UploadCheckpointResponse {
+    StatusCode code = 1;
+    string path = 2;
+}
+
+message DownloadCheckpointRequest {
+    string path = 1;
+}
+
+message DownloadCheckpointResponse {
+    StatusCode code = 1;
+    Chunk chunk = 2;
+}
+
+message Chunk {
+    bytes data = 1;
+}
+
+enum StatusCode {
+    Ok = 0;
+    Failed = 1;
+    Unknown = 2;
+}

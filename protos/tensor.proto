@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package rimpac;
+
+message Weights {
+    repeated Tensor data = 1;
+}
+
+message Tensor {
+    bytes data = 1;
+    repeated uint32 shape = 2;
+    enum Type {
+        FLOAT32 = 0;
+        FLOAT64 = 1;
+        INT32 = 2;
+        INT64 = 3;
+        UINT32 = 4;
+        UINT64 = 5;
+    }
+    Type dtype = 3;
+}
