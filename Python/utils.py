@@ -6,6 +6,7 @@ import socket
 import traceback
 from datetime import datetime
 from itertools import count
+from threading import Lock
 
 import psutil
 import numpy as np
@@ -13,6 +14,19 @@ import torch
 from torch.autograd import Variable
 from slack import WebClient
 from slack.errors import SlackApiError
+
+
+class Atomic:
+
+    def __init__(self, dtype=int):
+        self._value = dtype()
+        self._lock = Lock()
+
+    def increment(self):
+        with self._lock:
+            self._value += 1
+            value = self._value
+        return value
 
 
 def epsilon(discount=1e-3, step=100, minimum=5e-3, initial_value=1.0):

@@ -4,6 +4,7 @@ import os
 import abc
 import json
 import random
+from collections import deque
 from datetime import datetime
 from uuid import uuid4
 
@@ -17,32 +18,18 @@ with open(os.path.join(os.path.dirname(__file__), '..', 'config.json')) as f:
     MONGO_PASSWORD = config["mongo"]["password"]
 
 
-class ReplayMemory(abc.ABC):
-    pass
-
-
 class ReplayBuffer:
 
     def __init__(self, capacity=1_000_000, seed=0):
         self.capacity = capacity
-        self.buffer = []
-        self.position = 0
+        self.buffer = deque(maxlen=capacity)
         random.seed(seed)
 
-    def push(self, state, action, reward, next_state, done):
-        if len(self.buffer) < self.capacity:
-            self.buffer.append(None)
-        self.buffer[self.position] = (state, action, reward, next_state, done)
-        self.position = (self.position + 1) % self.capacity
+    def push(self, *args):
+        self.buffer.append(args)
 
     def sample(self, batch_size):
-        batch = random.sample(self.buffer, batch_size)
-        state, action, reward, next_state, done = map(np.stack, zip(*batch))
-        return state, action, reward, next_state, done
-
-    def clear(self):
-        self.buffer.clear()
-        self.position = 0
+        return random.sample(self.buffer, batch_size)
 
     def __len__(self):
         return len(self.buffer)
