@@ -28,7 +28,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--env', type=str, default='RimpacDiscrete-v0')
 parser.add_argument('--no-graphics', action='store_true', default=False)
 parser.add_argument('--worker-id', type=int, default=0)
-parser.add_argument('--buffer-size', type=int, default=1e6)
+parser.add_argument('--buffer-size', type=int, default=1000000)
 parser.add_argument('--time-horizon', type=int, default=32)   # 2048
 parser.add_argument('--seq-len', type=int, default=64)  # 0.1s per state-action
 # parser.add_argument('--aggressive_factor', type=float, default=1.0)
@@ -79,7 +79,7 @@ class Learner:
             model=self._target_model,
             buffer=self._buffer,
             learning_rate=learning_rate,
-            cuda=False
+            cuda=True
         )
         """Checkpoints
         checkpoint_path = os.path.join(os.path.dirname(__file__), 'checkpoints', 'pretrained', 'supervised.ckpt')
@@ -129,15 +129,17 @@ class Learner:
 
             done = False
 
+            """
             self._worker_agent.set_state_dict(
                 self._target_agent.state_dict()
             )
+            """
 
             while not done:
                 batch = []
                 for t in range(rollout):
                     h_in = h_out.copy()
-                    action1, prob1, h_out[0] = self._worker_agent.get_action(obs1, h_in[0])
+                    action1, prob1, h_out[0] = self._target_agent.get_action(obs1, h_in[0])
                     # action2, prob2, h_out[1] = self._opponent_agent.get_action(obs2, h_in[1])
                     action2 = np.random.randint(self._env.action_space.n)
                     action = np.array([action1, action2], dtype=np.uint8)
@@ -158,13 +160,14 @@ class Learner:
                         if not no_logging:
                             self._writer.add_scalar('r/rewards', np.sum(rewards), episode)
                             self._writer.add_scalar('r/rating', ratings[0], episode)
-                            if episode % 100:
+                            self._writer.add_scalar('logging/hitpoint', obs1[field_hitpoint], episode)
+                            self._writer.add_scalar('logging/hitpoint_gap', obs1[field_hitpoint] - obs2[field_hitpoint], episode)
+                            self._writer.add_scalar('logging/damage', 1 - obs2[field_hitpoint], episode)
+                            self._writer.add_scalar('logging/ammo_usage', 1 - obs1[field_ammo], episode)
+                            self._writer.add_scalar('logging/fuel_usage', 1 - obs1[field_fuel], episode)
+                            if episode % 100 == 0:
+                                # TODO: matplotlib
                                 self._writer.add_scalar('r/recent_matches', np.mean(recent_matches), episode)
-                                self._writer.add_scalar('logging/hitpoint', obs1[field_hitpoint], episode)
-                                self._writer.add_scalar('logging/hitpoint_gap', obs1[field_hitpoint] - obs2[field_hitpoint], episode)
-                                self._writer.add_scalar('logging/damage', 1 - obs2[field_hitpoint], episode)
-                                self._writer.add_scalar('logging/ammo_usage', 1 - obs1[field_ammo], episode)
-                                self._writer.add_scalar('logging/fuel_usage', 1 - obs1[field_fuel], episode)
                         break
 
                     obs1, obs2 = next_obs1, next_obs2
@@ -174,6 +177,7 @@ class Learner:
                     training_step += 1
                     loss = self._target_agent.train(batch_size, on_policy=True)
                     loss += self._target_agent.train(batch_size)
+                    print(f'[{datetime.now().isoformat()}] Loss: {loss}')
                     if not no_logging:
                         self._writer.add_scalar('loss', loss, training_step)
 

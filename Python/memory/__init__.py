@@ -28,7 +28,9 @@ class ReplayBuffer:
     def push(self, *args):
         self.buffer.append(args)
 
-    def sample(self, batch_size):
+    def sample(self, batch_size, on_policy=False):
+        if on_policy:
+            return [self.buffer[-1]]
         return random.sample(self.buffer, batch_size)
 
     def __len__(self):

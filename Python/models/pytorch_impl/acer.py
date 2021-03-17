@@ -3,7 +3,6 @@
 import os
 from datetime import datetime
 
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -49,7 +48,7 @@ class LstmActorCriticModel(nn.Module):
         self.critic_h = nn.Linear(hidden_size, hidden_size)
         self.critic_h2 = nn.Linear(hidden_size, hidden_size)
         # self.critic_h_bn = nn.BatchNorm1d(hidden_size)
-        self.critic = nn.Linear(hidden_size, 1)
+        self.critic = nn.Linear(hidden_size, output_size)
 
         self.mask = BooleanMaskLayer(output_size)
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -149,29 +148,23 @@ class AcerAgent:
         return action, probs[action], hidden_out
 
     def train(self, batch_size=4, on_policy=False):
-        s, a, r, s_, a_prob, h_in, h_out, dones, begins = \
-            [], [], [], [], [], [], [], [], []
+        s, a, r, s_, a_prob, h_in, h_out, dones, begins = [], [], [], [], [], [], [], [], []
 
         # sample
-        if on_policy:
-            batches = [self._buffer[-1]]
-        else:
-            batches = self._buffer.sample(batch_size)
-            # batch = reduce(lambda x, y: x + y, self._buffer.sample(batch_size), [])
-        for batch in batches:
-            for i, data in enumerate(batch):
-                s.append(data[0])
-                a.append(data[1])
-                r.append(data[2])
-                s_.append(data[3])
-                a_prob.append(data[4])
-                h_in.append(data[5])
-                h_out.append(data[6])
-                dones.append(data[7])
-                begins.append(i == 0)
+        for batch in self._buffer.sample(batch_size, on_policy=on_policy):
+            for step in batch:
+                for i, data in enumerate(step):
+                    s.append(data[0])
+                    a.append(data[1])
+                    r.append(data[2])
+                    s_.append(data[3])
+                    a_prob.append(data[4])
+                    h_in.append(data[5])
+                    h_out.append(data[6])
+                    dones.append(data[7])
+                    begins.append(i == 0)
 
-        s, a, r, s_, a_prob, dones, begins = \
-            convert_to_tensor(self._device, s, a, r, s_, a_prob, dones, begins)
+        s, a, r, s_, a_prob, dones, begins = convert_to_tensor(self._device, s, a, r, s_, a_prob, dones, begins)
         print(f'[{datetime.now().isoformat()}] s.shape: {s.shape}')
         a = a.unsqueeze(1)
         r = r.unsqueeze(1)
@@ -181,13 +174,10 @@ class AcerAgent:
         hiddens = [(h_in[0].detach().to(self._device), h_in[1].detach().to(self._device)),
                    (h_out[0].detach().to(self._device), h_out[1].detach().to(self_device))]
 
-        losses = []
-        pi_losses = []
-        value_losses = []
-
         q = self._model.value(s, hiddens[0]).squeeze(1)
         q_a = q.gather(1, a.type(torch.int64))
-        pi, _ = self._model.get_policy(s, hiddens[0]).squeeze(1)
+        pi, _ = self._model.get_policy(s, hiddens[0])
+        pi = pi.squeeze(1)
         pi_a = pi.gather(1, a.type(torch.int64))
         v = (q * pi).sum(1).unsqueeze(1).detach()
 
@@ -199,7 +189,7 @@ class AcerAgent:
         q_retrace = v[-1] * dones[-1]
         q_retraces = []
         for i in reversed(range(len(r))):
-            q_retrace = r[i] + gamma * q_retrace
+            q_retrace = r[i] + self._gamma * q_retrace
             q_retraces.append(q_retrace.item())
             q_retrace = rho_bar[i] * (q_retrace - q_a[i]) + v[i]
 
@@ -207,7 +197,7 @@ class AcerAgent:
                 q_retrace = v[i-1] * dones[i-1]     # when a new sequence begins
 
         q_retraces.reverse()
-        q_retrace = torch.FloatTensor(q_retraces).unsqueeze(1)
+        q_retrace = torch.FloatTensor(q_retraces).unsqueeze(1).to(self._device)
 
         loss1 = -rho_bar * torch.log(pi_a) * (q_retrace - v)
         loss2 = -correction_coeff * pi.detach() * torch.log(pi) * (q.detach() - v)  # bias correction term
@@ -221,9 +211,19 @@ class AcerAgent:
 
         return loss_value
 
+    def state_dict(self):
+        return self._model.state_dict()
+
+    def set_state_dict(self, state_dict):
+        self._model.load_state_dict(state_dict)
+
     @property
     def buffer(self):
         return self._buffer
+
+    @property
+    def rnn_output_size(self):
+        return self._model.rnn_output_size
 
 
 if __name__ == "__main__":

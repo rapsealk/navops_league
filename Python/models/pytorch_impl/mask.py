@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
+import sys
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -30,10 +32,11 @@ class BooleanMaskLayer(nn.Module):
             mask = torch.FloatTensor(mask)
         elif x.ndim == 2:
             mask = np.zeros((x.shape[0], self._output_size))
-            mask[np.where(x[:, -3] == 1.0), 4] = -np.inf
-            mask[np.where(x[:, -7] == 1.0), 3] = -np.inf
-            mask[np.where(x[:, -8] == 1.0), 1] = -np.inf
-            mask[np.where(x[:, -12] == 1.0), 2] = -np.inf
+            mask[np.where(x[:, -3] == 1.0), 4] = float('-inf')
+            mask[np.where(x[:, -7] == 1.0), 3] = float('-inf')
+            mask[np.where(x[:, -8] == 1.0), 1] = float('-inf')
+            mask[np.where(x[:, -12] == 1.0), 2] = float('-inf')
+            # mask += sys.float_info.epsilon
             mask = torch.FloatTensor(mask).unsqueeze(1)
 
         return mask
