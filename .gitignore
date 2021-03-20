@@ -12,6 +12,8 @@ __pycache__/
 summary/
 runs/
 
+plots/
+
 firebase.json
 
 # prtobuf

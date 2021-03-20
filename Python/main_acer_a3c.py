@@ -3,6 +3,7 @@
 import argparse
 import os
 import json
+from collections import deque
 from datetime import datetime
 from itertools import count
 import threading
@@ -19,6 +20,7 @@ from models.pytorch_impl import AcerAgent, LstmActorCriticModel
 from memory import ReplayBuffer
 from utils import SlackNotification, discount_rewards, Atomic
 from rating import EloRating
+from plotboard import WinRateBoard
 
 with open(os.path.join(os.path.dirname(__file__), 'config.json')) as f:
     config = json.loads(''.join(f.readlines()))
@@ -29,7 +31,7 @@ parser.add_argument('--env', type=str, default='RimpacDiscrete-v0')
 parser.add_argument('--no-graphics', action='store_true', default=False)
 parser.add_argument('--worker-id', type=int, default=0)
 parser.add_argument('--batch-size', type=int, default=4)
-parser.add_argument('--buffer-size', type=int, default=1000000)
+parser.add_argument('--buffer-size', type=int, default=10000) # 42533 bytes -> 10000 (12GB)
 parser.add_argument('--time-horizon', type=int, default=32)   # 2048
 parser.add_argument('--seq-len', type=int, default=64)  # 0.1s per state-action
 # parser.add_argument('--aggressive_factor', type=float, default=1.0)
@@ -99,6 +101,7 @@ class Learner:
         self._id = f'{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}-{environment}'
         if not no_logging:
             self._writer = SummaryWriter(f'runs/{self._id}')
+            self._plotly = WinRateBoard()
 
         self._training_episode = Atomic(int)
         self._lock = Lock()
@@ -112,9 +115,15 @@ class Learner:
             thread.start()
 
         observation_shape = self._env.observation_space.shape[0]
+
+        result_wins_dq = deque(maxlen=10)
+        result_draws_dq = deque(maxlen=10)
+        result_loses_dq = deque(maxlen=10)
+        result_episodes_dq = deque(maxlen=10)
         result_wins = []
         result_draws = []
         result_loses = []
+
         ratings = (1200, 1200)
         training_step = 0
         for episode in count(1):
@@ -173,10 +182,18 @@ class Learner:
                             self._writer.add_scalar('logging/ammo_usage', 1 - obs1[field_ammo], episode)
                             self._writer.add_scalar('logging/fuel_usage', 1 - obs1[field_fuel], episode)
                             if episode % 100 == 0:
-                                # TODO: matplotlib stacked percentage bar
-                                self._writer.add_scalar('r/wins', np.mean(result_wins), episode)
-                                self._writer.add_scalar('r/loses', np.mean(result_loses), episode)
-                                self._writer.add_scalar('r/draws', np.mean(result_draws), episode)
+                                result_wins_dq.append(np.sum(result_wins))
+                                result_draws_dq.append(np.sum(result_draws))
+                                result_loses_dq.append(np.sum(result_loses))
+                                result_episodes_dq.append(str(episode))
+                                result_wins = []
+                                result_draws = []
+                                result_loses = []
+                                data = [tuple(result_wins_dq), tuple(result_draws_dq), tuple(result_loses_dq)]
+                                self._plotly.plot(tuple(result_episodes_dq), data)
+                                # self._writer.add_scalar('r/wins', np.mean(result_wins), episode)
+                                # self._writer.add_scalar('r/loses', np.mean(result_loses), episode)
+                                # self._writer.add_scalar('r/draws', np.mean(result_draws), episode)
 
                                 self._target_agent.save(os.path.join(os.path.dirname(__file__), 'checkpoints', f'{environment}-acer-{episode}.ckpt'), episode=episode)
                         break
