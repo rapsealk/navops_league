@@ -171,7 +171,7 @@ class LstmActorCriticModel(nn.Module):
         v = self.critic(v)
         return p, v, hidden
 
-    def get_policy(self, inputs, hidden):
+    def get_policy(self, inputs, hidden, training=False):
         x = F.silu(self.encoder(inputs))
         x = x.view(-1, 1, self._rnn_input_size)
         x, hidden = self.rnn(x, hidden)
@@ -183,6 +183,8 @@ class LstmActorCriticModel(nn.Module):
         x = F.silu(self.actor_h2(x))
         # x = F.silu(self.actor_h_bn(self.actor_h(x)))
         x = self.actor(x)
+        if not training:
+            x = x + self.mask(inputs).to(self._device)
         #mask = self.mask(inputs).to(self._device)
         #x = x + mask
         # x = x + self.mask(inputs).to(self._device)
@@ -223,7 +225,7 @@ class MultiHeadAcerAgent:
         cuda=True
     ):
         if cuda:
-            self._device = torch.device("cuda" if torch.cuda_is_available() else "cpu")
+            self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         else:
             self._device = torch.device("cpu")
 
@@ -426,7 +428,7 @@ class AcerAgent:
 
         q = self._model.value(s, hiddens[0]).squeeze(1)
         q_a = q.gather(1, a.type(torch.int64))
-        pi, _ = self._model.get_policy(s, hiddens[0])
+        pi, _ = self._model.get_policy(s, hiddens[0], training=True)
         pi = pi.squeeze(1)
         pi_a = pi.gather(1, a.type(torch.int64))
         v = (q * pi).sum(1).unsqueeze(1).detach()

@@ -111,7 +111,9 @@ class Learner:
             thread.start()
 
         observation_shape = self._env.observation_space.shape[0]
-        recent_matches = []
+        result_wins = []
+        result_draws = []
+        result_loses = []
         ratings = (1200, 1200)
         training_step = 0
         for episode in count(1):
@@ -155,7 +157,11 @@ class Learner:
 
                     if done:
                         print(f'[{datetime.now().isoformat()}] Done! ({obs1[field_hitpoint]}, {obs2[field_hitpoint]}) -> {info.get("win", None)}')
-                        recent_matches.append(info['win'] == 0)
+
+                        result_wins.append(info.get('win', -1) == 0)
+                        result_loses.append(info.get('win', -1) == 1)
+                        result_draws.append(info.get('win', -1) == -1)
+
                         ratings = EloRating.calc(ratings[0], ratings[1], info.get('win', -1) == 0)
                         if not no_logging:
                             self._writer.add_scalar('r/rewards', np.sum(rewards), episode)
@@ -166,8 +172,10 @@ class Learner:
                             self._writer.add_scalar('logging/ammo_usage', 1 - obs1[field_ammo], episode)
                             self._writer.add_scalar('logging/fuel_usage', 1 - obs1[field_fuel], episode)
                             if episode % 100 == 0:
-                                # TODO: matplotlib
-                                self._writer.add_scalar('r/recent_matches', np.mean(recent_matches), episode)
+                                # TODO: matplotlib stacked percentage bar
+                                self._writer.add_scalar('r/wins', np.mean(result_wins), episode)
+                                self._writer.add_scalar('r/loses', np.mean(result_loses), episode)
+                                self._writer.add_scalar('r/draws', np.mean(result_draws), episode)
                         break
 
                     obs1, obs2 = next_obs1, next_obs2
