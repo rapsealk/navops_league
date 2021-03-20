@@ -1,7 +1,5 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-import sys
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -19,24 +17,23 @@ class BooleanMaskLayer(nn.Module):
         # Steer: -3 ~ -7 (-3, +4)
         # Speed: -8 ~ -12 (+1, -2)
         if x.ndim == 1:
-            mask = np.zeros(self._output_size)
+            mask = np.ones(self._output_size)
             if x[-3] == 1.0:
-                mask[4] = float("-inf")
+                mask[4] = 0     # float("-inf")
             elif x[-7] == 1.0:
-                mask[3] = float("-inf")
+                mask[3] = 0     # float("-inf")
 
             if x[-8] == 1.0:
-                mask[1] = float("-inf")
+                mask[1] = 0     # float("-inf")
             elif x[-12] == 1.0:
-                mask[2] = float("-inf")
+                mask[2] = 0     # float("-inf")
             mask = torch.FloatTensor(mask)
         elif x.ndim == 2:
             mask = np.zeros((x.shape[0], self._output_size))
-            mask[np.where(x[:, -3] == 1.0), 4] = float('-inf')
-            mask[np.where(x[:, -7] == 1.0), 3] = float('-inf')
-            mask[np.where(x[:, -8] == 1.0), 1] = float('-inf')
-            mask[np.where(x[:, -12] == 1.0), 2] = float('-inf')
-            # mask += sys.float_info.epsilon
+            mask[np.where(x[:, -3] == 1.0), 4] = 0      # float('-inf')
+            mask[np.where(x[:, -7] == 1.0), 3] = 0      # float('-inf')
+            mask[np.where(x[:, -8] == 1.0), 1] = 0      # float('-inf')
+            mask[np.where(x[:, -12] == 1.0), 2] = 0     # float('-inf')
             mask = torch.FloatTensor(mask).unsqueeze(1)
 
         return mask

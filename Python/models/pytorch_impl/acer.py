@@ -1,6 +1,7 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
 import os
+import pathlib
 from datetime import datetime
 
 import torch
@@ -171,7 +172,7 @@ class LstmActorCriticModel(nn.Module):
         v = self.critic(v)
         return p, v, hidden
 
-    def get_policy(self, inputs, hidden, training=False):
+    def get_policy(self, inputs, hidden):
         x = F.silu(self.encoder(inputs))
         x = x.view(-1, 1, self._rnn_input_size)
         x, hidden = self.rnn(x, hidden)
@@ -183,11 +184,7 @@ class LstmActorCriticModel(nn.Module):
         x = F.silu(self.actor_h2(x))
         # x = F.silu(self.actor_h_bn(self.actor_h(x)))
         x = self.actor(x)
-        if not training:
-            x = x + self.mask(inputs).to(self._device)
-        #mask = self.mask(inputs).to(self._device)
-        #x = x + mask
-        # x = x + self.mask(inputs).to(self._device)
+        x = x * self.mask(inputs).to(self._device)
         policy = F.softmax(x, dim=2)
         return policy, hidden
 
@@ -428,7 +425,7 @@ class AcerAgent:
 
         q = self._model.value(s, hiddens[0]).squeeze(1)
         q_a = q.gather(1, a.type(torch.int64))
-        pi, _ = self._model.get_policy(s, hiddens[0], training=True)
+        pi, _ = self._model.get_policy(s, hiddens[0])
         pi = pi.squeeze(1)
         pi_a = pi.gather(1, a.type(torch.int64))
         v = (q * pi).sum(1).unsqueeze(1).detach()
@@ -468,6 +465,24 @@ class AcerAgent:
 
     def set_state_dict(self, state_dict):
         self._model.load_state_dict(state_dict)
+
+    def save(self, path: str, episode: int = 0):
+        pathlib.Path(os.path.abspath(os.path.dirname(path))).mkdir(parents=True, exist_ok=True)
+        dirname = os.path.dirname(path)
+        if not os.path.exists(dirname):
+            os.mkdir(dirname)
+        torch.save({
+            "params": self._model.state_dict(),
+            # "optim": self._optim.parameters(),
+            "episode": episode
+            # TODO: epsilon
+        }, path)
+
+    def load(self, path: str):
+        state_dict = torch.load(path)
+        self._model.load_state_dict(state_dict["params"])
+        # self._optim.load(state_dict["optim"])
+        return state_dict.get("episode", 0)
 
     @property
     def buffer(self):

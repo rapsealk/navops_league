@@ -28,12 +28,13 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--env', type=str, default='RimpacDiscrete-v0')
 parser.add_argument('--no-graphics', action='store_true', default=False)
 parser.add_argument('--worker-id', type=int, default=0)
+parser.add_argument('--batch-size', type=int, default=4)
 parser.add_argument('--buffer-size', type=int, default=1000000)
 parser.add_argument('--time-horizon', type=int, default=32)   # 2048
 parser.add_argument('--seq-len', type=int, default=64)  # 0.1s per state-action
 # parser.add_argument('--aggressive_factor', type=float, default=1.0)
 # parser.add_argument('--defensive_factor', type=float, default=0.7)
-parser.add_argument('--learning-rate', type=float, default=1e-3)
+parser.add_argument('--learning-rate', type=float, default=3e-5)
 parser.add_argument('--no-logging', action='store_true', default=False)
 args = parser.parse_args()
 
@@ -42,7 +43,7 @@ args = parser.parse_args()
 environment = args.env
 # Hyperparameters
 rollout = args.time_horizon
-batch_size = 4
+batch_size = args.batch_size
 sequence_length = args.seq_len
 # AGGRESSIVE_FACTOR = args.aggressive_factor
 # DEFENSIVE_FACTOR = args.defensive_factor
@@ -52,7 +53,7 @@ no_logging = args.no_logging
 field_hitpoint = -2
 field_ammo = -14
 field_fuel = -13
-workers = cpu_count()
+workers = 0     # cpu_count()
 
 if args.env == 'RimpacDiscreteSkipFrame-v0':
     field_ammo = -4
@@ -176,11 +177,14 @@ class Learner:
                                 self._writer.add_scalar('r/wins', np.mean(result_wins), episode)
                                 self._writer.add_scalar('r/loses', np.mean(result_loses), episode)
                                 self._writer.add_scalar('r/draws', np.mean(result_draws), episode)
+
+                                self._target_agent.save(os.path.join(os.path.dirname(__file__), 'checkpoints', f'{environment}-acer-{episode}.ckpt'), episode=episode)
                         break
 
                     obs1, obs2 = next_obs1, next_obs2
 
                 self._buffer.push(batch)
+                print(f'[{datetime.now().isoformat()}] Batch: {len(self._buffer)}')
                 if len(self._buffer) > 500:
                     training_step += 1
                     loss = self._target_agent.train(batch_size, on_policy=True)
@@ -210,6 +214,7 @@ class Worker(Thread):
             learning_rate=learning_rate,
             cuda=False
         )
+        self._buffer = buffer
         self._learner = learner
         self._training_episode = training_episode
         self._writer = writer
@@ -221,27 +226,27 @@ class Worker(Thread):
         """
 
     def run(self):
+        observation_shape = self._env.observation_space.shape[0]
         while True:
+            rewards = []
+            new_obs1, new_obs2 = self._env.reset()
+
+            obs1 = np.concatenate([new_obs1] * sequence_length)
+            obs2 = np.concatenate([new_obs2] * sequence_length)
+
+            rnn_output_size = self._worker_agent.rnn_output_size
+            h_out = [(torch.zeros([1, 1, rnn_output_size], dtype=torch.float),
+                      torch.zeros([1, 1, rnn_output_size], dtype=torch.float)),
+                     (torch.zeros([1, 1, rnn_output_size], dtype=torch.float),
+                      torch.zeros([1, 1, rnn_output_size], dtype=torch.float))]
+
+            done = False
+
             self.load_learner_parameters()
-            observation_shape = self._env.observation_space.shape[0]
-            while True:
-                rewards = []
+
+            while not done:
                 batch = []
-                new_obs1, new_obs2 = self._env.reset()
-
-                obs1 = np.concatenate([new_obs1] * sequence_length)
-                obs2 = np.concatenate([new_obs2] * sequence_length)
-
-                rnn_output_size = self._worker_agent.rnn_output_size
-                h_out = [(torch.zeros([1, 1, rnn_output_size], dtype=torch.float),
-                          torch.zeros([1, 1, rnn_output_size], dtype=torch.float)),
-                         (torch.zeros([1, 1, rnn_output_size], dtype=torch.float),
-                          torch.zeros([1, 1, rnn_output_size], dtype=torch.float))]
-
-                done = False
-
-                while not done:
-                    # for t in range(rollout):
+                for t in range(rollout):
                     h_in = h_out.copy()
                     action1, prob1, h_out[0] = self._worker_agent.get_action(obs1, h_in[0])
                     # action2, prob2, h_out[1] = self._opponent_agent.get_action(obs2, h_in[1])
@@ -255,28 +260,14 @@ class Worker(Thread):
                     next_obs1 = np.concatenate((obs1[observation_shape:], next_obs[0]))
                     next_obs2 = np.concatenate((obs2[observation_shape:], next_obs[1]))
 
-                    # self._target_agent.append((obs1, action[0], reward1, next_obs1, prob1, h_in[0], h_out[0], not done))
                     batch.append((obs1, action[0], reward[0], next_obs1, prob1, h_in[0], h_out[0], not done))
-                    # self._opponent_agent.append((obs2, action[1], reward2, next_obs2, prob2, h_in[1], h_out[1], not done))
 
                     if done:
-                        rewards = discount_rewards(rewards)
-
-                        for traj, r in zip(batch, rewards):
-                            self._worker_agent.append(traj[:2] + (r,) + traj[3:])
                         break
 
                     obs1, obs2 = next_obs1, next_obs2
 
-                time_horizons = self._training_episode.increment()
-                with self._learner._lock:
-                    loss, pi_loss, value_loss = self._learner._target_agent.apply_gradient(self._worker_agent, time_horizon=rollout)
-                if not no_logging:
-                    self._writer.add_scalar('loss/total', loss, time_horizons)
-                    self._writer.add_scalar('loss/policy', pi_loss, time_horizons)
-                    self._writer.add_scalar('loss/value', value_loss, time_horizons)
-                # print(f'[{datetime.now().isoformat()}] Episode #{time_horizons}: Loss({loss}, {pi_loss}, {value_loss})')
-                # _ = self._opponent_agent.train()
+                self._buffer.push(batch)
 
     def load_learner_parameters(self):
         self._worker_agent.set_state_dict(
