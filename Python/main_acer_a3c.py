@@ -13,11 +13,12 @@ import gym
 import gym_rimpac   # noqa: F401
 import numpy as np
 import torch
-from torch.utils.tensorboard import SummaryWriter
 
-from models.pytorch_impl import AcerAgent, LstmActorCriticModel
+from models.pytorch_impl import MultiHeadAcerAgent, MultiHeadLstmActorCriticModel
+# from models.pytorch_impl import AcerAgent, LstmActorCriticModel
 from memory import ReplayBuffer
-from utils import SlackNotification, discount_rewards, Atomic
+from utils import Atomic
+# from utils import SlackNotification, discount_rewards, Atomic
 from rating import EloRating
 
 with open(os.path.join(os.path.dirname(__file__), 'config.json')) as f:
@@ -28,7 +29,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--env', type=str, default='RimpacDiscrete-v0')
 parser.add_argument('--no-graphics', action='store_true', default=False)
 parser.add_argument('--worker-id', type=int, default=0)
-parser.add_argument('--buffer-size', type=int, default=1000000)
+parser.add_argument('--buffer-size', type=int, default=20000)
 parser.add_argument('--time-horizon', type=int, default=32)   # 2048
 parser.add_argument('--seq-len', type=int, default=64)  # 0.1s per state-action
 # parser.add_argument('--aggressive_factor', type=float, default=1.0)
@@ -36,6 +37,9 @@ parser.add_argument('--seq-len', type=int, default=64)  # 0.1s per state-action
 parser.add_argument('--learning-rate', type=float, default=1e-3)
 parser.add_argument('--no-logging', action='store_true', default=False)
 args = parser.parse_args()
+
+if not args.no_logging:
+    from torch.utils.tensorboard import SummaryWriter
 
 # TODO: ML-Agents EventSideChannel(uuid.uuid4())
 
@@ -52,7 +56,7 @@ no_logging = args.no_logging
 field_hitpoint = -2
 field_ammo = -14
 field_fuel = -13
-workers = cpu_count()
+workers = 0 # cpu_count()
 
 if args.env == 'RimpacDiscreteSkipFrame-v0':
     field_ammo = -4
@@ -62,20 +66,21 @@ if args.env == 'RimpacDiscreteSkipFrame-v0':
 class Learner:
 
     def __init__(self):
-        self._env = gym.make(environment, no_graphics=args.no_graphics, worker_id=args.worker_id)
+        build_path = os.path.abspath(os.path.join('C:\\', 'Users', 'rapsealk', 'Desktop', 'RimpacMultihead', 'Rimpac'))
+        self._env = gym.make(environment, no_graphics=args.no_graphics, worker_id=args.worker_id, override_path=build_path)
         self._buffer = ReplayBuffer(args.buffer_size)
-        self._target_model = LstmActorCriticModel(
+        self._target_model = MultiHeadLstmActorCriticModel(
             self._env.observation_space.shape[0] * sequence_length,
-            self._env.action_space.n,
+            self._env.action_space.nvec,
             hidden_size=256
         )
-        self._target_agent = AcerAgent(
+        self._target_agent = MultiHeadAcerAgent(
             model=self._target_model,
             buffer=self._buffer,
             learning_rate=learning_rate,
             cuda=True
         )
-        self._worker_agent = AcerAgent(
+        self._worker_agent = MultiHeadAcerAgent(
             model=self._target_model,
             buffer=self._buffer,
             learning_rate=learning_rate,
@@ -139,10 +144,18 @@ class Learner:
                 batch = []
                 for t in range(rollout):
                     h_in = h_out.copy()
+                    """
                     action1, prob1, h_out[0] = self._target_agent.get_action(obs1, h_in[0])
                     # action2, prob2, h_out[1] = self._opponent_agent.get_action(obs2, h_in[1])
                     action2 = np.random.randint(self._env.action_space.n)
                     action = np.array([action1, action2], dtype=np.uint8)
+                    """
+                    (action1_m, prob1_m), (action1_a, prob1_a), h_out[0] = self._target_agent.get_action(obs1, h_in[0])
+                    action2 = np.concatenate([
+                        np.random.randint(0, self._env.action_space.nvec[0], size=(2, 1)),
+                        np.random.randint(0, self._env.action_space.nvec[1], size=(2, 1))
+                    ], axis=1)[1]
+                    action = np.array([[action1_m, action1_a], action2], dtype=np.uint8)
 
                     next_obs, reward, done, info = self._env.step(action)
 
@@ -151,7 +164,7 @@ class Learner:
                     next_obs1 = np.concatenate((obs1[observation_shape:], next_obs[0]))
                     next_obs2 = np.concatenate((obs2[observation_shape:], next_obs[1]))
 
-                    batch.append((obs1, action[0], reward[0], next_obs1, prob1, h_in[0], h_out[0], not done))
+                    batch.append((obs1, action[0], reward[0], next_obs1, (prob1_m, prob1_a), h_in[0], h_out[0], not done))
 
                     if done:
                         print(f'[{datetime.now().isoformat()}] Done! ({obs1[field_hitpoint]}, {obs2[field_hitpoint]}) -> {info.get("win", None)}')
@@ -173,11 +186,11 @@ class Learner:
                     obs1, obs2 = next_obs1, next_obs2
 
                 self._buffer.push(batch)
-                if len(self._buffer) > 500:
+                if len(self._buffer) > 5:#00:
                     training_step += 1
                     loss = self._target_agent.train(batch_size, on_policy=True)
                     loss += self._target_agent.train(batch_size)
-                    print(f'[{datetime.now().isoformat()}] Loss: {loss}')
+                    print(f'[{datetime.now().isoformat()}] Loss: {loss} (batch: {len(self._buffer)})')
                     if not no_logging:
                         self._writer.add_scalar('loss', loss, training_step)
 
@@ -193,7 +206,7 @@ class Worker(Thread):
         self._env = gym.make(environment, no_graphics=True, worker_id=worker_id)
         self._model = LstmActorCriticModel(
             self._env.observation_space.shape[0] * sequence_length,
-            self._env.action_space.n,
+            self._env.action_space.nvec,
             hidden_size=256
         )
         self._worker_agent = AcerAgent(
@@ -252,8 +265,6 @@ class Worker(Thread):
                     # self._opponent_agent.append((obs2, action[1], reward2, next_obs2, prob2, h_in[1], h_out[1], not done))
 
                     if done:
-                        rewards = discount_rewards(rewards)
-
                         for traj, r in zip(batch, rewards):
                             self._worker_agent.append(traj[:2] + (r,) + traj[3:])
                         break

@@ -34,7 +34,7 @@ def convert_to_tensor(device, *args):
 class MultiHeadLstmActorCriticModel(nn.Module):
 
     def __init__(self, input_size, output_sizes, hidden_size=256):
-        super(MultiHeadLstmActorCriticModel, self).__init()
+        super(MultiHeadLstmActorCriticModel, self).__init__()
         self._rnn_input_size = 256
         self._rnn_output_size = 128
 
@@ -62,7 +62,7 @@ class MultiHeadLstmActorCriticModel(nn.Module):
         self.critic_attack_h2 = nn.Linear(hidden_size, hidden_size)
         self.critic_attack = nn.Linear(hidden_size, attack_action_size)
 
-        # self.mask = BooleanMaskLayer(output_size)
+        self.mask = BooleanMaskLayer(output_sizes[0])
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.apply(weights_init_)
@@ -88,7 +88,7 @@ class MultiHeadLstmActorCriticModel(nn.Module):
 
         x_v_attack = F.silu(self.critic_attack_h(x))
         x_v_attack = F.silu(self.critic_attack_h2(x_v_attack))
-        value_attack = self.critic_movement(x_v_attack)
+        value_attack = self.critic_attack(x_v_attack)
 
         return (logit_movement, value_movement), (logit_attack, value_attack), hidden
 
@@ -102,12 +102,15 @@ class MultiHeadLstmActorCriticModel(nn.Module):
         x_p_move = F.silu(self.actor_movement_h(x))
         x_p_move = F.silu(self.actor_movement_h2(x_p_move))
         logit_movement = self.actor_movement(x_p_move)
+        # logit_movement = logit_movement * self.mask(x).to(self._device)
         prob_movement = F.softmax(logit_movement, dim=2)
+        # prob_movement = F.log_softmax(logit_movement, dim=2)
 
         x_p_attack = F.silu(self.actor_attack_h(x))
         x_p_attack = F.silu(self.actor_attack_h2(x_p_attack))
         logit_attack = self.actor_attack(x_p_attack)
         prob_attack = F.softmax(logit_attack, dim=2)
+        # prob_attack = F.log_softmax(logit_attack, dim=2)
 
         return prob_movement, prob_attack, hidden
 
@@ -124,9 +127,18 @@ class MultiHeadLstmActorCriticModel(nn.Module):
 
         x_v_attack = F.silu(self.critic_attack_h(x))
         x_v_attack = F.silu(self.critic_attack_h2(x_v_attack))
-        value_attack = self.critic_movement(x_v_attack)
+        value_attack = self.critic_attack(x_v_attack)
 
         return value_movement, value_attack
+
+    @property
+    def rnn_output_size(self):
+        return self._rnn_output_size
+
+    def to(self, device):
+        self.mask = self.mask.to(device)
+        self._device = device
+        return super(MultiHeadLstmActorCriticModel, self).to(device)
 
 
 class LstmActorCriticModel(nn.Module):
@@ -223,7 +235,7 @@ class MultiHeadAcerAgent:
         cuda=True
     ):
         if cuda:
-            self._device = torch.device("cuda" if torch.cuda_is_available() else "cpu")
+            self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         else:
             self._device = torch.device("cpu")
 
@@ -302,7 +314,7 @@ class MultiHeadAcerAgent:
         q_retraces_movement = []
         for i in reversed(range(len(r))):
             q_retrace_movement = r[i] + self._gamma * q_retrace_movement
-            q_retraces_movement.append(q_retraces_movement.item())
+            q_retraces_movement.append(q_retrace_movement.item())
             q_retrace_movement = rho_movement_bar[i] * (q_retrace_movement - q_movement_a[i]) + value_movement[i]
             if begins[i] and i != 0:
                 q_retrace_movement = value_movement[i-1] * dones[i-1]
@@ -323,7 +335,7 @@ class MultiHeadAcerAgent:
         q_retraces_attack = []
         for i in reversed(range(len(r))):
             q_retrace_attack = r[i] + self._gamma * q_retrace_attack
-            q_retraces_attack.append(q_retraces_attack.item())
+            q_retraces_attack.append(q_retrace_attack.item())
             q_retrace_attack = rho_attack_bar[i] * (q_retrace_attack - q_attack_a[i]) + value_attack[i]
             if begins[i] and i != 0:
                 q_retrace_attack = value_attack[i-1] * dones[i-1]
@@ -339,7 +351,7 @@ class MultiHeadAcerAgent:
         loss_value = loss.mean().item()
 
         self._optim.zero_grad()
-        loss.mean.backward()
+        loss.mean().backward()
         self._optim.step()
 
         return loss_value
