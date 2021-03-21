@@ -40,7 +40,7 @@ class MultiHeadLstmActorCriticModel(nn.Module):
         self._rnn_output_size = 128
 
         self.encoder = nn.Linear(input_size, self._rnn_input_size)
-        self.rnn = nn.LSTM(self._rnn_input_size, self._rnn_output_size)
+        self.rnn = nn.LSTM(self._rnn_input_size, self._rnn_output_size, num_layers=4)
         self.flatten = nn.Flatten()
         self.linear = nn.Linear(self._rnn_output_size, hidden_size)
         self.linear2 = nn.Linear(hidden_size, hidden_size)
@@ -108,6 +108,7 @@ class MultiHeadLstmActorCriticModel(nn.Module):
         x_p_attack = F.silu(self.actor_attack_h(x))
         x_p_attack = F.silu(self.actor_attack_h2(x_p_attack))
         logit_attack = self.actor_attack(x_p_attack)
+        # logit_attack.masked_fill_(logit_attack > 0, -1e30)
         prob_attack = F.softmax(logit_attack, dim=2)
 
         return prob_movement, prob_attack, hidden

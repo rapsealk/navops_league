@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package rimpac;
+
+//import "google/protobuf/empty.proto";
+import "tensor.proto";
+
+/*
+service LeagueManagement {
+    rpc RegisterCgf(RegisterCgfRequest) returns (RegisterCgfResponse) {}
+}
+
+message RegisterCgfRequest {
+    Cgf cgf = 1;
+}
+
+message RegisterCgfResponse {
+    StatusCode code = 1;
+    string id = 2;
+}
+*/
+
+message Batch {
+    Tensor observation = 1;
+    repeated uint32 action = 2;
+    float reward = 3;
+    Tensor next_observation = 4;
+    repeated float probability = 5;
+    Tensor hidden_in = 6;
+    Tensor hidden_out = 7;
+    bool done = 8;
+}
+
+message MultiHeadBatch {
+    repeated float observation = 1;
+    repeated uint32 action = 2;
+    float reward = 3;
+    repeated float next_observation = 4;
+    repeated float probability = 5;
+    repeated float hidden_in = 6;
+    repeated float hidden_out = 7;
+    bool done = 8;
+}
+
+/*
+message Observation {
+    //
+}
+
+message Action {
+    //
+}
+
+message Reward {
+    //
+}
+
+message Probability {
+    //
+}
+
+message RnnHidden {
+    //
+}
+
+message BooleanFlag {
+    // done
+}
+*/
