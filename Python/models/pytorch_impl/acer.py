@@ -33,13 +33,13 @@ def convert_to_tensor(device, *args):
 
 class MultiHeadLstmActorCriticModel(nn.Module):
 
-    def __init__(self, input_size, output_sizes, hidden_size=256):
+    def __init__(self, input_size, output_sizes, hidden_size=1024):
         super(MultiHeadLstmActorCriticModel, self).__init__()
-        self._rnn_input_size = 256
-        self._rnn_output_size = 128
+        self._rnn_input_size = 512
+        self._rnn_output_size = 256
 
         self.encoder = nn.Linear(input_size, self._rnn_input_size)
-        self.rnn = nn.LSTM(self._rnn_input_size, self._rnn_output_size)
+        self.rnn = nn.LSTM(self._rnn_input_size, self._rnn_output_size, num_layers=4)
         self.flatten = nn.Flatten()
         self.linear = nn.Linear(self._rnn_output_size, hidden_size)
         self.linear2 = nn.Linear(hidden_size, hidden_size)
@@ -102,7 +102,7 @@ class MultiHeadLstmActorCriticModel(nn.Module):
         x_p_move = F.silu(self.actor_movement_h(x))
         x_p_move = F.silu(self.actor_movement_h2(x_p_move))
         logit_movement = self.actor_movement(x_p_move)
-        # logit_movement = logit_movement * self.mask(x).to(self._device)
+        logit_movement = logit_movement * self.mask(x).to(self._device)
         prob_movement = F.softmax(logit_movement, dim=2)
         # prob_movement = F.log_softmax(logit_movement, dim=2)
 
@@ -347,11 +347,11 @@ class MultiHeadAcerAgent:
         loss_attack = loss_attack_1 + loss_attack_2.sum(1) + F.smooth_l1_loss(q_attack_a, q_retraces_attack)
 
         # Total Loss
-        loss = loss_movement + loss_attack
-        loss_value = loss.mean().item()
+        loss = loss_movement.mean() + loss_attack.mean()
+        loss_value = loss.item()
 
         self._optim.zero_grad()
-        loss.mean().backward()
+        loss.backward()
         self._optim.step()
 
         return loss_value
