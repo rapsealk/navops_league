@@ -65,7 +65,7 @@ if args.env == 'RimpacDiscreteSkipFrame-v0':
 class Learner:
 
     def __init__(self):
-        build_path = os.path.join(os.path.dirname(__file__), '..', 'RimpacMultiHead')
+        build_path = os.path.join(os.path.dirname(__file__), '..', '..', 'RimpacMultiHeadBuild')
         self._env = gym.make(environment, no_graphics=args.no_graphics, worker_id=args.worker_id, override_path=build_path)
         self._buffer = ReplayBuffer(args.buffer_size)
         self._target_model = MultiHeadLstmActorCriticModel(
@@ -135,10 +135,11 @@ class Learner:
             obs2 = np.concatenate([new_obs2] * sequence_length)
 
             rnn_output_size = self._target_agent.rnn_output_size
-            h_out = [(torch.zeros([1, 1, rnn_output_size], dtype=torch.float),
-                      torch.zeros([1, 1, rnn_output_size], dtype=torch.float)),
-                     (torch.zeros([1, 1, rnn_output_size], dtype=torch.float),
-                      torch.zeros([1, 1, rnn_output_size], dtype=torch.float))]
+            rnn_num_layers = 4
+            h_out = [(torch.zeros([rnn_num_layers, 1, rnn_output_size], dtype=torch.float),
+                      torch.zeros([rnn_num_layers, 1, rnn_output_size], dtype=torch.float)),
+                     (torch.zeros([rnn_num_layers, 1, rnn_output_size], dtype=torch.float),
+                      torch.zeros([rnn_num_layers, 1, rnn_output_size], dtype=torch.float))]
 
             done = False
 
@@ -152,7 +153,7 @@ class Learner:
                 batch = []
                 for t in range(rollout):
                     h_in = h_out.copy()
-"""
+                    """
                     action1, prob1, h_out[0] = self._target_agent.get_action(obs1, h_in[0])
                     # action2, prob2, h_out[1] = self._opponent_agent.get_action(obs2, h_in[1])
                     action2 = np.random.randint(self._env.action_space.n)

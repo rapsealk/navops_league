@@ -362,6 +362,24 @@ class MultiHeadAcerAgent:
     def set_state_dict(self, state_dict):
         self._model.load_state_dict(state_dict)
 
+    def save(self, path: str, episode: int = 0):
+        pathlib.Path(os.path.abspath(os.path.dirname(path))).mkdir(parents=True, exist_ok=True)
+        dirname = os.path.dirname(path)
+        if not os.path.exists(dirname):
+            os.mkdir(dirname)
+        torch.save({
+            "params": self._model.state_dict(),
+            # "optim": self._optim.parameters(),
+            "episode": episode
+            # TODO: epsilon
+        }, path)
+
+    def load(self, path: str):
+        state_dict = torch.load(path)
+        self._model.load_state_dict(state_dict["params"])
+        # self._optim.load(state_dict["optim"])
+        return state_dict.get("episode", 0)
+
     @property
     def buffer(self):
         return self._buffer
