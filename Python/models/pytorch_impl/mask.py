@@ -28,7 +28,7 @@ class BooleanMaskLayer(nn.Module):
                 mask[2] = 0     # float("-inf")
             mask = torch.tensor(mask, requires_grad=False)
         elif x.ndim == 2:
-            mask = np.zeros((x.shape[0], self._output_size))
+            mask = np.ones((x.shape[0], self._output_size))
             mask[np.where(x[:, -3] == 1.0), 4] = 0      # float('-inf')
             mask[np.where(x[:, -7] == 1.0), 3] = 0      # float('-inf')
             mask[np.where(x[:, -8] == 1.0), 1] = 0      # float('-inf')

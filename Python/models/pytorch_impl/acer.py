@@ -35,7 +35,7 @@ def convert_to_tensor(device, *args):
 class MultiHeadLstmActorCriticModel(nn.Module):
 
     def __init__(self, input_size, output_sizes, hidden_size=256):
-        super(MultiHeadLstmActorCriticModel, self).__init()
+        super(MultiHeadLstmActorCriticModel, self).__init__()
         self._rnn_input_size = 256
         self._rnn_output_size = 128
 
@@ -252,7 +252,6 @@ class MultiHeadAcerAgent:
     def train(self, batch_size=4, on_policy=False):
         s, a, r, s_, a_prob, h_in, h_out, dones, begins = [], [], [], [], [], [], [], [], []
 
-        # sample
         for batch in self._buffer.sample(batch_size, on_policy=on_policy):
             for step in batch:
                 for i, data in enumerate(step):
@@ -267,9 +266,7 @@ class MultiHeadAcerAgent:
                     begins.append(i == 0)
 
         s, a, r, s_, a_prob, dones, begins = convert_to_tensor(self._device, s, a, r, s_, a_prob, dones, begins)
-        # a = a.unsqueeze(1)
         r = r.unsqueeze(1)
-        # a_prob = a_prob.unsqueeze(1)
         dones = dones.unsqueeze(1)
 
         a_movement = a[:, 0].unsqueeze(1)
@@ -301,8 +298,9 @@ class MultiHeadAcerAgent:
         q_retrace_movement = value_movement[-1] * dones[-1]
         q_retraces_movement = []
         for i in reversed(range(len(r))):
+            print(f'[PyTorch] q_retrace_movement: {q_retrace_movement.shape}')
             q_retrace_movement = r[i] + self._gamma * q_retrace_movement
-            q_retraces_movement.append(q_retraces_movement.item())
+            q_retraces_movement.append(q_retrace_movement.item())
             q_retrace_movement = rho_movement_bar[i] * (q_retrace_movement - q_movement_a[i]) + value_movement[i]
             if begins[i] and i != 0:
                 q_retrace_movement = value_movement[i-1] * dones[i-1]

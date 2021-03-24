@@ -6,6 +6,7 @@
 
 ## Activate VirtualEnv on Windows (Run as Administrator)
 ```ps
+>> python -m virtualenv <venv>
 >> Set-ExecutionPolicy Unrestricted -Force
 >> source venv/Scripts/activate.ps1
 ```
