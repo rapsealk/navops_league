@@ -4,6 +4,12 @@
 ![Python 3.8](https://img.shields.io/badge/Python-3.8-blue.svg?logo=python)
 ![PyTorch](https://img.shields.io/badge/PyTorch-1.7.1-blue.svg?logo=pytorch)
 
+## Activate VirtualEnv on Windows (Run as Administrator)
+```ps
+>> Set-ExecutionPolicy Unrestricted -Force
+>> source venv/Scripts/activate.ps1
+```
+
 ## References
 * [Playing Atari with Deep Reinforcement Learning](https://arxiv.org/abs/1312.5602)
 * [Deep Reinforcement Learning with Double Q-learning](https://arxiv.org/abs/1509.06461)
