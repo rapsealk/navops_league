@@ -1,6 +1,7 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
 import os
+import pathlib
 from datetime import datetime
 
 import torch
@@ -102,7 +103,7 @@ class MultiHeadLstmActorCriticModel(nn.Module):
         x_p_move = F.silu(self.actor_movement_h(x))
         x_p_move = F.silu(self.actor_movement_h2(x_p_move))
         logit_movement = self.actor_movement(x_p_move)
-        logit_movement = logit_movement * self.mask(x).to(self._device)
+        # logit_movement = logit_movement * self.mask(x).to(self._device)
         prob_movement = F.softmax(logit_movement, dim=2)
         # prob_movement = F.log_softmax(logit_movement, dim=2)
 
