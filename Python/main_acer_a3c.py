@@ -3,9 +3,11 @@
 import argparse
 import os
 import json
+import importlib
 from collections import deque
 from datetime import datetime
 from itertools import count
+from uuid import uuid4
 import threading
 from threading import Thread, Lock
 from multiprocessing import cpu_count
@@ -13,14 +15,17 @@ from multiprocessing import cpu_count
 import gym
 import gym_navops   # noqa: F401
 import numpy as np
-import torch
 from torch.utils.tensorboard import SummaryWriter
 
-from models.pytorch_impl import MultiHeadAcerAgent, MultiHeadLstmActorCriticModel
 from memory import ReplayBuffer
-from utils import SlackNotification, Atomic
+# from utils import SlackNotification, Atomic
 from rating import EloRating
 from plotboard import WinRateBoard
+
+
+def generate_id():
+    return str(uuid4()).replace('-', '')[:16]
+
 
 with open(os.path.join(os.path.dirname(__file__), 'config.json')) as f:
     config = json.loads(''.join(f.readlines()))
@@ -38,7 +43,15 @@ parser.add_argument('--seq-len', type=int, default=64)  # 0.1s per state-action
 # parser.add_argument('--defensive_factor', type=float, default=0.7)
 parser.add_argument('--learning-rate', type=float, default=3e-5)
 parser.add_argument('--no-logging', action='store_true', default=False)
+parser.add_argument('--framework', choices=['pytorch', 'tensorflow'], default='pytorch')
 args = parser.parse_args()
+
+if args.framework == 'tensorflow':
+    models_impl = importlib.import_module('models.tensorflow_impl')
+elif args.framework == 'pytorch':
+    import torch
+    models_impl = importlib.import_module('models.pytorch_impl')
+
 
 # TODO: ML-Agents EventSideChannel(uuid.uuid4())
 
@@ -61,45 +74,27 @@ workers = 0     # cpu_count()
 class Learner:
 
     def __init__(self):
+        self.session_id = generate_id()
+
         self._env = gym.make(environment, no_graphics=args.no_graphics, worker_id=args.worker_id)
         self._buffer = ReplayBuffer(args.buffer_size)
-        self._target_model = MultiHeadLstmActorCriticModel(
+        self._target_model = models_impl.MultiHeadLstmActorCriticModel(
             self._env.observation_space.shape[0] * sequence_length,
             self._env.action_space.nvec,
             hidden_size=512
         )
-        self._target_agent = MultiHeadAcerAgent(
+        self._target_agent = models_impl.MultiHeadAcerAgent(
             model=self._target_model,
             buffer=self._buffer,
             learning_rate=learning_rate,
             cuda=True
         )
-        self._worker_agent = MultiHeadAcerAgent(
-            model=self._target_model,
-            buffer=self._buffer,
-            learning_rate=learning_rate,
-            cuda=True
-        )
-        """Checkpoints
-        checkpoint_path = os.path.join(os.path.dirname(__file__), 'checkpoints', 'pretrained', 'supervised.ckpt')
-        if os.path.exists(checkpoint_path):
-            try:
-                self._target_agent.load(checkpoint_path)
-            except RuntimeError:
-                pass
-        """
-        """
-        self._opponent_agent = PPOAgent(
-            self._env.observation_space.shape[0] * sequence_length,
-            self._env.action_space.nvec
-        )
-        """
         self._id = f'{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}-{environment}'
         if not no_logging:
             self._writer = SummaryWriter(f'runs/{self._id}')
             self._plotly = WinRateBoard()
 
-        self._training_episode = Atomic(int)
+        # self._training_episode = Atomic(int)
         self._lock = Lock()
 
     def run(self):
@@ -129,32 +124,24 @@ class Learner:
             obs1 = np.concatenate([new_obs1] * sequence_length)
             obs2 = np.concatenate([new_obs2] * sequence_length)
 
-            rnn_output_size = self._target_agent.rnn_output_size
-            rnn_num_layers = 4
-            h_out = [(torch.zeros([rnn_num_layers, 1, rnn_output_size], dtype=torch.float),
-                      torch.zeros([rnn_num_layers, 1, rnn_output_size], dtype=torch.float)),
-                     (torch.zeros([rnn_num_layers, 1, rnn_output_size], dtype=torch.float),
-                      torch.zeros([rnn_num_layers, 1, rnn_output_size], dtype=torch.float))]
+            if args.framework == 'pytorch':
+                rnn_output_size = self._target_agent.rnn_output_size
+                rnn_num_layers = 4
+                h_out = [(torch.zeros([rnn_num_layers, 1, rnn_output_size], dtype=torch.float),
+                          torch.zeros([rnn_num_layers, 1, rnn_output_size], dtype=torch.float)),
+                         (torch.zeros([rnn_num_layers, 1, rnn_output_size], dtype=torch.float),
+                          torch.zeros([rnn_num_layers, 1, rnn_output_size], dtype=torch.float))]
 
             done = False
-
-            """
-            self._worker_agent.set_state_dict(
-                self._target_agent.state_dict()
-            )
-            """
 
             while not done:
                 batch = []
                 for t in range(rollout):
-                    h_in = h_out.copy()
-                    """
-                    action1, prob1, h_out[0] = self._target_agent.get_action(obs1, h_in[0])
-                    # action2, prob2, h_out[1] = self._opponent_agent.get_action(obs2, h_in[1])
-                    action2 = np.random.randint(self._env.action_space.n)
-                    action = np.array([action1, action2], dtype=np.uint8)
-                    """
-                    (action1_m, prob1_m), (action1_a, prob1_a), h_out[0] = self._target_agent.get_action(obs1, h_in[0])
+                    if args.framework == 'tensorflow':
+                        (action1_m, prob1_m), (action1_a, prob1_a) = self._target_agent.get_action(obs1)
+                    elif args.framework == 'pytorch':
+                        h_in = h_out.copy()
+                        (action1_m, prob1_m), (action1_a, prob1_a), h_out[0] = self._target_agent.get_action(obs1, h_in[0])
                     action2 = np.concatenate([
                         np.random.randint(0, self._env.action_space.nvec[0], size=(2, 1)),
                         np.random.randint(0, self._env.action_space.nvec[1], size=(2, 1))
@@ -168,7 +155,10 @@ class Learner:
                     next_obs1 = np.concatenate((obs1[observation_shape:], next_obs[0]))
                     next_obs2 = np.concatenate((obs2[observation_shape:], next_obs[1]))
 
-                    batch.append((obs1, action[0], reward[0], next_obs1, (prob1_m, prob1_a), h_in[0], h_out[0], not done))
+                    if args.framework == 'tensorflow':
+                        batch.append((obs1, action[0], reward[0], next_obs1, (prob1_m, prob1_a), not done))
+                    elif args.framework == 'pytorch':
+                        batch.append((obs1, action[0], reward[0], next_obs1, (prob1_m, prob1_a), h_in[0], h_out[0], not done))
 
                     if done:
                         print(f'[{datetime.now().isoformat()}] Done! ({obs1[field_hitpoint]}, {obs2[field_hitpoint]}) -> {info.get("win", None)}')
@@ -206,8 +196,7 @@ class Learner:
                     obs1, obs2 = next_obs1, next_obs2
 
                 self._buffer.push(batch)
-                print(f'[{datetime.now().isoformat()}] Batch: {len(self._buffer)}')
-                if len(self._buffer) > 500:
+                if len(self._buffer) > 5:#00:
                     training_step += 1
                     loss = self._target_agent.train(batch_size, on_policy=True)
                     loss += self._target_agent.train(batch_size)
@@ -240,12 +229,6 @@ class Worker(Thread):
         self._learner = learner
         self._training_episode = training_episode
         self._writer = writer
-        """
-        self._opponent_agent = PPOAgent(
-            self._env.observation_space.shape[0] * sequence_length,
-            self._env.action_space.nvec
-        )
-        """
 
     def run(self):
         observation_shape = self._env.observation_space.shape[0]
