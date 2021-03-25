@@ -16,9 +16,9 @@ import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-from models.pytorch_impl import AcerAgent, LstmActorCriticModel
+from models.pytorch_impl import MultiHeadAcerAgent, MultiHeadLstmActorCriticModel
 from memory import ReplayBuffer
-from utils import SlackNotification, discount_rewards, Atomic
+from utils import SlackNotification, Atomic
 from rating import EloRating
 from plotboard import WinRateBoard
 
@@ -65,20 +65,21 @@ if args.env == 'RimpacDiscreteSkipFrame-v0':
 class Learner:
 
     def __init__(self):
-        self._env = gym.make(environment, no_graphics=args.no_graphics, worker_id=args.worker_id)
+        build_path = os.path.join(os.path.dirname(__file__), '..', '..', 'RimpacMultiHeadBuild')
+        self._env = gym.make(environment, no_graphics=args.no_graphics, worker_id=args.worker_id, override_path=build_path)
         self._buffer = ReplayBuffer(args.buffer_size)
-        self._target_model = LstmActorCriticModel(
+        self._target_model = MultiHeadLstmActorCriticModel(
             self._env.observation_space.shape[0] * sequence_length,
-            self._env.action_space.n,
-            hidden_size=256
+            self._env.action_space.nvec,
+            hidden_size=512
         )
-        self._target_agent = AcerAgent(
+        self._target_agent = MultiHeadAcerAgent(
             model=self._target_model,
             buffer=self._buffer,
             learning_rate=learning_rate,
             cuda=True
         )
-        self._worker_agent = AcerAgent(
+        self._worker_agent = MultiHeadAcerAgent(
             model=self._target_model,
             buffer=self._buffer,
             learning_rate=learning_rate,
@@ -95,7 +96,7 @@ class Learner:
         """
         self._opponent_agent = PPOAgent(
             self._env.observation_space.shape[0] * sequence_length,
-            self._env.action_space.n
+            self._env.action_space.nvec
         )
         """
         self._id = f'{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}-{environment}'
@@ -134,10 +135,11 @@ class Learner:
             obs2 = np.concatenate([new_obs2] * sequence_length)
 
             rnn_output_size = self._target_agent.rnn_output_size
-            h_out = [(torch.zeros([1, 1, rnn_output_size], dtype=torch.float),
-                      torch.zeros([1, 1, rnn_output_size], dtype=torch.float)),
-                     (torch.zeros([1, 1, rnn_output_size], dtype=torch.float),
-                      torch.zeros([1, 1, rnn_output_size], dtype=torch.float))]
+            rnn_num_layers = 4
+            h_out = [(torch.zeros([rnn_num_layers, 1, rnn_output_size], dtype=torch.float),
+                      torch.zeros([rnn_num_layers, 1, rnn_output_size], dtype=torch.float)),
+                     (torch.zeros([rnn_num_layers, 1, rnn_output_size], dtype=torch.float),
+                      torch.zeros([rnn_num_layers, 1, rnn_output_size], dtype=torch.float))]
 
             done = False
 
@@ -151,10 +153,18 @@ class Learner:
                 batch = []
                 for t in range(rollout):
                     h_in = h_out.copy()
+                    """
                     action1, prob1, h_out[0] = self._target_agent.get_action(obs1, h_in[0])
                     # action2, prob2, h_out[1] = self._opponent_agent.get_action(obs2, h_in[1])
                     action2 = np.random.randint(self._env.action_space.n)
                     action = np.array([action1, action2], dtype=np.uint8)
+                    """
+                    (action1_m, prob1_m), (action1_a, prob1_a), h_out[0] = self._target_agent.get_action(obs1, h_in[0])
+                    action2 = np.concatenate([
+                        np.random.randint(0, self._env.action_space.nvec[0], size=(2, 1)),
+                        np.random.randint(0, self._env.action_space.nvec[1], size=(2, 1))
+                    ], axis=1)[1]
+                    action = np.array([[action1_m, action1_a], action2], dtype=np.uint8)
 
                     next_obs, reward, done, info = self._env.step(action)
 
@@ -163,7 +173,7 @@ class Learner:
                     next_obs1 = np.concatenate((obs1[observation_shape:], next_obs[0]))
                     next_obs2 = np.concatenate((obs2[observation_shape:], next_obs[1]))
 
-                    batch.append((obs1, action[0], reward[0], next_obs1, prob1, h_in[0], h_out[0], not done))
+                    batch.append((obs1, action[0], reward[0], next_obs1, (prob1_m, prob1_a), h_in[0], h_out[0], not done))
 
                     if done:
                         print(f'[{datetime.now().isoformat()}] Done! ({obs1[field_hitpoint]}, {obs2[field_hitpoint]}) -> {info.get("win", None)}')
@@ -206,7 +216,7 @@ class Learner:
                     training_step += 1
                     loss = self._target_agent.train(batch_size, on_policy=True)
                     loss += self._target_agent.train(batch_size)
-                    print(f'[{datetime.now().isoformat()}] Loss: {loss}')
+                    print(f'[{datetime.now().isoformat()}] Loss: {loss} (batch: {len(self._buffer)})')
                     if not no_logging:
                         self._writer.add_scalar('loss', loss, training_step)
 
@@ -220,12 +230,12 @@ class Worker(Thread):
         Thread.__init__(self, daemon=True)
         print(f'[{datetime.now().isoformat()}] Thread({threading.get_ident()})')
         self._env = gym.make(environment, no_graphics=True, worker_id=worker_id)
-        self._model = LstmActorCriticModel(
+        self._model = MultiHeadLstmActorCriticModel(
             self._env.observation_space.shape[0] * sequence_length,
-            self._env.action_space.n,
+            self._env.action_space.nvec,
             hidden_size=256
         )
-        self._worker_agent = AcerAgent(
+        self._worker_agent = MultiHeadAcerAgent(
             self._model,
             buffer,
             learning_rate=learning_rate,
@@ -238,7 +248,7 @@ class Worker(Thread):
         """
         self._opponent_agent = PPOAgent(
             self._env.observation_space.shape[0] * sequence_length,
-            self._env.action_space.n
+            self._env.action_space.nvec
         )
         """
 
@@ -267,7 +277,7 @@ class Worker(Thread):
                     h_in = h_out.copy()
                     action1, prob1, h_out[0] = self._worker_agent.get_action(obs1, h_in[0])
                     # action2, prob2, h_out[1] = self._opponent_agent.get_action(obs2, h_in[1])
-                    action2 = np.random.randint(self._env.action_space.n)
+                    action2 = np.random.randint(self._env.action_space.nvec)
                     action = np.array([action1, action2], dtype=np.uint8)
 
                     next_obs, reward, done, info = self._env.step(action)

@@ -26,6 +26,7 @@ class BooleanMaskLayer(nn.Module):
                 mask[1] = 0     # float("-inf")
             elif x[-12] == 1.0:
                 mask[2] = 0     # float("-inf")
+            # mask = torch.FloatTensor(mask)
             mask = torch.tensor(mask, requires_grad=False)
         elif x.ndim == 2:
             mask = np.ones((x.shape[0], self._output_size))

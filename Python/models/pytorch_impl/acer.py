@@ -34,10 +34,10 @@ def convert_to_tensor(device, *args):
 
 class MultiHeadLstmActorCriticModel(nn.Module):
 
-    def __init__(self, input_size, output_sizes, hidden_size=256):
+    def __init__(self, input_size, output_sizes, hidden_size=1024):
         super(MultiHeadLstmActorCriticModel, self).__init__()
-        self._rnn_input_size = 256
-        self._rnn_output_size = 128
+        self._rnn_input_size = 512
+        self._rnn_output_size = 256
 
         self.encoder = nn.Linear(input_size, self._rnn_input_size)
         self.rnn = nn.LSTM(self._rnn_input_size, self._rnn_output_size, num_layers=4)
@@ -63,7 +63,7 @@ class MultiHeadLstmActorCriticModel(nn.Module):
         self.critic_attack_h2 = nn.Linear(hidden_size, hidden_size)
         self.critic_attack = nn.Linear(hidden_size, attack_action_size)
 
-        # self.mask = BooleanMaskLayer(output_size)
+        self.mask = BooleanMaskLayer(output_sizes[0])
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.apply(weights_init_)
@@ -89,7 +89,7 @@ class MultiHeadLstmActorCriticModel(nn.Module):
 
         x_v_attack = F.silu(self.critic_attack_h(x))
         x_v_attack = F.silu(self.critic_attack_h2(x_v_attack))
-        value_attack = self.critic_movement(x_v_attack)
+        value_attack = self.critic_attack(x_v_attack)
 
         return (logit_movement, value_movement), (logit_attack, value_attack), hidden
 
@@ -103,13 +103,16 @@ class MultiHeadLstmActorCriticModel(nn.Module):
         x_p_move = F.silu(self.actor_movement_h(x))
         x_p_move = F.silu(self.actor_movement_h2(x_p_move))
         logit_movement = self.actor_movement(x_p_move)
+        # logit_movement = logit_movement * self.mask(x).to(self._device)
         prob_movement = F.softmax(logit_movement, dim=2)
+        # prob_movement = F.log_softmax(logit_movement, dim=2)
 
         x_p_attack = F.silu(self.actor_attack_h(x))
         x_p_attack = F.silu(self.actor_attack_h2(x_p_attack))
         logit_attack = self.actor_attack(x_p_attack)
         # logit_attack.masked_fill_(logit_attack > 0, -1e30)
         prob_attack = F.softmax(logit_attack, dim=2)
+        # prob_attack = F.log_softmax(logit_attack, dim=2)
 
         return prob_movement, prob_attack, hidden
 
@@ -126,9 +129,18 @@ class MultiHeadLstmActorCriticModel(nn.Module):
 
         x_v_attack = F.silu(self.critic_attack_h(x))
         x_v_attack = F.silu(self.critic_attack_h2(x_v_attack))
-        value_attack = self.critic_movement(x_v_attack)
+        value_attack = self.critic_attack(x_v_attack)
 
         return value_movement, value_attack
+
+    @property
+    def rnn_output_size(self):
+        return self._rnn_output_size
+
+    def to(self, device):
+        self.mask = self.mask.to(device)
+        self._device = device
+        return super(MultiHeadLstmActorCriticModel, self).to(device)
 
 
 class LstmActorCriticModel(nn.Module):
@@ -321,7 +333,7 @@ class MultiHeadAcerAgent:
         q_retraces_attack = []
         for i in reversed(range(len(r))):
             q_retrace_attack = r[i] + self._gamma * q_retrace_attack
-            q_retraces_attack.append(q_retraces_attack.item())
+            q_retraces_attack.append(q_retrace_attack.item())
             q_retrace_attack = rho_attack_bar[i] * (q_retrace_attack - q_attack_a[i]) + value_attack[i]
             if begins[i] and i != 0:
                 q_retrace_attack = value_attack[i-1] * dones[i-1]
@@ -333,11 +345,11 @@ class MultiHeadAcerAgent:
         loss_attack = loss_attack_1 + loss_attack_2.sum(1) + F.smooth_l1_loss(q_attack_a, q_retraces_attack)
 
         # Total Loss
-        loss = loss_movement + loss_attack
-        loss_value = loss.mean().item()
+        loss = loss_movement.mean() + loss_attack.mean()
+        loss_value = loss.item()
 
         self._optim.zero_grad()
-        loss.mean.backward()
+        loss.backward()
         self._optim.step()
 
         return loss_value
@@ -347,6 +359,24 @@ class MultiHeadAcerAgent:
 
     def set_state_dict(self, state_dict):
         self._model.load_state_dict(state_dict)
+
+    def save(self, path: str, episode: int = 0):
+        pathlib.Path(os.path.abspath(os.path.dirname(path))).mkdir(parents=True, exist_ok=True)
+        dirname = os.path.dirname(path)
+        if not os.path.exists(dirname):
+            os.mkdir(dirname)
+        torch.save({
+            "params": self._model.state_dict(),
+            # "optim": self._optim.parameters(),
+            "episode": episode
+            # TODO: epsilon
+        }, path)
+
+    def load(self, path: str):
+        state_dict = torch.load(path)
+        self._model.load_state_dict(state_dict["params"])
+        # self._optim.load(state_dict["optim"])
+        return state_dict.get("episode", 0)
 
     @property
     def buffer(self):
