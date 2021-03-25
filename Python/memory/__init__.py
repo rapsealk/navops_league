@@ -41,7 +41,7 @@ class MongoReplayBuffer:
 
     def __init__(self, username=MONGO_USERNAME, password=MONGO_PASSWORD):
         client = pymongo.MongoClient(f"mongodb://{username}:{password}@localhost:27017/")
-        database = client["rimpac"]
+        database = client["navops"]
         self._collection = database["trajectory"]
 
     def push(self, state, action, reward, next_state, done):
@@ -96,7 +96,7 @@ class MongoLocalMemory:
     def __init__(self, username=MONGO_USERNAME, password=MONGO_PASSWORD):
         self._id = str(uuid4()).replace('-', '')[:16]
         client = pymongo.MongoClient(f"mongodb://{username}:{password}@localhost:27017/")
-        database = client["rimpac_tmp"]
+        database = client["navops_tmp"]
         self._collection = database[self._id]
 
     # def __del__(self):

@@ -5,17 +5,17 @@ import os
 import json
 
 import gym
-import gym_rimpac   # noqa: F401
+import gym_navops   # noqa: F401
 
-with open(os.path.join(os.path.dirname(__file__), 'gym-rimpac', 'config.json')) as f:
+with open(os.path.join(os.path.dirname(__file__), 'gym-navops', 'config.json')) as f:
     config = ''.join(f.readlines())
     config = json.loads(config)
 
 
-class TestRimpacEnvironment(unittest.TestCase):
+class TestNavOpsEnvironment(unittest.TestCase):
 
     def setUp(self):
-        self._env = gym.make('Rimpac-v0', no_graphics=True)
+        self._env = gym.make('NavOps-v0', no_graphics=True)
         self._env.reset()
 
     def test_environment_space(self):

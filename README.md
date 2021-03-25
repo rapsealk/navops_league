@@ -1,12 +1,12 @@
-# Rimpac League
+# NavOps League
 
-![GitHub Actions CI](https://github.com/rapsealk/rimpac_league/workflows/Lint/badge.svg)
+![GitHub Actions CI](https://github.com/rapsealk/navops_league/workflows/Lint/badge.svg)
 ![Python 3.8](https://img.shields.io/badge/Python-3.8-blue.svg?logo=python)
 ![PyTorch](https://img.shields.io/badge/PyTorch-1.7.1-blue.svg?logo=pytorch)
 
 ## Activate VirtualEnv on Windows (Run as Administrator)
 ```ps
->> python -m virtualenv <venv>
+>> python -m virtualenv "<venv>"
 >> Set-ExecutionPolicy Unrestricted -Force
 >> source venv/Scripts/activate.ps1
 ```

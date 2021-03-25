@@ -7,7 +7,7 @@ from datetime import datetime
 from itertools import count
 
 import gym
-import gym_rimpac   # noqa: F401
+import gym_navops   # noqa: F401
 import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
@@ -21,7 +21,7 @@ with open(os.path.join(os.path.dirname(__file__), 'config.json')) as f:
     SLACK_API_TOKEN = config["slack"]["token"]
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--env', type=str, default='RimpacDiscrete-v0')
+parser.add_argument('--env', type=str, default='NavOpsDiscrete-v0')
 parser.add_argument('--no-graphics', action='store_true', default=False)
 parser.add_argument('--worker-id', type=int, default=0)
 parser.add_argument('--time-horizon', type=int, default=4096)

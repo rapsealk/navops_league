@@ -10,7 +10,7 @@ from multiprocessing import cpu_count
 
 import numpy as np
 import gym
-import gym_rimpac   # noqa: F401
+import gym_navops   # noqa: F401
 from torch.utils.tensorboard import SummaryWriter
 
 from models.pytorch_impl import SoftActorCriticAgent, ReplayBuffer
@@ -19,7 +19,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--no-graphics', action='store_true', default=True)
 args = parser.parse_args()
 
-ENVIRONMENT = 'Rimpac-v0'
+ENVIRONMENT = 'NavOps-v0'
 DISCOUNT_FACTOR = 0.998
 
 
@@ -71,7 +71,7 @@ class Learner:
 
         self._buffer = ReplayBuffer(1000000)
         self._writer = SummaryWriter('runs/{}-{}'.format(datetime.now().strftime('%Y-%m-%d_%H-%M-%S'), ENVIRONMENT))
-        print('Rimpac:', 'runs/{}-{}'.format(datetime.now().strftime('%Y-%m-%d_%H-%M-%S'), ENVIRONMENT))
+        print('NavOps:', 'runs/{}-{}'.format(datetime.now().strftime('%Y-%m-%d_%H-%M-%S'), ENVIRONMENT))
 
         self.num_workers = cpu_count()
 

@@ -6,7 +6,7 @@ import numpy as np
 from mlagents.trainers.buffer import BufferKey, ObservationKeyPrefix
 from mlagents.trainers.demo_loader import demo_to_buffer
 
-DEMO_PATH = os.path.join(os.path.dirname(__file__), 'Rimpac.demo')
+DEMO_PATH = os.path.join(os.path.dirname(__file__), 'NavOps.demo')
 
 
 class DemoLoader:

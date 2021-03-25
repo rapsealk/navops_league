@@ -65,7 +65,7 @@ class MongoDatabase:
         hostname=MONGO_HOSTNAME
     ):
         client = pymongo.MongoClient(f'mongodb://{username}:{password}@{hostname}:27017/')
-        self._database = client["rimpac"]
+        self._database = client["navops"]
         # self._collection = database["cgf"]
 
     def create(self, table: str, data: dict):

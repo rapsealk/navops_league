@@ -9,7 +9,7 @@ from threading import Thread
 from multiprocessing import cpu_count
 
 import gym
-import gym_rimpac   # noqa: F401
+import gym_navops   # noqa: F401
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
@@ -23,7 +23,7 @@ with open(os.path.join(os.path.dirname(__file__), 'config.json')) as f:
     SLACK_API_TOKEN = config["slack"]["token"]
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--env', type=str, default='RimpacDiscrete-v0')
+parser.add_argument('--env', type=str, default='NavOpsDiscrete-v0')
 parser.add_argument('--batch_size', type=int, default=2048)
 parser.add_argument('--seq_len', type=int, default=64)
 parser.add_argument('--aggressive_factor', type=float, default=1.0)
@@ -160,7 +160,7 @@ class Learner:
                             os.path.join(
                                 os.path.dirname(__file__),
                                 'checkpoints',
-                                f'rimpac-discrete-v0-dqn-{episode:05}.ckpt'
+                                f'navops-discrete-v0-dqn-{episode:05}.ckpt'
                             )
                         )
                         best_rating = ratings[1]

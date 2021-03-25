@@ -27,4 +27,5 @@ docker/*/data/*
 
 # Unity Demonstraion
 *.demo
-Rimpac/
+
+NavOps/

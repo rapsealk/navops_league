@@ -7,7 +7,7 @@ from itertools import count
 
 import numpy as np
 import gym
-import gym_rimpac   # noqa: F401
+import gym_navops   # noqa: F401
 from torch.utils.tensorboard import SummaryWriter
 
 from models.pytorch_impl import SoftActorCriticAgent, ReplayBuffer
@@ -37,7 +37,7 @@ def epsilon():
 
 
 def main():
-    env = gym.make('Rimpac-v0', no_graphics=args.no_graphics)
+    env = gym.make('NavOps-v0', no_graphics=args.no_graphics)
     writer = SummaryWriter('runs/{}'.format(datetime.now().strftime('%Y-%m-%d_%H-%M-%S')))
 
     agent1 = SoftActorCriticAgent(env.observation_space.shape[0], env.action_space)

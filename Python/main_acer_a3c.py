@@ -11,7 +11,7 @@ from threading import Thread, Lock
 from multiprocessing import cpu_count
 
 import gym
-import gym_rimpac   # noqa: F401
+import gym_navops   # noqa: F401
 import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
@@ -27,7 +27,7 @@ with open(os.path.join(os.path.dirname(__file__), 'config.json')) as f:
     SLACK_API_TOKEN = config["slack"]["token"]
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--env', type=str, default='RimpacDiscrete-v0')
+parser.add_argument('--env', type=str, default='NavOpsMultiDiscrete-v0')
 parser.add_argument('--no-graphics', action='store_true', default=False)
 parser.add_argument('--worker-id', type=int, default=0)
 parser.add_argument('--batch-size', type=int, default=4)
@@ -57,16 +57,11 @@ field_ammo = -14
 field_fuel = -13
 workers = 0     # cpu_count()
 
-if args.env == 'RimpacDiscreteSkipFrame-v0':
-    field_ammo = -4
-    field_fuel = -3
-
 
 class Learner:
 
     def __init__(self):
-        build_path = os.path.join(os.path.dirname(__file__), '..', '..', 'RimpacMultiHeadBuild')
-        self._env = gym.make(environment, no_graphics=args.no_graphics, worker_id=args.worker_id, override_path=build_path)
+        self._env = gym.make(environment, no_graphics=args.no_graphics, worker_id=args.worker_id)
         self._buffer = ReplayBuffer(args.buffer_size)
         self._target_model = MultiHeadLstmActorCriticModel(
             self._env.observation_space.shape[0] * sequence_length,

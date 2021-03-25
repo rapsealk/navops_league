@@ -4,7 +4,7 @@ import os
 import argparse
 
 import gym
-import gym_rimpac   # noqa: F401
+import gym_navops   # noqa: F401
 import numpy as np
 
 from models.pytorch_impl import PPOAgent
@@ -29,7 +29,7 @@ def generate_observation(observations):
 
 
 def main():
-    env = gym.make('RimpacDiscrete-v0', mock=True)
+    env = gym.make('NavOpsDiscrete-v0', mock=True)
     print(f'env(obs={env.observation_space.shape}, act={env.action_space.n})')
     agent = PPOAgent(
         env.observation_space.shape[0] * args.seq_len,

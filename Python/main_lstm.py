@@ -11,7 +11,7 @@ from threading import Thread, Lock
 from multiprocessing import cpu_count
 
 import gym
-import gym_rimpac   # noqa: F401
+import gym_navops   # noqa: F401
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
@@ -30,7 +30,7 @@ with open(os.path.join(os.path.dirname(__file__), 'config.json')) as f:
     config = json.loads(''.join(f.readlines()))
     SLACK_API_TOKEN = config["slack"]["token"]
 
-ENVIRONMENT = 'Rimpac-v0'
+ENVIRONMENT = 'NavOps-v0'
 BATCH_SIZE = 32
 TIME_SEQUENCE = 4
 HIDDEN_SIZE = 256
@@ -253,7 +253,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-    # env = gym.make('Rimpac-v0', mock=True)
+    # env = gym.make('NavOps-v0', mock=True)
     # obs = np.zeros((BATCH_SIZE, TIME_SEQUENCE, *env.observation_space.shape))
     # print(sys.getsizeof(obs) / 1000)
     """

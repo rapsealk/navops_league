@@ -19,7 +19,7 @@ class TestDatabase(unittest.TestCase):
 
     def setUp(self):
         self.database = pymongo.MongoClient("mongodb://{}:{}@localhost:27017/".format(MONGO_ROOT_USERNAME, MONGO_ROOT_PASSWORD))
-        self.collection = self.database["rimpac"]["transition"]
+        self.collection = self.database["navops"]["transition"]
 
         self.collection.drop()
         documents = []

@@ -403,9 +403,9 @@ class SoftActorCriticAgent:
 
 if __name__ == "__main__":
     import gym
-    import gym_rimpac   # noqa: F401
+    import gym_navops   # noqa: F401
 
-    env = gym.make('RimpacDiscrete-v0', mock=True)
+    env = gym.make('NavOpsDiscrete-v0', mock=True)
     agent = DQNAgent(env.observation_space.shape[0], env.action_space.n)
 
     inputs = np.random.uniform(-1.0, 1.0, env.observation_space.shape)

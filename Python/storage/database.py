@@ -31,7 +31,7 @@ def Dictable(cls):
 
 """
 def main():
-    engine = db.create_engine('mysql+pymysql://root:1111@localhost/rimpac')
+    engine = db.create_engine('mysql+pymysql://root:1111@localhost/navops')
     connection = engine.connect()
     metadata = db.MetaData()
     table = db.Table('test', metadata, autoload=True, autoload_with=engine)
@@ -51,7 +51,7 @@ def main():
     mongo = MongoClient("mongodb://{}:{}@localhost:27017/".format(MONGO_ROOT_USERNAME, MONGO_ROOT_PASSWORD))
     print(mongo.list_database_names())
 
-    database = mongo["rimpac"]
+    database = mongo["navops"]
     collection = database["transition"]
 
     x = collection.insert_one({

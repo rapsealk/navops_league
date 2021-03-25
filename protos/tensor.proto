@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package rimpac;
+package navops;
 
 message Weights {
     repeated Tensor data = 1;

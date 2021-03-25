@@ -3,7 +3,7 @@
 from datetime import datetime
 
 import gym
-import gym_rimpac   # noqa: F401
+import gym_navops   # noqa: F401
 import numpy as np
 
 from models.pytorch_impl.model import SoftActorCriticAgent
@@ -22,7 +22,7 @@ def process_raw_observation(next_obs, *obs):
 
 
 def main():
-    env = gym.make('Rimpac-v0', mock=True)
+    env = gym.make('NavOps-v0', mock=True)
     print(env.observation_space.shape)
     print(env.action_space.shape)
 
