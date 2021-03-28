@@ -78,8 +78,7 @@ class Learner:
     def __init__(self):
         self.session_id = generate_id()
 
-        build_path = os.path.join(os.path.dirname(__file__), 'NavOps')
-        self._env = gym.make(environment, no_graphics=args.no_graphics, worker_id=args.worker_id, override_path=build_path)
+        self._env = gym.make(environment, no_graphics=args.no_graphics, worker_id=args.worker_id)
         self._buffer = ReplayBuffer(args.buffer_size)
         self._target_model = models_impl.MultiHeadLstmActorCriticModel(
             self._env.observation_space.shape[0] * sequence_length,
@@ -92,6 +91,18 @@ class Learner:
             learning_rate=learning_rate,
             cuda=True
         )
+        self._bot_model = models_impl.MultiHeadLstmActorCriticModel(
+            self._env.observation_space.shape[0] * sequence_length,
+            self._env.action_space.nvec,
+            hidden_size=512
+        )
+        self._bot_agent = models_impl.MultiHeadAcerAgent(
+            model=self._bot_model,
+            buffer=self._buffer,
+            learning_rate=learning_rate,
+            cuda=False
+        )
+        self._bot_agent.load(os.path)
         self._id = f'{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}-{environment}'
         if not no_logging:
             self._writer = SummaryWriter(f'runs/{self._id}')
@@ -181,6 +192,7 @@ class Learner:
 
                     if done:
                         # print(f'[{datetime.now().isoformat()}] Done! ({obs1[field_hitpoint]}, {obs2[field_hitpoint]}) -> {info.get("win", None)}')
+                        
                         print(f'[{datetime.now().isoformat()}] Done! ({",".join(list(map(lambda x: str(x[field_hitpoint]), observations)))}) -> {info.get("win", None)}')
 
                         result_wins.append(info.get('win', -1) == 0)
