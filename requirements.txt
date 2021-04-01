@@ -1,6 +1,6 @@
 psutil==5.8.0
 tensorflow==2.4.1
-torch==1.8.1+cu110 -f https://download.pytorch.org/whl/torch_stable.html
+torch==1.8.1+cu111 -f https://download.pytorch.org/whl/torch_stable.html
 mlagents>=0.25.0
 mlagents_envs>=0.25.0
 grpcio~=1.32.0

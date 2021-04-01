@@ -13,27 +13,27 @@ class BooleanMaskLayer(nn.Module):
         self._output_size = output_size
 
     def forward(self, x: torch.Tensor):
+        masking = -1e9  # float("-inf")
         x = x.clone().detach().cpu().squeeze().numpy()
         # Steer: -3 ~ -7 (-3, +4)
         # Speed: -8 ~ -12 (+1, -2)
         if x.ndim == 1:
             mask = np.ones(self._output_size)
             if x[-3] == 1.0:
-                mask[4] = 0     # float("-inf")
+                mask[4] = masking
             elif x[-7] == 1.0:
-                mask[3] = 0     # float("-inf")
+                mask[3] = masking
             if x[-8] == 1.0:
-                mask[1] = 0     # float("-inf")
+                mask[1] = masking
             elif x[-12] == 1.0:
-                mask[2] = 0     # float("-inf")
-            # mask = torch.FloatTensor(mask)
+                mask[2] = masking
             mask = torch.tensor(mask, requires_grad=False)
         elif x.ndim == 2:
             mask = np.ones((x.shape[0], self._output_size))
-            mask[np.where(x[:, -3] == 1.0), 4] = 0      # float('-inf')
-            mask[np.where(x[:, -7] == 1.0), 3] = 0      # float('-inf')
-            mask[np.where(x[:, -8] == 1.0), 1] = 0      # float('-inf')
-            mask[np.where(x[:, -12] == 1.0), 2] = 0     # float('-inf')
+            mask[np.where(x[:, -3] == 1.0), 4] = masking
+            mask[np.where(x[:, -7] == 1.0), 3] = masking
+            mask[np.where(x[:, -8] == 1.0), 1] = masking
+            mask[np.where(x[:, -12] == 1.0), 2] = masking
             mask = torch.tensor(mask, requires_grad=False).unsqueeze(1)
 
         return mask

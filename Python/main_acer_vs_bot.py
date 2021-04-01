@@ -108,6 +108,19 @@ class Learner:
             self._writer = SummaryWriter(f'runs/{self._id}')
             self._plotly = WinRateBoard()
 
+        with open(os.path.join(os.path.dirname(__file__), f'{self._id}.log', 'w')) as f:
+            experiment_settings = {
+                "session": self.session_id,
+                "id": self._id,
+                "framework": args.framework,
+                "environment": environment,
+                "time_horizon": args.time_horizon,
+                "batch_size": args.batch_size,
+                "sequence_length": args.seq_len,
+                "learning_rate": args.learning_rate
+            }
+            f.write(json.dumps(experiment_settings))
+
         # self._training_episode = Atomic(int)
         self._lock = Lock()
 

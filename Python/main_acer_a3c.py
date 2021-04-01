@@ -78,8 +78,7 @@ class Learner:
     def __init__(self):
         self.session_id = generate_id()
 
-        build_path = os.path.join(os.path.dirname(__file__), 'NavOps')
-        self._env = gym.make(environment, no_graphics=args.no_graphics, worker_id=args.worker_id, override_path=build_path)
+        self._env = gym.make(environment, no_graphics=args.no_graphics, worker_id=args.worker_id)
         self._buffer = ReplayBuffer(args.buffer_size)
         self._target_model = models_impl.MultiHeadLstmActorCriticModel(
             self._env.observation_space.shape[0] * sequence_length,
@@ -96,6 +95,19 @@ class Learner:
         if not no_logging:
             self._writer = SummaryWriter(f'runs/{self._id}')
             self._plotly = WinRateBoard()
+
+        with open(os.path.join(os.path.dirname(__file__), f'{self._id}.log', 'w')) as f:
+            experiment_settings = {
+                "session": self.session_id,
+                "id": self._id,
+                "framework": args.framework,
+                "environment": environment,
+                "time_horizon": args.time_horizon,
+                "batch_size": args.batch_size,
+                "sequence_length": args.seq_len,
+                "learning_rate": args.learning_rate
+            }
+            f.write(json.dumps(experiment_settings))
 
         # self._training_episode = Atomic(int)
         self._lock = Lock()
@@ -206,6 +218,7 @@ class Learner:
                                 result_loses = []
                                 data = [tuple(result_wins_dq), tuple(result_draws_dq), tuple(result_loses_dq)]
                                 self._plotly.plot(tuple(result_episodes_dq), data)
+                                self._plotly.plot_scatter(data)
                                 # self._writer.add_scalar('r/wins', np.mean(result_wins), episode)
                                 # self._writer.add_scalar('r/loses', np.mean(result_loses), episode)
                                 # self._writer.add_scalar('r/draws', np.mean(result_draws), episode)

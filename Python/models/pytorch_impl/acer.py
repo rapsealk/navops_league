@@ -103,7 +103,7 @@ class MultiHeadLstmActorCriticModel(nn.Module):
         x_p_move = F.silu(self.actor_movement_h(x))
         x_p_move = F.silu(self.actor_movement_h2(x_p_move))
         logit_movement = self.actor_movement(x_p_move)
-        # logit_movement = logit_movement * self.mask(x).to(self._device)
+        logit_movement = logit_movement * self.mask(x).to(self._device)
         prob_movement = F.softmax(logit_movement, dim=2)
         # prob_movement = F.log_softmax(logit_movement, dim=2)
 
@@ -310,7 +310,7 @@ class MultiHeadAcerAgent:
         q_retrace_movement = value_movement[-1] * dones[-1]
         q_retraces_movement = []
         for i in reversed(range(len(r))):
-            print(f'[PyTorch] q_retrace_movement: {q_retrace_movement.shape}')
+            # print(f'[PyTorch] q_retrace_movement: {q_retrace_movement.shape}')
             q_retrace_movement = r[i] + self._gamma * q_retrace_movement
             q_retraces_movement.append(q_retrace_movement.item())
             q_retrace_movement = rho_movement_bar[i] * (q_retrace_movement - q_movement_a[i]) + value_movement[i]

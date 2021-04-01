@@ -5,6 +5,8 @@ import pathlib
 from time import time
 from datetime import datetime
 
+import numpy as np
+
 import plotly.graph_objects as go
 
 
@@ -22,15 +24,18 @@ class WinRateBoard:
         fig = go.Figure(data=[
             go.Bar(name=name, x=x, y=data, marker={"color": color}) for name, data, color in zip(title, y, colors)
         ])
-        """
-        fig = go.Figure(data=[
-            go.Bar(name='Win', x=['100'], y=[0.2]),
-            go.Bar(name='Lose', x=['100'], y=[0.6])
-        ])
-        """
         fig.update_xaxes(title_text='Episodes')
-        fig.update_yaxes(title_text='Rate')
+        fig.update_yaxes(title_text='Winning Rate (100 Episodes)')
         fig.update_layout(barmode='stack')
+        fig.write_image(os.path.join(self.dirpath, f'{int(time() * 1000)}.png'))
+
+    def plot_scatter(self, y, titles=['Win', 'Draw', 'Lose'], colors=['#00AB84', '#F6D258', '#F2552C']):
+        fig = go.Figure()
+        x = list(range(len(y[0])))
+        for i in range(len(y)):
+            fig.add_trace(go.Scatter(x=x, y=y[i], mode='lines', name=titles[i], line={"color": colors[i], "width": 4}))
+        fig.update_xaxes(title_text='Episodes')
+        fig.update_yaxes(title_text='Winning Rate (100 Episodes)')
         fig.write_image(os.path.join(self.dirpath, f'{int(time() * 1000)}.png'))
 
     @property

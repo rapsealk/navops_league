@@ -1,8 +1,9 @@
 # NavOps League
 
 ![GitHub Actions CI](https://github.com/rapsealk/navops_league/workflows/Lint/badge.svg)
-![Python 3.8](https://img.shields.io/badge/Python-3.8-blue.svg?logo=python)
+![Python](https://img.shields.io/badge/Python-3.8-blue.svg?logo=python)
 ![PyTorch](https://img.shields.io/badge/PyTorch-1.7.1-blue.svg?logo=pytorch)
+![TensorFlow](https://img.shields.io/badge/TensorFlow-2.4.1-orange.svg?logo=tensorflow)
 
 ## Activate VirtualEnv on Windows (Run as Administrator)
 ```ps
