@@ -9,16 +9,18 @@ import plotly.graph_objects as go
 
 
 class WinRateBoard:
-
+    """
+    https://plotly.com/python-api-reference/generated/plotly.graph_objects.Bar.html#plotly-graph-objs-bar
+    """
     def __init__(self, dirpath=os.path.join(os.path.dirname(__file__), 'plots')):
         self._id = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         self._dirpath = os.path.join(dirpath, self._id)
         if not os.path.exists(self._dirpath):
             pathlib.Path(os.path.abspath(self._dirpath)).mkdir(parents=True, exist_ok=True)
 
-    def plot(self, x, y, title=['Win', 'Draw', 'Lose']):
+    def plot(self, x, y, title=['Win', 'Draw', 'Lose'], colors=['#00AB84', '#F6D258', '#F2552C']):
         fig = go.Figure(data=[
-            go.Bar(name=name, x=x, y=data) for name, data in zip(title, y)
+            go.Bar(name=name, x=x, y=data, marker={"color": color}) for name, data, color in zip(title, y, colors)
         ])
         """
         fig = go.Figure(data=[

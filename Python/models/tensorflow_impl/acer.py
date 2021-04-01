@@ -269,7 +269,7 @@ class MultiHeadAcerAgent:
 
         return loss_value
 
-    def save(self, path):
+    def save(self, path, episode=0):
         self._model.save_weights(path)
 
     def load(self, path):
