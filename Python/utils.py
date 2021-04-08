@@ -7,13 +7,18 @@ import traceback
 from datetime import datetime
 from itertools import count
 from threading import Lock
+from uuid import uuid4
 
-import psutil
+# import psutil
 import numpy as np
 import torch
 from torch.autograd import Variable
 from slack import WebClient
 from slack.errors import SlackApiError
+
+
+def generate_id(k=16):
+    return str(uuid4()).replace('-', '')[:k]
 
 
 class Atomic:
@@ -100,6 +105,7 @@ class SlackNotification:
             sys.stderr.write(f'[SlackApiError] {e.response["error"]}')
 
 
+"""
 def print_memory_usage():
     memory_usage_dict = psutil.virtual_memory()._asdict()
     memory_usage_percent = memory_usage_dict['percent']
@@ -109,6 +115,7 @@ def print_memory_usage():
     current_process = psutil.Process(pid)
     current_process_memory_usage_as_KB = current_process.memory_info()[0] / 2.0 ** 20
     print(f'[{datetime.now().isoformat()}] Current-Process memory_usage: {current_process_memory_usage_as_KB: 9.3f} KB')
+"""
 
 
 class SizeEstimator(object):

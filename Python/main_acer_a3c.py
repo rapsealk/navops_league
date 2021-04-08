@@ -7,7 +7,6 @@ import importlib
 from collections import deque
 from datetime import datetime
 from itertools import count
-from uuid import uuid4
 import threading
 from threading import Thread, Lock
 from multiprocessing import cpu_count
@@ -18,13 +17,9 @@ import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
 from memory import ReplayBuffer
-# from utils import SlackNotification, Atomic
+from utils import generate_id   # SlackNotification, Atomic
 from rating import EloRating
 from plotboard import WinRateBoard
-
-
-def generate_id():
-    return str(uuid4()).replace('-', '')[:16]
 
 
 with open(os.path.join(os.path.dirname(__file__), 'config.json')) as f:
@@ -32,7 +27,7 @@ with open(os.path.join(os.path.dirname(__file__), 'config.json')) as f:
     SLACK_API_TOKEN = config["slack"]["token"]
 
 parser = argparse.ArgumentParser()
-# parser.add_argument('--n', type=int, default=2)
+parser.add_argument('--n', type=int, default=1)
 parser.add_argument('--env', type=str, default='NavOpsMultiDiscrete-v0')
 parser.add_argument('--no-graphics', action='store_true', default=False)
 parser.add_argument('--worker-id', type=int, default=0)
@@ -96,18 +91,19 @@ class Learner:
             self._writer = SummaryWriter(f'runs/{self._id}')
             self._plotly = WinRateBoard()
 
-        with open(os.path.join(os.path.dirname(__file__), f'{self._id}.log', 'w')) as f:
-            experiment_settings = {
-                "session": self.session_id,
-                "id": self._id,
-                "framework": args.framework,
-                "environment": environment,
-                "time_horizon": args.time_horizon,
-                "batch_size": args.batch_size,
-                "sequence_length": args.seq_len,
-                "learning_rate": args.learning_rate
-            }
-            f.write(json.dumps(experiment_settings))
+        if not args.no_logging:
+            with open(os.path.join(os.path.dirname(__file__), f'{self._id}.log'), 'w') as f:
+                experiment_settings = {
+                    "session": self.session_id,
+                    "id": self._id,
+                    "framework": args.framework,
+                    "environment": environment,
+                    "time_horizon": args.time_horizon,
+                    "batch_size": args.batch_size,
+                    "sequence_length": args.seq_len,
+                    "learning_rate": args.learning_rate
+                }
+                f.write(json.dumps(experiment_settings))
 
         # self._training_episode = Atomic(int)
         self._lock = Lock()
@@ -171,7 +167,7 @@ class Learner:
                     ], axis=1)[1]
                     action = np.array([[action1_m, action1_a], action2], dtype=np.uint8)
                     """
-                    action = np.array([[action1_m, action1_a]])
+                    action = np.array([[[action1_m, action1_a]] * args.n]).squeeze()
 
                     next_obs, reward, done, info = self._env.step(action)
 

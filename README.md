@@ -2,8 +2,9 @@
 
 ![GitHub Actions CI](https://github.com/rapsealk/navops_league/workflows/Lint/badge.svg)
 ![Python](https://img.shields.io/badge/Python-3.8-blue.svg?logo=python)
-![PyTorch](https://img.shields.io/badge/PyTorch-1.7.1-blue.svg?logo=pytorch)
+![PyTorch](https://img.shields.io/badge/PyTorch-1.8.1-blue.svg?logo=pytorch)
 ![TensorFlow](https://img.shields.io/badge/TensorFlow-2.4.1-orange.svg?logo=tensorflow)
+![Nvidia CUDA](https://img.shields.io/badge/CUDA-11.2-green.svg?logo=nvidia)
 
 ## Activate VirtualEnv on Windows (Run as Administrator)
 ```ps
@@ -21,6 +22,7 @@
 * [High-Dimensional Continuous Control Using Generalized Advantage Estimation](https://arxiv.org/abs/1506.02438)
 * [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347)
 * [Grandmaster level in StarCraft II using multi-agent reinforcement learning](https://www.nature.com/articles/s41586-019-1724-z)
+* [Continuous Control with Deep Reinforcement Learning](https://arxiv.org/pdf/1509.02971.pdf)
 * [Dota 2 with Large Scale Deep Reinforcement Learning](https://arxiv.org/abs/1912.06680)
 * [Continuous-Discrete Reinforcement Learning for Hybrid Control in Robotics](https://arxiv.org/abs/2001.00449)
 
