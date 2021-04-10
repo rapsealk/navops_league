@@ -25,6 +25,8 @@
 * [Continuous Control with Deep Reinforcement Learning](https://arxiv.org/pdf/1509.02971.pdf)
 * [Dota 2 with Large Scale Deep Reinforcement Learning](https://arxiv.org/abs/1912.06680)
 * [Continuous-Discrete Reinforcement Learning for Hybrid Control in Robotics](https://arxiv.org/abs/2001.00449)
+* [Reinforcement Learning with Attention that Works: A Self-Supervised Approach](https://arxiv.org/abs/1904.03367)
+* [Neural Machine Translation by Jointly Learning to Align and Translate](https://arxiv.org/abs/1409.0473)
 
 ## Keywords
 * Blind Cliffwalk
@@ -32,3 +34,8 @@
 ## Blog Posts
 * [Replay in biological and artificial neural networks | DeepMind](https://www.deepmind.com/blog/article/replay-in-biological-and-artificial-neural-networks)
 * [Faulty Reward Functions in the Wild](https://openai.com/blog/faulty-reward-functions/)
+* [Deep reinforcement learning with relational inductive biases](https://deepmind.com/research/publications/deep-reinforcement-learning-relational-inductive-biases)
+
+## Books
+* General Naval Tactics (2020) Milan Vego. US Naval Institute Press
+  - **Naval tactics is critical for ultimately winning a war at sea.** (p.1)
