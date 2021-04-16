@@ -28,6 +28,16 @@
 * [Reinforcement Learning with Attention that Works: A Self-Supervised Approach](https://arxiv.org/abs/1904.03367)
 * [Neural Machine Translation by Jointly Learning to Align and Translate](https://arxiv.org/abs/1409.0473)
 
+### MARL: Multi-Agent Reinforcement Learning
+* [심층 강화학습 기술 동향](https://ettrends.etri.re.kr/ettrends/178/0905178001/34-4_1-14.pdf)
+* [멀티 에이전트 강화학습 기술 동향](https://ettrends.etri.re.kr/ettrends/186/0905186026/35-6_137-149.pdf)
+* [Multi-Agent Actor-Critic for Mixed Cooperative-Competitive Environments](https://arxiv.org/abs/1706.02275)
+* [Actor-Attention-Critic for Multi-Agent Reinforcement Learning](https://arxiv.org/abs/1810.02912)
+
+### XAI: Explainable AI
+* [On Pixel-Wise Explanations for Non-Linear Classifier Decisions by Layer-Wise Relevance Propagation](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0130140)
+
+
 ## Keywords
 * Blind Cliffwalk
 
