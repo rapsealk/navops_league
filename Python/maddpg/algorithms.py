@@ -9,8 +9,8 @@ from models import Actor, Critic
 
 def convert_to_tensor(device, *args):
     # return map(lambda tensor: tensor.to(device), map(torch.FloatTensor, args))
-    return map(lambda tensor: tensor.float().to(device), map(torch.tensor,
-        map(lambda arr: np.asarray(arr, dtype=np.float32), args)
+    return map(lambda tensor: tensor.float().to(device), map(torch.from_numpy,
+        map(lambda arr: np.array(arr, dtype=np.float32), args)
     ))
 
 
@@ -31,7 +31,8 @@ class MADDPG:
         self._tau = tau
         self._agent_id = agent_id
 
-        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self._device = torch.device("cpu")
 
         # create the network
         self.actor_network = Actor(input_size, output_size, hidden_size=hidden_size).to(self._device)
@@ -83,6 +84,11 @@ class MADDPG:
 
     # update the network
     def train(self, transitions, other_agents):
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.to(device)
+        for agent in other_agents:
+            agent.policy.to(device)
+
         states, actions, next_states, rewards, dones = [], [], [], [], []
         for s, a, s_, r, d in transitions:
             states.append(s)
@@ -92,15 +98,15 @@ class MADDPG:
             dones.append(d)
 
         # print(f'[MADDPG] np.states: {states[0].shape} {states[-1].shape}')
-        print(f'[MADDPG] np.actions: {actions[0].shape} {actions[-1].shape}')
+        # print(f'[MADDPG] np.actions: {actions[0].shape} {actions[-1].shape}')
         # print(f'[MADDPG] np.next_states: {next_states[0].shape} {next_states[-1].shape}')
         # print(f'[MADDPG] np.rewards: {rewards[0].shape} {rewards[-1].shape}')
         # print(f'[MADDPG] np.dones: {dones[0]} {dones[-1]}')
 
-        states, actions, next_states, rewards, dones = convert_to_tensor(self._device, states, actions, next_states, rewards, dones)
+        states, actions, next_states, rewards, dones = convert_to_tensor(device, states, actions, next_states, rewards, dones)
 
         # print(f'[MADDPG] train.states: {states.shape}')
-        print(f'[MADDPG] train.actions: {actions.shape}')
+        # print(f'[MADDPG] train.actions: {actions.shape}')
         # print(f'[MADDPG] train.next_states: {next_states.shape}')
         # print(f'[MADDPG] train.rewards: {rewards.shape}')
         # print(f'[MADDPG] train.dones: {dones.shape}')
@@ -129,20 +135,20 @@ class MADDPG:
                 if agent_id == self.agent_id:
                     # u_next.append(self.actor_target_network(o_next[agent_id]))
                     action_ = self.actor_target_network(o_next[:, agent_id])
-                    print(f'[MADDPG] action_: {action_.shape}')
+                    # print(f'[MADDPG] action_: {action_.shape}')
                     action_ = torch.argmax(action_, dim=-1)
-                    u_next.append(action_.numpy())
+                    u_next.append(action_.cpu().numpy())
                 else:
                     # u_next.append(other_agents[index].policy.actor_target_network(o_next[agent_id]))
                     action_ = other_agents[index].policy.actor_target_network(o_next[:, agent_id])
-                    print(f'[MADDPG] action_: {action_.shape}')
+                    # print(f'[MADDPG] action_: {action_.shape}')
                     action_ = torch.argmax(action_, dim=-1)
-                    u_next.append(action_.numpy())
+                    u_next.append(action_.cpu().numpy())
                     index += 1
             # print(f'[MADDPG] o_next: {o_next}')
-            print(f'[MADDPG] u_next: {u_next}')
-            u_next = np.asarray(u_next, dtype=np.uint8)
-            u_next = torch.from_numpy(u_next)
+            # print(f'[MADDPG] u_next: {u_next}')
+            u_next = np.array(u_next, dtype=np.uint8)
+            u_next = torch.from_numpy(u_next).to(device)
             q_next = self.critic_target_network(o_next, u_next).detach()
 
             target_q = (r.unsqueeze(1) + self.gamma * q_next).detach()
@@ -154,11 +160,11 @@ class MADDPG:
 
         # the actor loss
         # 重新选择联合动作中当前agent的动作，其他agent的动作不变
-        print(f'[MADDPG] u.shape: {u.shape}')
+        # print(f'[MADDPG] u.shape: {u.shape}')
         ap = self.actor_network(o[self.agent_id])
-        print(f'[MADDPG] ap.shape: {ap.shape}')
+        # print(f'[MADDPG] ap.shape: {ap.shape}')
         ap = Categorical(ap).sample()
-        print(f'[MADDPG] a.shape: {ap.shape}')
+        # print(f'[MADDPG] a.shape: {ap.shape}')
         u[self.agent_id] = ap
         # u[self.agent_id] = self.actor_network(o[self.agent_id])
         # actor_loss = - self.critic_network(o, u).mean()
@@ -166,6 +172,8 @@ class MADDPG:
         # if self.agent_id == 0:
         #     print('critic_loss is {}, actor_loss is {}'.format(critic_loss, actor_loss))
         # update the network
+        total_loss = actor_loss.item() + critic_loss.item()
+
         self.actor_optim.zero_grad()
         actor_loss.backward()
         self.actor_optim.step()
@@ -180,6 +188,12 @@ class MADDPG:
         """
         self.train_step += 1
 
+        self.to(self.device)
+        for agent in other_agents:
+            agent.policy.to(agent.policy.device)
+
+        return total_loss
+
     def save_model(self, train_step):
         """
         num = str(train_step // self.args.save_rate)
@@ -193,6 +207,19 @@ class MADDPG:
         torch.save(self.critic_network.state_dict(),  model_path + '/' + num + '_critic_params.pkl')
         """
         return
+
+    def to(self, device):
+        # create the network
+        self.actor_network = self.actor_network.to(device)
+        self.critic_network = self.critic_network.to(device)
+
+        # build up the target network
+        self.actor_target_network = self.actor_target_network.to(device)
+        self.critic_target_network = self.critic_target_network.to(device)
+
+    @property
+    def device(self):
+        return self._device
 
     @property
     def gamma(self):

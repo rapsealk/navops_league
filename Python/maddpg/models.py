@@ -34,6 +34,8 @@ class Actor(nn.Module):
         self.linear3 = nn.Linear(hidden_size, hidden_size)
         self.action_head = nn.Linear(hidden_size, output_size)
 
+        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     def forward(self, x):
         x = F.relu(self.linear1(x))
         x = F.relu(self.linear2(x))
@@ -41,6 +43,10 @@ class Actor(nn.Module):
         x = self.action_head(x)
         prob = F.softmax(x, dim=-1)
         return prob
+
+    def to(self, device):
+        self._device = device
+        return super(Actor, self).to(device)
 
 
 class Critic(nn.Module):
@@ -54,6 +60,8 @@ class Critic(nn.Module):
         self.linear3 = nn.Linear(hidden_size, hidden_size)
         self.q_value_head = nn.Linear(hidden_size, 1)
 
+        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     def forward(self, state, action):
         # state = torch.cat(state, dim=1)
         state = state.view(state.shape[0], -1)
@@ -66,8 +74,8 @@ class Critic(nn.Module):
         # print(f'[CRITIC] action.transpose: {action} ({action.shape})')
         oh_action = []
         for a in action:
-            oh_action.append(onehot(a.numpy(), max_range=self.action_size))
-        action = torch.stack(oh_action)
+            oh_action.append(onehot(a.cpu().numpy(), max_range=self.action_size))
+        action = torch.stack(oh_action).to(self._device)
         # print(f'[CRITIC] action.onehot: {action} ({action.shape})')
 
         x = torch.cat([state, action], dim=-1).float()
@@ -76,6 +84,10 @@ class Critic(nn.Module):
         x = F.relu(self.linear3(x))
         q_value = self.q_value_head(x)
         return q_value
+
+    def to(self, device):
+        self._device = device
+        return super(Critic, self).to(device)
 
     @property
     def action_size(self):

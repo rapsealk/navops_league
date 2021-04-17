@@ -46,24 +46,33 @@ class ReplayBuffer:
 
 
 def main():
-    build_path = os.path.join('/', 'Users', 'rapsealk', 'Desktop', 'NavOps-v2')
+    build_path = os.path.join(os.path.dirname(__file__), '..', 'NavOps')
+    # build_path = os.path.join('/', 'Users', 'rapsealk', 'Desktop', 'NavOps-v2')
     # build_path = Path('/') / 'Users' / 'rapsealk' / 'Desktop' / 'NavOps-v2'
     env = gym.make(args.env, no_graphics=args.no_graphics, worker_id=0, override_path=build_path)
-
-    observations = env.reset()
 
     agents = [Agent(env.observation_space.shape[0], np.sum(env.action_space.nvec), agent_id=i, n=args.n)
               for i in range(args.n)]
     buffer = ReplayBuffer()
+    episode_results = []
 
     for episode in count(1):
+        observations = env.reset()
         for step in count(1):
             actions = []
             for agent, observation in zip(agents, observations):
                 actions.append(action := agent.select_action(observation))
                 # print(f'[MAIN] STEP={step} AGENT={agent.agent_id} ACTION={action}')
-            actions = np.asarray(actions)   # , dtype=np.uint8)
-            actions_mh = np.asarray([actions, actions]).T
+            actions = np.array(actions)   # , dtype=np.uint8)
+
+            # actions_mh = np.asarray([actions, actions]).T
+            actions_mh = [[], []]
+            for action in actions:
+                # print('action.shape:', action.shape, action)
+                actions_mh[0].append(action if action < env.action_space.nvec[0] else 0)
+                actions_mh[1].append(action - env.action_space.nvec[0] if action >= env.action_space.nvec[0] else 0)
+            actions_mh = np.array(actions_mh)
+            actions_mh = np.transpose(actions_mh)
 
             next_observations, rewards, done, info = env.step(actions_mh)
             # print(f'[MAIN] episode({episode}) step({step})')
@@ -76,16 +85,26 @@ def main():
 
             observations = next_observations
 
-            if len(buffer) > 5 and len(buffer) % 5 == 0:
-                for agent in agents:
-                    other_agents = agents.copy()
-                    other_agents.remove(agent)
-                    batch = buffer.sample(args.batch_size)
-                    agent.learn(batch, other_agents)
-                # break
+            if done:
+                episode_results.append(info.get('win', -1) == 0)
+                break
+
+        if len(buffer) > args.batch_size:   # and len(buffer) % 5 == 0:
+            train_losses = []
+            for agent in agents:
+                other_agents = agents.copy()
+                other_agents.remove(agent)
+                batch = buffer.sample(args.batch_size)
+                loss = agent.learn(batch, other_agents)
+                train_losses.append(loss)
+            # break
+            print(f'Episode #{episode}: Loss={np.sum(train_losses)}')
+
+        if episode % 100 == 0:
+            print(f'Episode #{episode} :: WinRate={np.mean(episode_results)}')
 
         # if episode == 2:
-        break
+        # break
 
     env.close()
 
