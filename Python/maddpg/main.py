@@ -1,16 +1,23 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 import os
+import sys
 import argparse
 import random
 from collections import deque
 from itertools import count
+from datetime import datetime
 
 import numpy as np
+from torch.utils.tensorboard import SummaryWriter
 
 import gym
 import gym_navops   # noqa: F401
 from agent import Agent
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from utils import generate_id
+from plotboard import WinRateBoard
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--env', type=str, default='NavOpsMultiDiscrete-v2')
@@ -61,7 +68,13 @@ def main():
         for i in range(args.n)
     ]
     buffer = ReplayBuffer()
-    episode_results = []
+    episode_wins = []
+    episode_loses = []
+    episode_draws = []
+
+    exprmt_id = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")    # generate_id()
+    writer = SummaryWriter(f'runs/{exprmt_id}')
+    plotboard = WinRateBoard(dirpath=os.path.join(os.path.dirname(__file__), 'plots', exprmt_id))
 
     for episode in count(1):
         observations = env.reset()
@@ -109,7 +122,9 @@ def main():
             h_ins = h_outs
 
             if done:
-                episode_results.append(info.get('win', -1) == 0)
+                episode_wins.append(info.get('win', -1) == 0)
+                episode_loses.append(info.get('win', -1) == 1)
+                episode_draws.append(info.get('win', -1) == -1)
                 break
 
         if len(buffer) > args.batch_size:
@@ -121,9 +136,31 @@ def main():
                 loss = agent.learn(batch, other_agents)
                 train_losses.append(loss)
             print(f'Episode #{episode}: Loss={np.mean(train_losses)}')
+            # Tensorboard
+            try:
+                writer.add_scalar('loss/sum', np.sum(train_losses), episode)
+                writer.add_scalar('loss/mean', np.mean(train_losses), episode)
+                hps = [next_obs[0] for next_obs in next_observations]
+                writer.add_scalar('performance/hp', np.mean(hps), episode)
+            except:
+                sys.stderr.write(f'[{datetime.now().isoformat()}] [MAIN/TENSORBOARD] FAILED TO LOG LOSS!\n')
 
         if episode % 100 == 0:
-            print(f'Episode #{episode} :: WinRate={np.mean(episode_results)}')
+            print(f'Episode #{episode} :: WinRate={np.mean(episode_wins)}')
+            # plotly
+            data = [episode_wins, episode_draws, episode_loses]
+            try:
+                plotboard.plot(tuple(map(str, range(1, episode+1))), data)
+                plotboard.plot(data)
+            except:
+                sys.stderr.write(f'[{datetime.now().isoformat()}] [MAIN/PLOTLY] FAILED TO PLOT!\n')
+            # Tensorboard
+            try:
+                writer.add_scalar('r/wins', np.mean(episode_wins), episode // 100)
+                writer.add_scalar('r/draws', np.mean(episode_draws), episode // 100)
+                writer.add_scalar('r/loses', np.mean(episode_loses), episode // 100)
+            except:
+                sys.stderr.write(f'[{datetime.now().isoformat()}] [MAIN/TENSORBOARD] FAILED TO WRITE TENSORBOARD!\n')
 
     env.close()
 

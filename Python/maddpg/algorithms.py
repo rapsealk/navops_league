@@ -67,6 +67,8 @@ class MADDPG:
         for agent in other_agents:
             agent.policy.to(device)
 
+        batch_size = len(transitions)
+
         states, actions, next_states, rewards, h_ins, h_outs, dones = [], [], [], [], [], [], []
         for s, a, s_, r, h_in, h_out, d in transitions:
             states.append(s)
@@ -135,7 +137,7 @@ class MADDPG:
             target_q = (r.unsqueeze(1) + self.gamma * q_next).detach()
 
         # the q loss
-        critic_h_in = self.critic_network.reset_hidden_state()
+        critic_h_in = self.critic_network.reset_hidden_state(batch_size=batch_size)
         q_value, _ = self.critic_network(states, torch.transpose(actions, dim0=0, dim1=1), critic_h_in)
         critic_loss = (target_q - q_value).pow(2).mean()
 
