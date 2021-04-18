@@ -9,9 +9,9 @@ from models import Actor, Critic
 
 def convert_to_tensor(device, *args):
     # return map(lambda tensor: tensor.to(device), map(torch.FloatTensor, args))
-    return map(lambda tensor: tensor.float().to(device), map(torch.from_numpy,
+    return torch.stack(tuple(map(lambda tensor: tensor.float().to(device), map(torch.from_numpy,
         map(lambda arr: np.array(arr, dtype=np.float32), args)
-    ))
+    ))))
 
 
 class MADDPG:
@@ -50,28 +50,6 @@ class MADDPG:
         self.actor_optim = torch.optim.Adam(self.actor_network.parameters(), lr=actor_learning_rate)
         self.critic_optim = torch.optim.Adam(self.critic_network.parameters(), lr=critic_learning_rate)
 
-        """
-        # create the dict for store the model
-        if not os.path.exists(self.args.save_dir):
-            os.mkdir(self.args.save_dir)
-        # path to save the model
-        self.model_path = self.args.save_dir + '/' + self.args.scenario_name
-        if not os.path.exists(self.model_path):
-            os.mkdir(self.model_path)
-        self.model_path = self.model_path + '/' + 'agent_%d' % agent_id
-        if not os.path.exists(self.model_path):
-            os.mkdir(self.model_path)
-
-        # 加载模型
-        if os.path.exists(self.model_path + '/actor_params.pkl'):
-            self.actor_network.load_state_dict(torch.load(self.model_path + '/actor_params.pkl'))
-            self.critic_network.load_state_dict(torch.load(self.model_path + '/critic_params.pkl'))
-            print('Agent {} successfully loaded actor_network: {}'.format(self.agent_id,
-                                                                          self.model_path + '/actor_params.pkl'))
-            print('Agent {} successfully loaded critic_network: {}'.format(self.agent_id,
-                                                                           self.model_path + '/critic_params.pkl'))
-        """
-
         self.train_step = 0
 
     # soft update
@@ -89,43 +67,46 @@ class MADDPG:
         for agent in other_agents:
             agent.policy.to(device)
 
-        states, actions, next_states, rewards, dones = [], [], [], [], []
-        for s, a, s_, r, d in transitions:
+        states, actions, next_states, rewards, h_ins, h_outs, dones = [], [], [], [], [], [], []
+        for s, a, s_, r, h_in, h_out, d in transitions:
             states.append(s)
             actions.append(a)
             next_states.append(s_)
             rewards.append(r)
+            h_ins.append(h_in)
+            h_outs.append(h_out)
             dones.append(d)
 
-        # print(f'[MADDPG] np.states: {states[0].shape} {states[-1].shape}')
-        # print(f'[MADDPG] np.actions: {actions[0].shape} {actions[-1].shape}')
-        # print(f'[MADDPG] np.next_states: {next_states[0].shape} {next_states[-1].shape}')
-        # print(f'[MADDPG] np.rewards: {rewards[0].shape} {rewards[-1].shape}')
-        # print(f'[MADDPG] np.dones: {dones[0]} {dones[-1]}')
-
-        states, actions, next_states, rewards, dones = convert_to_tensor(device, states, actions, next_states, rewards, dones)
-
-        # print(f'[MADDPG] train.states: {states.shape}')
-        # print(f'[MADDPG] train.actions: {actions.shape}')
-        # print(f'[MADDPG] train.next_states: {next_states.shape}')
-        # print(f'[MADDPG] train.rewards: {rewards.shape}')
-        # print(f'[MADDPG] train.dones: {dones.shape}')
-
-        """
-        for key in transitions.keys():
-            transitions[key] = torch.tensor(transitions[key], dtype=torch.float32)
-        r = transitions[f'r_{self.agent_id}']
-        o, u, o_next = [], [], []  # 用来装每个agent经验中的各项
-        for agent_id in range(self.args.n_agents):
-            o.append(transitions[f'o_{agent_id}'])
-            u.append(transitions[f'u_{agent_id}'])
-            o_next.append(transitions[f'o_next_{agent_id}'])
-        """
+        # states, actions, next_states, rewards, h_ins, h_outs, dones = \
+        #     convert_to_tensor(device, states, actions, next_states, rewards, h_ins, h_outs, dones)
+        states = convert_to_tensor(device, states).squeeze()
+        actions = convert_to_tensor(device, actions).squeeze()
+        next_states = convert_to_tensor(device, next_states).squeeze()
+        rewards = convert_to_tensor(device, rewards).squeeze()
+        # h_ins = convert_to_tensor(device, h_ins)
+        h_ins = [
+            # convert_to_tensor(device, [h_in[0] for h_in in h_ins]),
+            # convert_to_tensor(device, [h_in[1] for h_in in h_ins]),
+            # convert_to_tensor(device, [h_in[2] for h_in in h_ins])
+            torch.stack([h_in[0] for h_in in h_ins]).squeeze(),
+            torch.stack([h_in[1] for h_in in h_ins]).squeeze(),
+            torch.stack([h_in[2] for h_in in h_ins]).squeeze(),
+            #[h_in[1] for h_in in h_ins],
+            #[h_in[2] for h_in in h_ins],
+        ]
+        # h_ins = convert_to_tensor(device, h_ins)
+        h_outs = [
+            # convert_to_tensor(device, h_outs[:, 0]),
+            # convert_to_tensor(device, h_outs[:, 1]),
+            # convert_to_tensor(device, h_outs[:, 2])
+            [h_out[0] for h_out in h_outs],
+            [h_out[1] for h_out in h_outs],
+            [h_out[2] for h_out in h_outs],
+        ]
+        # h_outs = convert_to_tensor(device, h_outs)
+        dones = convert_to_tensor(device, dones)
 
         r = rewards[:, self.agent_id]
-        o = states#[:, self.agent_id]
-        u = actions#[:, self.agent_id]
-        o_next = next_states#[:, self.agent_id]
 
         # calculate the target Q value function
         u_next = []
@@ -133,42 +114,42 @@ class MADDPG:
             index = 0
             for agent_id in range(len(other_agents)+1):
                 if agent_id == self.agent_id:
-                    # u_next.append(self.actor_target_network(o_next[agent_id]))
-                    action_ = self.actor_target_network(o_next[:, agent_id])
-                    # print(f'[MADDPG] action_: {action_.shape}')
+                    _, h_out_ = self.actor_target_network(states[:, agent_id], h_ins[agent_id])
+                    next_h_ins = torch.cat((h_ins[agent_id][1:], h_out_[-1:]))
+                    action_, _ = self.actor_target_network(next_states[:, agent_id], next_h_ins)
                     action_ = torch.argmax(action_, dim=-1)
                     u_next.append(action_.cpu().numpy())
                 else:
-                    # u_next.append(other_agents[index].policy.actor_target_network(o_next[agent_id]))
-                    action_ = other_agents[index].policy.actor_target_network(o_next[:, agent_id])
-                    # print(f'[MADDPG] action_: {action_.shape}')
+                    # FIXME: other h_in
+                    _, h_out_ = other_agents[index].policy.actor_target_network(states[:, agent_id], h_ins[agent_id])
+                    next_h_ins_ = torch.cat((h_ins[agent_id][1:], h_out_[-1:]))
+                    action_, _ = other_agents[index].policy.actor_target_network(next_states[:, agent_id], next_h_ins_)
                     action_ = torch.argmax(action_, dim=-1)
                     u_next.append(action_.cpu().numpy())
                     index += 1
-            # print(f'[MADDPG] o_next: {o_next}')
-            # print(f'[MADDPG] u_next: {u_next}')
             u_next = np.array(u_next, dtype=np.uint8)
             u_next = torch.from_numpy(u_next).to(device)
-            q_next = self.critic_target_network(o_next, u_next).detach()
+            q_next, _ = self.critic_target_network(next_states, u_next, next_h_ins)
+            q_next = q_next.detach()
 
             target_q = (r.unsqueeze(1) + self.gamma * q_next).detach()
 
         # the q loss
-        # q_value = self.critic_network(o, u)
-        q_value = self.critic_network(o, torch.transpose(u, dim0=0, dim1=1))
+        critic_h_in = self.critic_network.reset_hidden_state()
+        q_value, _ = self.critic_network(states, torch.transpose(actions, dim0=0, dim1=1), critic_h_in)
         critic_loss = (target_q - q_value).pow(2).mean()
 
         # the actor loss
-        # 重新选择联合动作中当前agent的动作，其他agent的动作不变
-        # print(f'[MADDPG] u.shape: {u.shape}')
-        ap = self.actor_network(o[self.agent_id])
-        # print(f'[MADDPG] ap.shape: {ap.shape}')
-        ap = Categorical(ap).sample()
-        # print(f'[MADDPG] a.shape: {ap.shape}')
-        u[self.agent_id] = ap
-        # u[self.agent_id] = self.actor_network(o[self.agent_id])
-        # actor_loss = - self.critic_network(o, u).mean()
-        actor_loss = -self.critic_network(o, torch.transpose(u, dim0=0, dim1=1)).mean()
+        probs, _ = self.actor_network(states[:, self.agent_id], h_ins[self.agent_id])
+        asmpl = Categorical(probs).sample()
+        actions = torch.transpose(actions, dim0=0, dim1=1)
+        actions[self.agent_id] = asmpl
+        # actions[: self.agent_id] = asmpl
+        # actions[self.agent_id] = Categorical(probs).sample()
+        #actor_loss = -self.critic_network(states, actions, critic_h_in).mean()
+        actor_loss, _ = self.critic_network(states, actions, critic_h_in)
+        actor_loss = -actor_loss.mean()
+        #actor_loss = -self.critic_network(states, torch.transpose(actions, dim0=0, dim1=1)).mean()
         # if self.agent_id == 0:
         #     print('critic_loss is {}, actor_loss is {}'.format(critic_loss, actor_loss))
         # update the network
@@ -216,6 +197,12 @@ class MADDPG:
         # build up the target network
         self.actor_target_network = self.actor_target_network.to(device)
         self.critic_target_network = self.critic_target_network.to(device)
+
+    def reset_hidden_states(self, batch_size=8):
+        return [
+            self.actor_network.reset_hidden_state(batch_size=batch_size),
+            self.critic_network.reset_hidden_state(batch_size=batch_size)
+        ]
 
     @property
     def device(self):
