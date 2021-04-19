@@ -53,7 +53,7 @@ class ReplayBuffer:
 
 
 def main():
-    build_path = os.path.join('/', 'Users', 'rapsealk', 'Desktop', 'NavOps-v2')
+    build_path = os.path.join('C:\\', 'Users', 'rapsealk', 'Desktop', 'NavOps')
     # build_path = os.path.join(os.path.dirname(__file__), '..', 'NavOps')
     env = gym.make(args.env, no_graphics=args.no_graphics, worker_id=0, override_path=build_path)
     print(f'[navops_league] obs: {env.observation_space.shape[0]}, action: {np.sum(env.action_space.nvec)}')
@@ -127,6 +127,8 @@ def main():
                 episode_draws.append(info.get('win', -1) == -1)
                 break
 
+        print(f'Episode #{episode} (buffer={len(buffer)}/{args.batch_size})')
+
         if len(buffer) > args.batch_size:
             train_losses = []
             for agent in agents:
@@ -148,9 +150,12 @@ def main():
         if episode % 100 == 0:
             print(f'Episode #{episode} :: WinRate={np.mean(episode_wins)}')
             # plotly
-            data = [episode_wins, episode_draws, episode_loses]
+            ep_wins = [np.sum(episode_wins[i*100:(i+1)*100]) for i in range(episode//100)]
+            ep_draws = [np.sum(episode_draws[i*100:(i+1)*100]) for i in range(episode//100)]
+            ep_loses = [np.sum(episode_loses[i*100:(i+1)*100]) for i in range(episode//100)]
+            data = [ep_wins, ep_draws, ep_loses]
             try:
-                plotboard.plot(tuple(map(str, range(1, episode+1))), data)
+                plotboard.plot(tuple(map(str, range(1, episode//100+1))), data)
                 plotboard.plot(data)
             except:
                 sys.stderr.write(f'[{datetime.now().isoformat()}] [MAIN/PLOTLY] FAILED TO PLOT!\n')

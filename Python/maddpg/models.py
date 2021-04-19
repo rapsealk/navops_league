@@ -31,6 +31,8 @@ class Actor(nn.Module):
 
     def forward(self, x, h_in):
         # print(f'[ACTOR] forward(x={x.shape}, h_in={h_in.shape})')
+        x = x.to(self.device)
+        h_in = h_in.to(self.device)
         h_out = self.rnn(x, h_in)
         x = F.relu(self.linear1(h_out))
         x = F.relu(self.linear2(x))

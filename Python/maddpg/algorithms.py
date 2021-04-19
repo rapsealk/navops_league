@@ -90,9 +90,9 @@ class MADDPG:
             # convert_to_tensor(device, [h_in[0] for h_in in h_ins]),
             # convert_to_tensor(device, [h_in[1] for h_in in h_ins]),
             # convert_to_tensor(device, [h_in[2] for h_in in h_ins])
-            torch.stack([h_in[0] for h_in in h_ins]).squeeze(),
-            torch.stack([h_in[1] for h_in in h_ins]).squeeze(),
-            torch.stack([h_in[2] for h_in in h_ins]).squeeze(),
+            torch.stack([h_in[0] for h_in in h_ins]).squeeze().to(device),
+            torch.stack([h_in[1] for h_in in h_ins]).squeeze().to(device),
+            torch.stack([h_in[2] for h_in in h_ins]).squeeze().to(device),
             #[h_in[1] for h_in in h_ins],
             #[h_in[2] for h_in in h_ins],
         ]
@@ -155,7 +155,7 @@ class MADDPG:
         # if self.agent_id == 0:
         #     print('critic_loss is {}, actor_loss is {}'.format(critic_loss, actor_loss))
         # update the network
-        total_loss = actor_loss.item() + critic_loss.item()
+        total_loss = actor_loss.cpu().item() + critic_loss.cpu().item()
 
         self.actor_optim.zero_grad()
         actor_loss.backward()
