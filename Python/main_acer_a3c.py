@@ -244,12 +244,12 @@ class Worker(Thread):
         Thread.__init__(self, daemon=True)
         print(f'[{datetime.now().isoformat()}] Thread({threading.get_ident()})')
         self._env = gym.make(environment, no_graphics=True, worker_id=worker_id)
-        self._model = MultiHeadLstmActorCriticModel(
+        self._model = models_impl.MultiHeadLstmActorCriticModel(
             self._env.observation_space.shape[0] * sequence_length,
             self._env.action_space.nvec,
             hidden_size=256
         )
-        self._worker_agent = MultiHeadAcerAgent(
+        self._worker_agent = models_impl.MultiHeadAcerAgent(
             self._model,
             buffer,
             learning_rate=learning_rate,

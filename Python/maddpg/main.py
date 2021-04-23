@@ -48,8 +48,24 @@ class ReplayBuffer:
             return [self._buffer[-1]]
         return random.sample(self._buffer, batch_size)
 
+    def extend(self, items):
+        self._buffer.extend(items)
+
+    def clear(self):
+        self._buffer.clear()
+
     def __len__(self):
         return len(self._buffer)
+
+    @property
+    def items(self):
+        return tuple(self._buffer)
+
+
+class MongoReplayBuffer:
+
+    def __init__(self):
+        pass
 
 
 def main():
@@ -67,7 +83,8 @@ def main():
         )
         for i in range(args.n)
     ]
-    buffer = ReplayBuffer()
+    buffer = ReplayBuffer(capacity=20000)
+    episode_buffer = ReplayBuffer(capacity=20000)
     episode_wins = []
     episode_loses = []
     episode_draws = []
@@ -115,7 +132,7 @@ def main():
             print(f'[main] n_obs_: {next_observations[0].shape}')
             """
 
-            buffer.push(observations, actions, next_observationss, rewards, h_ins, h_outs, done)
+            episode_buffer.push(observations, actions, next_observationss, rewards, h_ins, h_outs, done)
 
             # observations = next_observations
             observations = next_observationss
@@ -125,6 +142,15 @@ def main():
                 episode_wins.append(info.get('win', -1) == 0)
                 episode_loses.append(info.get('win', -1) == 1)
                 episode_draws.append(info.get('win', -1) == -1)
+
+                # TODO: reward
+                experiences = episode_buffer.items
+                episode_buffer.clear()
+                mean_reward = np.mean(experiences[-1][3])
+                # print(f'Episode #{episode} (mean_reward={mean_reward})')
+                for exp in experiences:
+                    exp[3][:] = mean_reward
+                buffer.extend(experiences)
                 break
 
         print(f'Episode #{episode} (buffer={len(buffer)}/{args.batch_size})')
