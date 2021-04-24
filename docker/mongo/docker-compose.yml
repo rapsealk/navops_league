@@ -10,5 +10,5 @@ services:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: 1111
     volumes:  # container:local (mount)
-      - ./data/db:/data/db
+      - D:/Docker/mongo/data/db:/data/db
     container_name: "mongodb"

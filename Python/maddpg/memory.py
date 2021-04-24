@@ -86,8 +86,10 @@ class MongoReplayBuffer:
     def to_pyobj(self, arg):
         if type(arg) is np.ndarray:
             arg = arg.tolist()
+        elif isinstance(arg, (tuple, list)) and type(arg[0]) is np.ndarray:
+            arg = tuple(value.tolist() for value in arg)
         elif isinstance(arg, (tuple, list)) and type(arg[0]) is torch.Tensor:
-            arg = tuple(value.numpy().tolist() for value in arg)
+            arg = tuple(value.detach().cpu().numpy().tolist() for value in arg)
         return arg
 
     def restore_pyobj(self, document):
@@ -95,7 +97,7 @@ class MongoReplayBuffer:
             np.array(document["observation"], dtype=np.float32),
             document["action"],
             np.array(document["next_observation"], dtype=np.float32),
-            document["reward"],
+            np.array(document["reward"], dtype=np.float32),
             tuple(torch.from_numpy(np.array(h_in)).float() for h_in in document["h_in"]),
             document["done"]
         )

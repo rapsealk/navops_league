@@ -69,14 +69,13 @@ class MADDPG:
 
         batch_size = len(transitions)
 
-        states, actions, next_states, rewards, h_ins, h_outs, dones = [], [], [], [], [], [], []
-        for s, a, s_, r, h_in, h_out, d in transitions:
+        states, actions, next_states, rewards, h_ins, dones = [], [], [], [], [], []
+        for s, a, s_, r, h_in, d in transitions:
             states.append(s)
             actions.append(a)
             next_states.append(s_)
             rewards.append(r)
             h_ins.append(h_in)
-            h_outs.append(h_out)
             dones.append(d)
 
         # states, actions, next_states, rewards, h_ins, h_outs, dones = \
@@ -97,15 +96,6 @@ class MADDPG:
             #[h_in[2] for h_in in h_ins],
         ]
         # h_ins = convert_to_tensor(device, h_ins)
-        h_outs = [
-            # convert_to_tensor(device, h_outs[:, 0]),
-            # convert_to_tensor(device, h_outs[:, 1]),
-            # convert_to_tensor(device, h_outs[:, 2])
-            [h_out[0] for h_out in h_outs],
-            [h_out[1] for h_out in h_outs],
-            [h_out[2] for h_out in h_outs],
-        ]
-        # h_outs = convert_to_tensor(device, h_outs)
         dones = convert_to_tensor(device, dones)
 
         r = rewards[:, self.agent_id]
