@@ -3,8 +3,6 @@
 import os
 import sys
 import argparse
-import random
-from collections import deque
 from itertools import count
 from datetime import datetime
 
@@ -14,9 +12,12 @@ from torch.utils.tensorboard import SummaryWriter
 import gym
 import gym_navops   # noqa: F401
 from agent import Agent
+from memory import ReplayBuffer, MongoReplayBuffer
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from utils import generate_id
 from plotboard import WinRateBoard
+
+REWARD_IDX = 3
 
 
 parser = argparse.ArgumentParser()
@@ -30,42 +31,6 @@ parser.add_argument('--sequence-length', type=int, default=64)
 # parser.add_argument('--learning-rate', type=float, default=1e-3)
 # parser.add_argument('--no-logging', action='store_true', default=False)
 args = parser.parse_args()
-
-
-class ReplayBuffer:
-
-    def __init__(self, capacity=1_000_000, seed=0):
-        self.capacity = capacity
-        self._buffer = deque(maxlen=capacity)
-        random.seed(seed)
-
-    def push(self, *args):
-        self._buffer.append(args)
-
-    def sample(self, batch_size, on_policy=False):
-        batch_size = min(batch_size, len(self._buffer))
-        if on_policy:
-            return [self._buffer[-1]]
-        return random.sample(self._buffer, batch_size)
-
-    def extend(self, items):
-        self._buffer.extend(items)
-
-    def clear(self):
-        self._buffer.clear()
-
-    def __len__(self):
-        return len(self._buffer)
-
-    @property
-    def items(self):
-        return tuple(self._buffer)
-
-
-class MongoReplayBuffer:
-
-    def __init__(self):
-        pass
 
 
 def main():
@@ -83,8 +48,11 @@ def main():
         )
         for i in range(args.n)
     ]
-    buffer = ReplayBuffer(capacity=20000)
-    episode_buffer = ReplayBuffer(capacity=20000)
+    # buffer = ReplayBuffer(capacity=20000)
+    # episode_buffer = ReplayBuffer(capacity=20000)
+    buffer = MongoReplayBuffer()
+    episode_buffer = MongoReplayBuffer()
+    # except pymongo.errors.ServerSelectionTimeoutError as e:
     episode_wins = []
     episode_loses = []
     episode_draws = []
@@ -132,7 +100,8 @@ def main():
             print(f'[main] n_obs_: {next_observations[0].shape}')
             """
 
-            episode_buffer.push(observations, actions, next_observationss, rewards, h_ins, h_outs, done)
+            # TODO: Remove h_outs
+            episode_buffer.push(observations, actions, next_observationss, rewards, h_ins, done)
 
             # observations = next_observations
             observations = next_observationss
@@ -146,10 +115,10 @@ def main():
                 # TODO: reward
                 experiences = episode_buffer.items
                 episode_buffer.clear()
-                mean_reward = np.mean(experiences[-1][3])
+                mean_reward = np.mean(experiences[-1][REWARD_IDX])
                 # print(f'Episode #{episode} (mean_reward={mean_reward})')
                 for exp in experiences:
-                    exp[3][:] = mean_reward
+                    exp[REWARD_IDX][:] = mean_reward
                 buffer.extend(experiences)
                 break
 
