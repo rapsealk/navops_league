@@ -5,6 +5,7 @@
 ![PyTorch](https://img.shields.io/badge/PyTorch-1.8.1-blue.svg?logo=pytorch)
 ![TensorFlow](https://img.shields.io/badge/TensorFlow-2.4.1-orange.svg?logo=tensorflow)
 ![Nvidia CUDA](https://img.shields.io/badge/CUDA-11.2-green.svg?logo=nvidia)
+![Unity](https://img.shields.io/badge/Unity-2020.3.4f1-white.svg?logo=unity)
 
 ## Activate VirtualEnv on Windows (Run as Administrator)
 ```ps

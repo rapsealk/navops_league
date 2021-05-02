@@ -19,10 +19,10 @@ class MADDPG:
         self,
         input_size,
         output_size,
-        hidden_size=64,
+        hidden_size=256,
         actor_learning_rate=3e-4,
         critic_learning_rate=1e-3,
-        gamma=0.95,
+        gamma=0.998,
         tau=0.01,
         agent_id=0,
         n=3
@@ -60,6 +60,17 @@ class MADDPG:
         for target_param, param in zip(self.critic_target_network.parameters(), self.critic_network.parameters()):
             target_param.data.copy_((1 - self.tau) * target_param.data + self.tau * param.data)
 
+    """
+    def _discount_with_dones(self, rewards, dones, gamma=0.98):
+        discounted = []
+        r = 0
+        for reward, done in zip(rewards[::-1], dones[::-1]):
+            r = reward + gamma * r * (1.0 - done)
+            # r = r * (1.0 - done)
+            discounted.append(r)
+        return discounted[::-1]
+    """
+
     # update the network
     def train(self, transitions, other_agents):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -69,18 +80,19 @@ class MADDPG:
 
         batch_size = len(transitions)
 
-        states, actions, next_states, rewards, h_ins, h_outs, dones = [], [], [], [], [], [], []
+        states, actions, next_states, rewards, h_ins, dones = [], [], [], [], [], []
         for s, a, s_, r, h_in, h_out, d in transitions:
             states.append(s)
             actions.append(a)
             next_states.append(s_)
             rewards.append(r)
             h_ins.append(h_in)
-            h_outs.append(h_out)
             dones.append(d)
 
-        # states, actions, next_states, rewards, h_ins, h_outs, dones = \
-        #     convert_to_tensor(device, states, actions, next_states, rewards, h_ins, h_outs, dones)
+        # rewards = self._discount_with_dones(rewards, dones, gamma=self.gamma)
+
+        # states, actions, next_states, rewards, h_ins, dones = \
+        #     convert_to_tensor(device, states, actions, next_states, rewards, h_ins, dones)
         states = convert_to_tensor(device, states).squeeze()
         actions = convert_to_tensor(device, actions).squeeze()
         next_states = convert_to_tensor(device, next_states).squeeze()
@@ -97,15 +109,6 @@ class MADDPG:
             #[h_in[2] for h_in in h_ins],
         ]
         # h_ins = convert_to_tensor(device, h_ins)
-        h_outs = [
-            # convert_to_tensor(device, h_outs[:, 0]),
-            # convert_to_tensor(device, h_outs[:, 1]),
-            # convert_to_tensor(device, h_outs[:, 2])
-            [h_out[0] for h_out in h_outs],
-            [h_out[1] for h_out in h_outs],
-            [h_out[2] for h_out in h_outs],
-        ]
-        # h_outs = convert_to_tensor(device, h_outs)
         dones = convert_to_tensor(device, dones)
 
         r = rewards[:, self.agent_id]
@@ -155,7 +158,9 @@ class MADDPG:
         # if self.agent_id == 0:
         #     print('critic_loss is {}, actor_loss is {}'.format(critic_loss, actor_loss))
         # update the network
-        total_loss = actor_loss.cpu().item() + critic_loss.cpu().item()
+        actor_loss_ = actor_loss.cpu().item()
+        critic_loss_ = critic_loss.cpu().item()
+        total_loss = actor_loss_ + critic_loss_
 
         self.actor_optim.zero_grad()
         actor_loss.backward()
@@ -175,21 +180,13 @@ class MADDPG:
         for agent in other_agents:
             agent.policy.to(agent.policy.device)
 
-        return total_loss
+        return total_loss, actor_loss_, critic_loss_
 
-    def save_model(self, train_step):
-        """
-        num = str(train_step // self.args.save_rate)
-        model_path = os.path.join(self.args.save_dir, self.args.scenario_name)
-        if not os.path.exists(model_path):
-            os.makedirs(model_path)
-        model_path = os.path.join(model_path, f'agent_{self.agent_id}')
-        if not os.path.exists(model_path):
-            os.makedirs(model_path)
-        torch.save(self.actor_network.state_dict(), model_path + '/' + num + '_actor_params.pkl')
-        torch.save(self.critic_network.state_dict(),  model_path + '/' + num + '_critic_params.pkl')
-        """
-        return
+    def save(self, path):
+        torch.save({
+            "actor_state_dict": self.actor_network.state_dict(),
+            "critic_state_dict": self.critic_network.state_dict()
+        }, path)
 
     def to(self, device):
         # create the network
