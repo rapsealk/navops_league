@@ -50,7 +50,7 @@ class ReplayBuffer:
         return tuple(self._buffer)
 
 
-class MongoReplayBuffer:
+class _MongoReplayBuffer:
 
     def __init__(self, username=MONGO_USERNAME, password=MONGO_PASSWORD, port=27017):
         self._id = generate_id()
@@ -61,16 +61,45 @@ class MongoReplayBuffer:
             raise e
         database = client["navops"]
         self._collection = database[self._id]
+        self._id_collection = database[self._id + 'tmp']
 
     def push(self, *args, keys=('observation', 'action', 'next_observation', 'reward', 'h_in', 'done')):
         document = {key: self.to_pyobj(arg) for key, arg in zip(keys, args)}
-        _ = self._collection.insert_one(document)
+        result = self._collection.insert_one(document)
+        # print('mrb.push.result:', result.inserted_id)
+        _ = self._id_collection.insert_one({"id": result.inserted_id})
 
     def sample(self, batch_size, on_policy=False):
         pipeline = [
-            {"$sample": {"size": batch_size}}
+            {"$sample": {"size": batch_size}},
+            # {"$project": {"_id": True}}
         ]
-        batch = tuple(map(self.restore_pyobj, self._collection.aggregate(pipeline)))
+        time_ = time.time()
+        query = self._collection.aggregate(pipeline, allowDiskUse=True)
+        print('sample.aggregate.time:', time.time() - time_)
+        time_ = time.time()
+        query = map(self.restore_pyobj, query)
+        print('sample.map.time:', time.time() - time_)
+        time_ = time.time()
+        batch = tuple(query)
+        print('sample.batch.time:', time.time() - time_)
+        # batch = tuple(map(self.restore_pyobj, self._collection.aggregate(pipeline, allowDiskUse=True)))
+        """
+
+        time_ = time.time()
+        query = self._id_collection.aggregate(pipeline, allowDiskUse=True)
+        print('sample.id.aggregate.time:', time.time() - time_)
+        time_ = time.time()
+        query = tuple(query)
+        print('sample.id.tuple.time:', time.time() - time_)
+        time_ = time.time()
+        query = [self._collection.find({"_id": oid['id']})[0] for oid in query]
+        print('sample.id.find.time:', time.time() - time_)
+        time_ = time.time()
+        batch = tuple(map(self.restore_pyobj, query))
+        print('sample.id.batch.time:', time.time() - time_)
+        """
+
         return batch
 
     def extend(self, items, keys=('observation', 'action', 'next_observation', 'reward', 'h_in', 'done')):
@@ -79,6 +108,7 @@ class MongoReplayBuffer:
 
     def clear(self):
         self._collection.drop()
+        self._id_collection.drop()
 
     def __len__(self):
         return self._collection.estimated_document_count()
@@ -111,9 +141,18 @@ class MongoReplayBuffer:
         return tuple(map(self.restore_pyobj, self._collection.find({})))
 
 
+class SQLliteReplayBuffer:
+
+    def __init__(self):
+        # SqlLiteReplayBuffer
+        # SQLliteReplayBuffer
+        self._conn = None
+        # https://wikidocs.net/5327
+
+
 if __name__ == "__main__":
     rb = ReplayBuffer(capacity=100)
-    mrb = MongoReplayBuffer()
+    mrb = _MongoReplayBuffer()
 
     n = 3
 

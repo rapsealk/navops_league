@@ -14,6 +14,7 @@ import gym
 import gym_navops   # noqa: F401
 from agent import Agent
 from memory import ReplayBuffer
+from database import MongoDatabase
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from utils import generate_id
 from plotboard import WinRateBoard
@@ -69,13 +70,24 @@ def main():
     writer = SummaryWriter(f'runs/{exprmt_id}')
     plotboard = WinRateBoard(dirpath=os.path.join(os.path.dirname(__file__), 'plots', exprmt_id))
 
-    for episode in count(1):
+    session_id = generate_id()
+    database = MongoDatabase()
+    result_db = database.ref("result")
+    session_db = database.ref(session_id)
+    initial_episode = len(session_db) + 1
+
+    for episode in count(initial_episode):
         observations = env.reset()
         observations = [
             np.concatenate([observation] * args.sequence_length, axis=0)
             for observation in observations
         ]
         h_ins = [agent.reset_hidden_states(batch_size=1)[0] for agent in agents]
+
+        # TODO
+        episode_id = ('0' * 10 + str(episode))[-10:]
+        ref = session_db.ref(episode_id)
+
         for step in count(1):
             actions = []
             h_outs = []
@@ -108,8 +120,26 @@ def main():
             print(f'[main] n_obs_: {next_observations[0].shape}')
             """
 
-            # TODO: Remove h_outs
             episode_buffer.push(observations, actions, next_observationss, rewards, h_ins, done)
+
+            # TODO: Logging
+            position_idx = -env.observation_space.shape[0] + 3  # [3, 4]
+            rotation_idx = -env.observation_space.shape[0] + 5  # [5, 6]
+            warship_obs_shape = 8
+            value = {
+                "position": [obs[position_idx:position_idx+2] for obs in observations],
+                "rotation": [obs[rotation_idx:rotation_idx+2] for obs in observations],
+                "opponent": {
+                    "position": [observations[0][(i+3)*warship_obs_shape+3:(i+3)*warship_obs_shape+5]
+                                 for i in range(len(observations))],
+                    "rotation": [observations[0][(i+3)*warship_obs_shape+5:(i+3)*warship_obs_shape+7]
+                                 for i in range(len(observations))]
+                },
+                "action": actions,
+                "reward": rewards
+            }
+            print(f'[main] value: {value}')
+            _ = ref.put(**value)
 
             # observations = next_observations
             observations = next_observationss
@@ -120,6 +150,12 @@ def main():
                 episode_wins.append(info.get('win', -1) == 0)
                 episode_loses.append(info.get('win', -1) == 1)
                 episode_draws.append(info.get('win', -1) == -1)
+
+                result_db.put({
+                    "session": session_id,
+                    "episode": episode_id,
+                    "result": info.get('win', -1)
+                })
 
                 # TODO: reward
                 experiences = episode_buffer.items
@@ -137,6 +173,14 @@ def main():
                 for i in range(discounted_rewards.shape[0]):
                     experiences[i][REWARD_IDX][:] = discounted_rewards[i]
                 buffer.extend(experiences)
+
+                """ TODO
+                for agent in agents:
+                    other_agents = agents.copy()
+                    other_agents.remove(agent)
+                    _ = agent.learn(experiences, other_agents)
+                """
+
                 break
 
         total_loss = None
