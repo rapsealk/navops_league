@@ -35,6 +35,9 @@ class Agent:
     def reset_hidden_states(self, batch_size=8):
         return self.policy.reset_hidden_states(batch_size=batch_size)
 
+    def save(self, path):
+        self.policy.save(path)
+
     @property
     def output_size(self):
         return self._output_size
