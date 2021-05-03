@@ -60,8 +60,8 @@ def main():
         )
         for i in range(args.n)
     ]
-    buffer = ReplayBuffer(capacity=100000)
-    episode_buffer = ReplayBuffer(capacity=100000)
+    buffer = ReplayBuffer(capacity=50000)
+    episode_buffer = ReplayBuffer(capacity=50000)
     episode_wins = []
     episode_loses = []
     episode_draws = []
@@ -127,9 +127,11 @@ def main():
             rotation_idx = -env.observation_space.shape[0] + 5  # [5, 6]
             warship_obs_shape = 8
             value = {
+                "hp": [obs[-warship_obs_shape] for obs in observations],
                 "position": [obs[position_idx:position_idx+2] for obs in observations],
                 "rotation": [obs[rotation_idx:rotation_idx+2] for obs in observations],
                 "opponent": {
+                    "hp": [observations[0][(i+3)*warship_obs_shape] for i in range(len(observations))],
                     "position": [observations[0][(i+3)*warship_obs_shape+3:(i+3)*warship_obs_shape+5]
                                  for i in range(len(observations))],
                     "rotation": [observations[0][(i+3)*warship_obs_shape+5:(i+3)*warship_obs_shape+7]
@@ -138,7 +140,7 @@ def main():
                 "action": actions,
                 "reward": rewards
             }
-            print(f'[main] value: {value}')
+            # print(f'[main] value: {value}')
             _ = ref.put(**value)
 
             # observations = next_observations
@@ -151,7 +153,7 @@ def main():
                 episode_loses.append(info.get('win', -1) == 1)
                 episode_draws.append(info.get('win', -1) == -1)
 
-                result_db.put({
+                result_db.put(**{
                     "session": session_id,
                     "episode": episode_id,
                     "result": info.get('win', -1)
@@ -160,10 +162,7 @@ def main():
                 # TODO: reward
                 experiences = episode_buffer.items
                 episode_buffer.clear()
-                #mean_reward = np.mean(experiences[-1][3])
-                # print(f'Episode #{episode} (mean_reward={mean_reward})')
-                #for exp in experiences:
-                #    exp[3][:] = mean_reward
+
                 discounted_rewards = np.array([exp[3] for exp in experiences]).transpose()
                 dones = [exp[-1] for exp in experiences]
                 for i in range(discounted_rewards.shape[0]):

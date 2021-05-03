@@ -6,6 +6,7 @@ import json
 import time
 from copy import copy
 
+import numpy as np
 import pymongo
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
@@ -42,6 +43,7 @@ class MongoDatabase:
             "timestamp": time.time(),
             **kwargs
         }
+        value = self._encode(**value)
         result = self._collection.insert_one(value)
         return result.inserted_id
 
@@ -51,6 +53,20 @@ class MongoDatabase:
 
     def clear(self):
         self._collection.drop()
+
+    def _encode(self, **kwargs):
+        for key, value in kwargs.items():
+            if isinstance(value, (np.float32, np.float64)):
+                kwargs[key] = float(value)
+            elif type(value) is np.ndarray:
+                kwargs[key] = value.tolist()
+            elif isinstance(value, (tuple, list)) and type(value[0]) is np.ndarray:
+                kwargs[key] = tuple(val.tolist() for val in value)
+            if isinstance(value, (tuple, list)) and isinstance(value[0], (np.float32, np.float64)):
+                kwargs[key] = tuple(float(val) for val in value)
+            elif type(value) is dict:
+                kwargs[key] = self._encode(**value)
+        return kwargs
 
     def __len__(self):
         return self._collection.estimated_document_count()
