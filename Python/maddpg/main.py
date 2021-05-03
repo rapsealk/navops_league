@@ -166,19 +166,17 @@ def main():
                 discounted_rewards = np.array([exp[3] for exp in experiences]).transpose()
                 dones = [exp[-1] for exp in experiences]
                 for i in range(discounted_rewards.shape[0]):
-                    discounted_rewards[i][:-1] = 0
+                    # discounted_rewards[i][:-1] = 0
                     discounted_rewards[i] = discount_with_dones(discounted_rewards[i], dones, gamma=0.996)  # 172
                 discounted_rewards = np.transpose(discounted_rewards)
                 for i in range(discounted_rewards.shape[0]):
                     experiences[i][REWARD_IDX][:] = discounted_rewards[i]
                 buffer.extend(experiences)
 
-                """ TODO
                 for agent in agents:
                     other_agents = agents.copy()
                     other_agents.remove(agent)
                     _ = agent.learn(experiences, other_agents)
-                """
 
                 break
 
