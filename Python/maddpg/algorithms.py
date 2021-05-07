@@ -19,7 +19,8 @@ class MADDPG:
         self,
         input_size,
         output_size,
-        hidden_size=256,
+        hidden_size=512,
+        rnn_hidden_size=512,
         actor_learning_rate=3e-4,
         critic_learning_rate=1e-3,
         gamma=0.998,
@@ -35,12 +36,12 @@ class MADDPG:
         self._device = torch.device("cpu")
 
         # create the network
-        self.actor_network = Actor(input_size, output_size, hidden_size=hidden_size).to(self._device)
-        self.critic_network = Critic((input_size+output_size)*n, output_size, hidden_size=hidden_size).to(self._device)
+        self.actor_network = Actor(input_size, output_size, hidden_size=hidden_size, rnn_hidden_size=rnn_hidden_size).to(self._device)
+        self.critic_network = Critic((input_size+output_size)*n, output_size, hidden_size=hidden_size, rnn_hidden_size=rnn_hidden_size).to(self._device)
 
         # build up the target network
-        self.actor_target_network = Actor(input_size, output_size, hidden_size=hidden_size).to(self._device)
-        self.critic_target_network = Critic((input_size+output_size)*n, output_size, hidden_size=hidden_size).to(self._device)
+        self.actor_target_network = Actor(input_size, output_size, hidden_size=hidden_size, rnn_hidden_size=rnn_hidden_size).to(self._device)
+        self.critic_target_network = Critic((input_size+output_size)*n, output_size, hidden_size=hidden_size, rnn_hidden_size=rnn_hidden_size).to(self._device)
 
         # load the weights into the target networks
         self.actor_target_network.load_state_dict(self.actor_network.state_dict())

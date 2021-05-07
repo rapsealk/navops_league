@@ -29,7 +29,7 @@ parser.add_argument('--batch-size', type=int, default=1024)
 parser.add_argument('--n', type=int, default=3)
 parser.add_argument('--worker-id', type=int, default=0)
 # parser.add_argument('--time-horizon', type=int, default=2048)
-parser.add_argument('--sequence-length', type=int, default=64)
+parser.add_argument('--sequence-length', type=int, default=32)
 # parser.add_argument('--learning-rate', type=float, default=1e-3)
 # parser.add_argument('--no-logging', action='store_true', default=False)
 args = parser.parse_args()
@@ -84,6 +84,8 @@ def main():
         ]
         h_ins = [agent.reset_hidden_states(batch_size=1)[0] for agent in agents]
 
+        episode_rewards = []
+
         # TODO
         episode_id = ('0' * 10 + str(episode))[-10:]
         ref = session_db.ref(episode_id)
@@ -119,6 +121,7 @@ def main():
             ]
             print(f'[main] n_obs_: {next_observations[0].shape}')
             """
+            episode_rewards.append(np.mean(rewards))
 
             episode_buffer.push(observations, actions, next_observationss, rewards, h_ins, done)
 
@@ -178,6 +181,13 @@ def main():
                     other_agents.remove(agent)
                     _ = agent.learn(experiences, other_agents)
 
+                try:
+                    hps = [next_obs[0] for next_obs in next_observations]
+                    writer.add_scalar('performance/hp', np.mean(hps), episode)
+                    writer.add_scalar('performance/reward', np.sum(episode_rewards), episode)
+                except:
+                    pass
+
                 break
 
         total_loss = None
@@ -201,8 +211,6 @@ def main():
                 writer.add_scalar('loss/mean', np.mean(train_losses), episode)
                 writer.add_scalar('loss/actor', np.mean(actor_losses), episode)
                 writer.add_scalar('loss/critic', np.mean(critic_losses), episode)
-                hps = [next_obs[0] for next_obs in next_observations]
-                writer.add_scalar('performance/hp', np.mean(hps), episode)
             except:
                 sys.stderr.write(f'[{datetime.now().isoformat()}] [MAIN/TENSORBOARD] FAILED TO LOG LOSS!\n')
 

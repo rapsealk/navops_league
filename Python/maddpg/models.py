@@ -6,11 +6,54 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Categorical
 
+STATE_STEER_LEFT_MAX = -5
+STATE_STEER_RIGHT_MAX = -1
+STATE_ENGINE_BACKWARD_MAX = -10
+STATE_ENGINE_FORWARD_MAX = -6
+
+ACTION_ENGINE_FORWARD = 1
+ACTION_ENGINE_BACKWARD = 2
+ACTION_STEER_LEFT = 3
+ACTION_STEER_RIGHT = 4
+
 
 def onehot(items, max_range=10):
     x = np.zeros((items.shape[0], max_range))
     x[range(items.shape[0]), items] = 1
     return torch.from_numpy(x).view(-1)
+
+
+class BooleanMaskLayer(nn.Module):
+
+    def __init__(self, output_size):
+        super(BooleanMaskLayer, self).__init__()
+        self._output_size = output_size
+
+    def forward(self, x: torch.Tensor):
+        masking = -1e9  # float("-inf")
+        x = x.clone().detach().cpu().squeeze().numpy()
+        # Steer: -3 ~ -7 (-3, +4)
+        # Speed: -8 ~ -12 (+1, -2)
+        if x.ndim == 1:
+            mask = np.ones(self._output_size)
+            if x[STATE_ENGINE_BACKWARD_MAX] == 1.0:
+                mask[ACTION_ENGINE_BACKWARD] = masking
+            elif x[STATE_ENGINE_FORWARD_MAX] == 1.0:
+                mask[ACTION_ENGINE_FORWARD] = masking
+            elif x[STATE_STEER_LEFT_MAX] == 1.0:
+                mask[ACTION_STEER_LEFT] = masking
+            elif x[STATE_STEER_RIGHT_MAX] == 1.0:
+                mask[ACTION_STEER_RIGHT] = masking
+            mask = torch.tensor(mask, requires_grad=False)
+        elif x.ndim == 2:
+            mask = np.ones((x.shape[0], self._output_size))
+            mask[np.where(x[:, STATE_ENGINE_BACKWARD_MAX] == 1.0), ACTION_ENGINE_BACKWARD] = masking
+            mask[np.where(x[:, STATE_ENGINE_FORWARD_MAX] == 1.0), ACTION_ENGINE_FORWARD] = masking
+            mask[np.where(x[:, STATE_STEER_LEFT_MAX] == 1.0), ACTION_STEER_LEFT] = masking
+            mask[np.where(x[:, STATE_STEER_RIGHT_MAX] == 1.0), ACTION_STEER_RIGHT] = masking
+            mask = torch.tensor(mask, requires_grad=False).unsqueeze(1)
+
+        return mask
 
 
 class Actor(nn.Module):
@@ -27,6 +70,8 @@ class Actor(nn.Module):
         self.linear3 = nn.Linear(hidden_size, hidden_size)
         self.action_head = nn.Linear(hidden_size, output_size)
 
+        self.action_mask = BooleanMaskLayer(output_size)
+
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def forward(self, x, h_in):
@@ -34,11 +79,11 @@ class Actor(nn.Module):
         x = x.to(self.device)
         h_in = h_in.to(self.device)
         h_out = self.rnn(x, h_in)
-        x = F.relu(self.linear1(h_out))
-        x = F.relu(self.linear2(x))
-        x = F.relu(self.linear3(x))
-        x = self.action_head(x)
-        prob = F.softmax(x, dim=-1)
+        y = F.relu(self.linear1(h_out))
+        y = F.relu(self.linear2(y))
+        y = F.relu(self.linear3(y))
+        y = self.action_head(y) * self.action_mask(x)
+        prob = F.softmax(y, dim=-1)
         return prob, h_out
 
     def to(self, device):
