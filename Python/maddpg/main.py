@@ -60,7 +60,7 @@ def main():
         )
         for i in range(args.n)
     ]
-    buffer = ReplayBuffer(capacity=50000)
+    # buffer = ReplayBuffer(capacity=50000)
     episode_buffer = ReplayBuffer(capacity=50000)
     episode_wins = []
     episode_loses = []
@@ -174,22 +174,38 @@ def main():
                 discounted_rewards = np.transpose(discounted_rewards)
                 for i in range(discounted_rewards.shape[0]):
                     experiences[i][REWARD_IDX][:] = discounted_rewards[i]
-                buffer.extend(experiences)
+                # buffer.extend(experiences)
+
+                train_losses = []
+                actor_losses = []
+                critic_losses = []
 
                 for agent in agents:
                     other_agents = agents.copy()
                     other_agents.remove(agent)
-                    _ = agent.learn(experiences, other_agents)
+                    total_loss, actor_loss, critic_loss = agent.learn(experiences, other_agents)
+                    train_losses.append(total_loss)
+                    actor_losses.append(actor_loss)
+                    critic_losses.append(critic_loss)
 
+                # Tensorboard
                 try:
+                    writer.add_scalar('loss/sum', np.sum(train_losses), episode)
+                    writer.add_scalar('loss/mean', np.mean(train_losses), episode)
+                    writer.add_scalar('loss/actor', np.mean(actor_losses), episode)
+                    writer.add_scalar('loss/critic', np.mean(critic_losses), episode)
+
                     hps = [next_obs[0] for next_obs in next_observations]
                     writer.add_scalar('performance/hp', np.mean(hps), episode)
                     writer.add_scalar('performance/reward', np.sum(episode_rewards), episode)
                 except:
-                    pass
+                    sys.stderr.write(f'[{datetime.now().isoformat()}] [MAIN/TENSORBOARD] FAILED TO LOG TENSORBOARD!\n')
+
+                print(f'[{datetime.now().isoformat()}] Episode #{episode} Loss={np.sum(train_losses)}')
 
                 break
 
+        """
         total_loss = None
         if len(buffer) > args.batch_size:
             train_losses = []
@@ -215,6 +231,7 @@ def main():
                 sys.stderr.write(f'[{datetime.now().isoformat()}] [MAIN/TENSORBOARD] FAILED TO LOG LOSS!\n')
 
         print(f'[{datetime.now().isoformat()}] Episode #{episode} Loss={total_loss} (buffer={len(buffer)}/{args.batch_size})')
+        """
 
         if episode % 100 == 0:
             print(f'Episode #{episode} :: WinRate={np.mean(episode_wins)}')

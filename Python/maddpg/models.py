@@ -51,7 +51,7 @@ class BooleanMaskLayer(nn.Module):
             mask[np.where(x[:, STATE_ENGINE_FORWARD_MAX] == 1.0), ACTION_ENGINE_FORWARD] = masking
             mask[np.where(x[:, STATE_STEER_LEFT_MAX] == 1.0), ACTION_STEER_LEFT] = masking
             mask[np.where(x[:, STATE_STEER_RIGHT_MAX] == 1.0), ACTION_STEER_RIGHT] = masking
-            mask = torch.tensor(mask, requires_grad=False).unsqueeze(1)
+            mask = torch.tensor(mask, requires_grad=False)  # .unsqueeze(1)
 
         return mask
 
@@ -82,7 +82,7 @@ class Actor(nn.Module):
         y = F.relu(self.linear1(h_out))
         y = F.relu(self.linear2(y))
         y = F.relu(self.linear3(y))
-        y = self.action_head(y) * self.action_mask(x)
+        y = self.action_head(y) * self.action_mask(x).to(self.device)
         prob = F.softmax(y, dim=-1)
         return prob, h_out
 
