@@ -21,6 +21,7 @@ from memory import ReplayBuffer
 # from utils import SlackNotification, Atomic
 from rating import EloRating
 from plotboard import WinRateBoard
+from database import MongoDatabase
 
 
 def generate_id():
@@ -78,7 +79,9 @@ class Learner:
     def __init__(self):
         self.session_id = generate_id()
 
-        self._env = gym.make(environment, no_graphics=args.no_graphics, worker_id=args.worker_id)
+        build_path = os.path.join('C:\\', 'Users', 'rapsealk', 'Desktop', 'NavOpsSingleBuild')
+        print('build_path:', build_path)
+        self._env = gym.make(environment, no_graphics=args.no_graphics, worker_id=args.worker_id, override_path=build_path)
         self._buffer = ReplayBuffer(args.buffer_size)
         self._target_model = models_impl.MultiHeadLstmActorCriticModel(
             self._env.observation_space.shape[0] * sequence_length,
@@ -96,19 +99,15 @@ class Learner:
             self._env.action_space.nvec,
             hidden_size=512
         )
-        self._bot_agent = models_impl.MultiHeadAcerAgent(
-            model=self._bot_model,
-            buffer=self._buffer,
-            learning_rate=learning_rate,
-            cuda=False
-        )
-        self._bot_agent.load(os.path)
         self._id = f'{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}-{environment}'
         if not no_logging:
             self._writer = SummaryWriter(f'runs/{self._id}')
             self._plotly = WinRateBoard()
+            database = MongoDatabase()
+            self._result_db = database.ref("result")
+            self._session_db = database.ref(self.session_id)
 
-        with open(os.path.join(os.path.dirname(__file__), f'{self._id}.log', 'w')) as f:
+        with open(os.path.join(os.path.dirname(__file__), f'{self._id}.log'), 'w') as f:
             experiment_settings = {
                 "session": self.session_id,
                 "id": self._id,
@@ -166,15 +165,17 @@ class Learner:
 
             done = False
 
+            # TODO
+            episode_id = ('0' * 10 + str(episode))[-10:]
+            ref = self._session_db.ref(episode_id)
+
             while not done:
                 batch = []
                 for t in range(rollout):
                     if args.framework == 'tensorflow':
-                        # (action1_m, prob1_m), (action1_a, prob1_a) = self._target_agent.get_action(obs1)
                         (action1_m, prob1_m), (action1_a, prob1_a) = self._target_agent.get_action(observations[0])
                     elif args.framework == 'pytorch':
                         h_in = h_out.copy()
-                        # (action1_m, prob1_m), (action1_a, prob1_a), h_out[0] = self._target_agent.get_action(obs1, h_in[0])
                         (action1_m, prob1_m), (action1_a, prob1_a), h_out[0] = self._target_agent.get_action(observations[0], h_in[0])
                     """
                     action2 = np.concatenate([
@@ -203,9 +204,25 @@ class Learner:
                         # batch.append((obs1, action[0], reward[0], next_obs1, (prob1_m, prob1_a), h_in[0], h_out[0], not done))
                         batch.append((observations[0], action[0], reward[0], next_observations[0], (prob1_m, prob1_a), h_in[0], h_out[0], not done))
 
+                    # TODO: Logging
+                    position_idx = -self._env.observation_space.shape[0] + 0  # [0, 1]
+                    rotation_idx = -self._env.observation_space.shape[0] + 2  # [2, 3]
+                    value = {
+                        "hp": observations[0][-2],
+                        "position": observations[0][position_idx:position_idx+2],
+                        "rotation": observations[0][rotation_idx:rotation_idx+2],
+                        "opponent": {
+                            "hp": observations[0][-1],
+                            "position": observations[0][position_idx+4:position_idx+6],
+                            "rotation": observations[0][rotation_idx+4:rotation_idx+6]
+                        },
+                        "action": action[0],
+                        "reward": reward[0]
+                    }
+                    # print(f'[main] value: {value}')
+                    _ = ref.put(**value)
+
                     if done:
-                        # print(f'[{datetime.now().isoformat()}] Done! ({obs1[field_hitpoint]}, {obs2[field_hitpoint]}) -> {info.get("win", None)}')
-                        
                         print(f'[{datetime.now().isoformat()}] Done! ({",".join(list(map(lambda x: str(x[field_hitpoint]), observations)))}) -> {info.get("win", None)}')
 
                         result_wins.append(info.get('win', -1) == 0)
@@ -236,19 +253,29 @@ class Learner:
                                 # self._writer.add_scalar('r/draws', np.mean(result_draws), episode)
 
                                 self._target_agent.save(os.path.join(os.path.dirname(__file__), 'checkpoints', f'{environment}-acer-{episode}.ckpt'), episode=episode)
+
+                            self._buffer.push(batch)
+                            loss = None
+                            if len(self._buffer) > 5:#00:
+                                training_step += 1
+                                loss = self._target_agent.train(batch_size, on_policy=True)
+                                loss += self._target_agent.train(batch_size)
+                                print(f'[{datetime.now().isoformat()}] Loss: {loss} (batch: {len(self._buffer)})')
+                                if not no_logging:
+                                    self._writer.add_scalar('loss', loss, training_step)
+
+                            self._result_db.put(**{
+                                "session": self.session_id,
+                                "episode": episode_id,
+                                "result": info.get('win', -1),
+                                "reward": np.sum(rewards),
+                                "loss": loss
+                            })
+
                         break
 
                     # obs1, obs2 = next_obs1, next_obs2
                     observations = next_observations
-
-                self._buffer.push(batch)
-                if len(self._buffer) > 5:#00:
-                    training_step += 1
-                    loss = self._target_agent.train(batch_size, on_policy=True)
-                    loss += self._target_agent.train(batch_size)
-                    print(f'[{datetime.now().isoformat()}] Loss: {loss} (batch: {len(self._buffer)})')
-                    if not no_logging:
-                        self._writer.add_scalar('loss', loss, training_step)
 
         for thread in threads:
             thread.join()
