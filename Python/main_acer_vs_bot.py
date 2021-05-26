@@ -107,7 +107,7 @@ class Learner:
             self._result_db = database.ref("result")
             self._session_db = database.ref(self.session_id)
 
-        with open(os.path.join(os.path.dirname(__file__), f'{self._id}.log'), 'w') as f:
+        with open(os.path.join(os.path.dirname(__file__), f'{self._id}.json'), 'w') as f:
             experiment_settings = {
                 "session": self.session_id,
                 "id": self._id,
@@ -223,7 +223,7 @@ class Learner:
                     _ = ref.put(**value)
 
                     if done:
-                        print(f'[{datetime.now().isoformat()}] Done! ({",".join(list(map(lambda x: str(x[field_hitpoint]), observations)))}) -> {info.get("win", None)}')
+                        print(f'[{datetime.now().isoformat()}] Episode#{episode} Done! ({",".join(list(map(lambda x: str(x[field_hitpoint]), observations)))}) -> {info.get("win", None)}')
 
                         result_wins.append(info.get('win', -1) == 0)
                         result_loses.append(info.get('win', -1) == 1)
@@ -267,7 +267,12 @@ class Learner:
                             self._result_db.put(**{
                                 "session": self.session_id,
                                 "episode": episode_id,
-                                "result": info.get('win', -1),
+                                "result": info.get('win', -1) == 0,
+                                "performance": {
+                                    "hp": observations[0][field_hitpoint],
+                                    "fuel": observations[0][field_fuel],
+                                    "ammo": observations[0][field_ammo]
+                                },
                                 "reward": np.sum(rewards),
                                 "loss": loss
                             })
