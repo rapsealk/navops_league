@@ -5,9 +5,10 @@ import pathlib
 from time import time
 from datetime import datetime
 
+import seaborn
+import matplotlib.pyplot as plt
 import numpy as np
-
-import plotly.graph_objects as go
+# import pika
 
 
 class WinRateBoard:
@@ -20,12 +21,19 @@ class WinRateBoard:
         if not os.path.exists(self._dirpath):
             pathlib.Path(os.path.abspath(self._dirpath)).mkdir(parents=True, exist_ok=True)
 
-    def plot(self, x, y, title=['Win', 'Draw', 'Lose'], colors=['#00AB84', '#F6D258', '#F2552C']):
+    def plot(
+        self,
+        x,
+        y,
+        title=['Win', 'Draw', 'Lose'],
+        title_texts=['Episodes', 'Winning Rate (100 Episodes)'],
+        colors=['#00AB84', '#F6D258', '#F2552C']
+    ):
         fig = go.Figure(data=[
             go.Bar(name=name, x=x, y=data, marker={"color": color}) for name, data, color in zip(title, y, colors)
         ])
-        fig.update_xaxes(title_text='Episodes')
-        fig.update_yaxes(title_text='Winning Rate (100 Episodes)')
+        fig.update_xaxes(title_text=title_texts[0])
+        fig.update_yaxes(title_text=title_texts[1])
         fig.update_layout(barmode='stack')
         fig.write_image(os.path.join(self.dirpath, f'{int(time() * 1000)}.png'))
 
