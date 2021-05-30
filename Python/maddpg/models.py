@@ -18,6 +18,7 @@ ACTION_STEER_RIGHT = 4
 
 
 def onehot(items, max_range=10):
+    # print('onehot.items.shape:', items.shape, 'max_range:', max_range)
     x = np.zeros((items.shape[0], max_range))
     x[range(items.shape[0]), items] = 1
     return torch.from_numpy(x).view(-1)
@@ -58,19 +59,35 @@ class BooleanMaskLayer(nn.Module):
 
 class Actor(nn.Module):
 
-    def __init__(self, input_size, output_size, hidden_size=64, rnn_hidden_size=64, batch_size=8):
+    def __init__(self, input_size, action_sizes, hidden_size=64, rnn_hidden_size=64, batch_size=8):
         super(Actor, self).__init__()
         self._hidden_size = hidden_size
         self._rnn_hidden_size = rnn_hidden_size
         self._batch_size = batch_size
 
+        movement_action_size, attack_action_size = action_sizes
+
         self.rnn = nn.GRUCell(input_size, rnn_hidden_size)
         self.linear1 = nn.Linear(rnn_hidden_size, hidden_size)
+        self.dropout1 = nn.Dropout(p=0.2)
         self.linear2 = nn.Linear(hidden_size, hidden_size)
-        self.linear3 = nn.Linear(hidden_size, hidden_size)
-        self.action_head = nn.Linear(hidden_size, output_size)
+        self.dropout2 = nn.Dropout(p=0.2)
 
-        self.action_mask = BooleanMaskLayer(output_size)
+        self.movement_linear1 = nn.Linear(hidden_size, hidden_size)
+        self.movement_dropout1 = nn.Dropout(p=0.2)
+        self.movement_linear2 = nn.Linear(hidden_size, hidden_size)
+        self.movement_dropout2 = nn.Dropout(p=0.2)
+        self.movement_linear3 = nn.Linear(hidden_size, hidden_size)
+        self.movement_linear4 = nn.Linear(hidden_size, movement_action_size)
+
+        self.attack_linear1 = nn.Linear(hidden_size, hidden_size)
+        self.attack_dropout1 = nn.Dropout(p=0.2)
+        self.attack_linear2 = nn.Linear(hidden_size, hidden_size)
+        self.attack_dropout2 = nn.Dropout(p=0.2)
+        self.attack_linear3 = nn.Linear(hidden_size, hidden_size)
+        self.attack_linear4 = nn.Linear(hidden_size, attack_action_size)
+
+        self.action_mask = BooleanMaskLayer(movement_action_size)
 
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -80,11 +97,27 @@ class Actor(nn.Module):
         h_in = h_in.to(self.device)
         h_out = self.rnn(x, h_in)
         y = F.relu(self.linear1(h_out))
+        y = self.dropout1(y)
         y = F.relu(self.linear2(y))
-        y = F.relu(self.linear3(y))
-        y = self.action_head(y) * self.action_mask(x).to(self.device)
-        prob = F.softmax(y, dim=-1)
-        return prob, h_out
+        y = self.dropout2(y)
+
+        y_m = F.relu(self.movement_linear1(y))
+        y_m = self.movement_dropout1(y_m)
+        y_m = F.relu(self.movement_linear2(y_m))
+        y_m = self.movement_dropout2(y_m)
+        y_m = F.relu(self.movement_linear3(y_m))
+        y_m = self.movement_linear4(y_m) * self.action_mask(x).to(self.device)
+        prob_m = F.softmax(y_m, dim=-1)
+
+        y_a = F.relu(self.attack_linear1(y))
+        y_a = self.attack_dropout1(y_a)
+        y_a = F.relu(self.attack_linear2(y_a))
+        y_a = self.attack_dropout2(y_a)
+        y_a = F.relu(self.attack_linear3(y_a))
+        y_a = self.attack_linear4(y_a)
+        prob_a = F.softmax(y_a, dim=-1)
+
+        return prob_m, prob_a, h_out
 
     def to(self, device):
         self._device = device
@@ -113,42 +146,76 @@ class Actor(nn.Module):
 
 class Critic(nn.Module):
 
-    def __init__(self, input_size, action_size, hidden_size=64, rnn_hidden_size=64, batch_size=8):
+    def __init__(self, input_size, action_sizes, hidden_size=64, rnn_hidden_size=64, batch_size=8):
         super(Critic, self).__init__()
-        self._action_size = action_size
+        self._action_sizes = action_sizes
         self._hidden_size = hidden_size
         self._rnn_hidden_size = rnn_hidden_size
         self._batch_size = batch_size
 
+        movement_action_size, attack_action_size = action_sizes
+
         self.rnn = nn.GRUCell(input_size, rnn_hidden_size)
         self.linear1 = nn.Linear(rnn_hidden_size, hidden_size)
+        self.dropout1 = nn.Dropout(p=0.2)
         self.linear2 = nn.Linear(hidden_size, hidden_size)
-        self.linear3 = nn.Linear(hidden_size, hidden_size)
-        self.q_value_head = nn.Linear(hidden_size, 1)
+        self.dropout2 = nn.Dropout(p=0.2)
+
+        self.movement_linear1 = nn.Linear(hidden_size, hidden_size)
+        self.movement_dropout1 = nn.Dropout(p=0.2)
+        self.movement_linear2 = nn.Linear(hidden_size, hidden_size)
+        self.movement_dropout2 = nn.Dropout(p=0.2)
+        self.movement_linear3 = nn.Linear(hidden_size, hidden_size)
+        self.q_movement = nn.Linear(hidden_size, 1)
+
+        self.attack_linear1 = nn.Linear(hidden_size, hidden_size)
+        self.attack_dropout1 = nn.Dropout(p=0.2)
+        self.attack_linear2 = nn.Linear(hidden_size, hidden_size)
+        self.attack_dropout2 = nn.Dropout(p=0.2)
+        self.attack_linear3 = nn.Linear(hidden_size, hidden_size)
+        self.q_attack = nn.Linear(hidden_size, 1)
 
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    def forward(self, state, action, h_in):
+    def forward(self, state, actions, h_in):
         # state = torch.cat(state, dim=1)
         state = state.view(state.shape[0], -1).to(self.device)
         # for i in range(len(action)):
         #     action[i] /= self.max_action
         # action = torch.cat(action, dim=1)
 
-        action = torch.transpose(action.byte(), dim0=1, dim1=0)
+        move_action = torch.transpose(actions[:, 0].squeeze().byte(), dim0=-1, dim1=0)
+        attack_action = torch.transpose(actions[:, 1].squeeze().byte(), dim0=-1, dim1=0)
         oh_action = []
-        for a in action:
-            oh_action.append(onehot(a.cpu().numpy(), max_range=self.action_size))
+        for mov_a, atk_a in zip(move_action, attack_action):
+            oh_mov_a = onehot(mov_a.cpu().numpy(), max_range=self.action_sizes[0])
+            oh_atk_a = onehot(atk_a.cpu().numpy(), max_range=self.action_sizes[1])
+            oh_action.append(torch.cat([oh_mov_a, oh_atk_a]))
         action = torch.stack(oh_action).to(self.device)
 
         x = torch.cat([state, action], dim=-1).float().to(self.device)
         h_in = h_in.to(self.device)
         h_out = self.rnn(x, h_in)
         x = F.relu(self.linear1(h_out))
+        x = self.dropout1(x)
         x = F.relu(self.linear2(x))
-        x = F.relu(self.linear3(x))
-        q_value = self.q_value_head(x)
-        return q_value, h_out
+        x = self.dropout2(x)
+
+        x_m = F.relu(self.movement_linear1(x))
+        x_m = self.movement_dropout1(x_m)
+        x_m = F.relu(self.movement_linear2(x_m))
+        x_m = self.movement_dropout2(x_m)
+        x_m = F.relu(self.movement_linear3(x_m))
+        q_movement = torch.tanh(self.q_movement(x_m))
+
+        x_a = F.relu(self.attack_linear1(x))
+        x_a = self.attack_dropout1(x_a)
+        x_a = F.relu(self.attack_linear2(x_a))
+        x_a = self.attack_dropout2(x_a)
+        x_a = F.relu(self.attack_linear3(x_a))
+        q_attack = torch.tanh(self.q_attack(x_a))
+
+        return q_movement, q_attack, h_out
 
     def to(self, device):
         self._device = device
@@ -171,8 +238,8 @@ class Critic(nn.Module):
         return self._batch_size
 
     @property
-    def action_size(self):
-        return self._action_size
+    def action_sizes(self):
+        return self._action_sizes
 
     @property
     def device(self):

@@ -8,10 +8,25 @@ from algorithms import MADDPG
 
 
 class Agent:
-    def __init__(self, input_size, output_size, agent_id, n=3):
-        self._output_size = output_size
+    def __init__(
+        self,
+        input_size,
+        action_sizes,
+        agent_id,
+        n=3,
+        actor_learning_rate=3e-4,
+        critic_learning_rate=1e-3
+    ):
+        self._action_sizes = action_sizes
         self.agent_id = agent_id
-        self.policy = MADDPG(input_size, output_size, agent_id=agent_id, n=n)
+        self.policy = MADDPG(
+            input_size,
+            action_sizes,
+            agent_id=agent_id,
+            n=n,
+            actor_learning_rate=actor_learning_rate,
+            critic_learning_rate=critic_learning_rate
+        )
 
     def select_action(self, o, h_in, noise_rate=0.0, epsilon=0.01):
         #if np.random.uniform() < epsilon:
@@ -19,15 +34,17 @@ class Agent:
         #    u = np.random.randint(0, self.output_size)
         #else:
         inputs = torch.tensor(o, dtype=torch.float32).unsqueeze(0)
-        prob, h_out = self.policy.actor_network(inputs, h_in)   # .squeeze(0)
-        action = Categorical(prob).sample()
+        prob_m, prob_a, h_out = self.policy.actor_network(inputs, h_in)   # .squeeze(0)
+        action_m = Categorical(prob_m).sample()
+        action_a = Categorical(prob_a).sample()
         # print('{} : {}'.format(self.name, pi))
-        action = action.cpu().detach().item()   # .numpy()
+        action_m = action_m.cpu().detach().item()   # .numpy()
+        action_a = action_a.cpu().detach().item()
         # noise = noise_rate * self.args.high_action * np.random.randn(*u.shape)  # gaussian noise
         # u += noise
         # u = np.clip(u, -self.args.high_action, self.args.high_action)
         # return u.copy()
-        return action, h_out
+        return action_m, action_a, h_out
 
     def learn(self, transitions, other_agents):
         return self.policy.train(transitions, other_agents)
@@ -39,8 +56,8 @@ class Agent:
         self.policy.save(path)
 
     @property
-    def output_size(self):
-        return self._output_size
+    def action_sizes(self):
+        return self._action_sizes
 
 
 def main():

@@ -18,7 +18,7 @@ class MADDPG:
     def __init__(
         self,
         input_size,
-        output_size,
+        action_sizes,
         hidden_size=512,
         rnn_hidden_size=512,
         actor_learning_rate=3e-4,
@@ -36,12 +36,12 @@ class MADDPG:
         self._device = torch.device("cpu")
 
         # create the network
-        self.actor_network = Actor(input_size, output_size, hidden_size=hidden_size, rnn_hidden_size=rnn_hidden_size).to(self._device)
-        self.critic_network = Critic((input_size+output_size)*n, output_size, hidden_size=hidden_size, rnn_hidden_size=rnn_hidden_size).to(self._device)
+        self.actor_network = Actor(input_size, action_sizes, hidden_size=hidden_size, rnn_hidden_size=rnn_hidden_size).to(self._device)
+        self.critic_network = Critic((input_size+np.sum(action_sizes))*n, action_sizes, hidden_size=hidden_size, rnn_hidden_size=rnn_hidden_size).to(self._device)
 
         # build up the target network
-        self.actor_target_network = Actor(input_size, output_size, hidden_size=hidden_size, rnn_hidden_size=rnn_hidden_size).to(self._device)
-        self.critic_target_network = Critic((input_size+output_size)*n, output_size, hidden_size=hidden_size, rnn_hidden_size=rnn_hidden_size).to(self._device)
+        self.actor_target_network = Actor(input_size, action_sizes, hidden_size=hidden_size, rnn_hidden_size=rnn_hidden_size).to(self._device)
+        self.critic_target_network = Critic((input_size+np.sum(action_sizes))*n, action_sizes, hidden_size=hidden_size, rnn_hidden_size=rnn_hidden_size).to(self._device)
 
         # load the weights into the target networks
         self.actor_target_network.load_state_dict(self.actor_network.state_dict())
@@ -112,6 +112,10 @@ class MADDPG:
         # h_ins = convert_to_tensor(device, h_ins)
         dones = convert_to_tensor(device, dones)
 
+        actions_m = actions[:, :, 0]   # .squeeze()
+        actions_a = actions[:, :, 1]   # .squeeze()
+        print(f'maddpg.train(actions={actions.shape}, actions_m={actions_m.shape}, actions_a={actions_a.shape})')
+
         r = rewards[:, self.agent_id]
 
         # calculate the target Q value function
@@ -120,45 +124,50 @@ class MADDPG:
             index = 0
             for agent_id in range(len(other_agents)+1):
                 if agent_id == self.agent_id:
-                    _, h_out_ = self.actor_target_network(states[:, agent_id], h_ins[agent_id])
+                    _, _, h_out_ = self.actor_target_network(states[:, agent_id], h_ins[agent_id])
                     next_h_ins = torch.cat((h_ins[agent_id][1:], h_out_[-1:]))
-                    action_, _ = self.actor_target_network(next_states[:, agent_id], next_h_ins)
-                    action_ = torch.argmax(action_, dim=-1)
-                    u_next.append(action_.cpu().numpy())
+                    action_m, action_a, _ = self.actor_target_network(next_states[:, agent_id], next_h_ins)
+                    action_m = torch.argmax(action_m, dim=-1)
+                    action_a = torch.argmax(action_a, dim=-1)
+                    u_next.append([action_m.cpu().numpy(), action_a.cpu().numpy()])
                 else:
                     # FIXME: other h_in
-                    _, h_out_ = other_agents[index].policy.actor_target_network(states[:, agent_id], h_ins[agent_id])
+                    _, _, h_out_ = other_agents[index].policy.actor_target_network(states[:, agent_id], h_ins[agent_id])
                     next_h_ins_ = torch.cat((h_ins[agent_id][1:], h_out_[-1:]))
-                    action_, _ = other_agents[index].policy.actor_target_network(next_states[:, agent_id], next_h_ins_)
-                    action_ = torch.argmax(action_, dim=-1)
-                    u_next.append(action_.cpu().numpy())
+                    action_m, action_a, _ = other_agents[index].policy.actor_target_network(next_states[:, agent_id], next_h_ins_)
+                    action_m = torch.argmax(action_m, dim=-1)
+                    action_a = torch.argmax(action_a, dim=-1)
+                    u_next.append([action_m.cpu().numpy(), action_a.cpu().numpy()])
                     index += 1
             u_next = np.array(u_next, dtype=np.uint8)
             u_next = torch.from_numpy(u_next).to(device)
-            q_next, _ = self.critic_target_network(next_states, u_next, next_h_ins)
-            q_next = q_next.detach()
+            q_next_m, q_next_a, _ = self.critic_target_network(next_states, u_next, next_h_ins)
+            q_next_m = q_next_m.detach()
+            q_next_a = q_next_a.detach()
 
-            target_q = (r.unsqueeze(1) + self.gamma * q_next).detach()
+            target_q_m = (r.unsqueeze(1) + self.gamma * q_next_m).detach()
+            target_q_a = (r.unsqueeze(1) + self.gamma * q_next_a).detach()
 
         # the q loss
         critic_h_in = self.critic_network.reset_hidden_state(batch_size=batch_size)
-        q_value, _ = self.critic_network(states, torch.transpose(actions, dim0=0, dim1=1), critic_h_in)
-        critic_loss = (target_q - q_value).pow(2).mean()
+        # q_m, q_a, _ = self.critic_network(states, torch.transpose(actions, dim0=-1, dim1=1), critic_h_in)
+        q_m, q_a, _ = self.critic_network(states, actions.permute(1, 2, 0), critic_h_in)
+        # q_m, q_a, _ = self.critic_network(states, torch.transpose(torch.transpose(actions, dim0=0, dim1=-1), dim0=0, dim1=1), critic_h_in)
+        # critic_loss = (target_q - q_value).pow(2).mean()
+        critic_loss = (target_q_m - q_m).pow(2).mean()
+        critic_loss += (target_q_a - q_a).pow(2).mean()
 
         # the actor loss
-        probs, _ = self.actor_network(states[:, self.agent_id], h_ins[self.agent_id])
-        asmpl = Categorical(probs).sample()
-        actions = torch.transpose(actions, dim0=0, dim1=1)
-        actions[self.agent_id] = asmpl
-        # actions[: self.agent_id] = asmpl
-        # actions[self.agent_id] = Categorical(probs).sample()
-        #actor_loss = -self.critic_network(states, actions, critic_h_in).mean()
-        actor_loss, _ = self.critic_network(states, actions, critic_h_in)
-        actor_loss = -actor_loss.mean()
-        #actor_loss = -self.critic_network(states, torch.transpose(actions, dim0=0, dim1=1)).mean()
-        # if self.agent_id == 0:
-        #     print('critic_loss is {}, actor_loss is {}'.format(critic_loss, actor_loss))
-        # update the network
+        probs_m, probs_a, _ = self.actor_network(states[:, self.agent_id], h_ins[self.agent_id])
+        action_m = Categorical(probs_m).sample()
+        action_a = Categorical(probs_a).sample()
+
+        actions_ = actions.permute(1, 2, 0)
+        actions_[self.agent_id, 0] = action_m
+        actions_[self.agent_id, 1] = action_a
+        actor_loss_m, actor_loss_a, _ = self.critic_network(states, actions_, critic_h_in)
+        actor_loss = -(actor_loss_m + actor_loss_a).mean()
+
         actor_loss_ = actor_loss.cpu().item()
         critic_loss_ = critic_loss.cpu().item()
         total_loss = actor_loss_ + critic_loss_
