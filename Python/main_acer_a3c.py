@@ -18,8 +18,8 @@ from torch.utils.tensorboard import SummaryWriter
 
 from memory import ReplayBuffer
 from utils import generate_id   # SlackNotification, Atomic
-from rating import EloRating
-from plotboard import WinRateBoard
+from utils.board import ReportingBoard
+from database import MongoDatabase
 
 
 with open(os.path.join(os.path.dirname(__file__), 'config.json')) as f:
@@ -62,9 +62,6 @@ sequence_length = args.seq_len
 learning_rate = args.learning_rate
 no_logging = args.no_logging
 
-field_hitpoint = -2
-field_ammo = -14
-field_fuel = -13
 workers = 0     # cpu_count()
 
 
@@ -73,7 +70,9 @@ class Learner:
     def __init__(self):
         self.session_id = generate_id()
 
-        self._env = gym.make(environment, no_graphics=args.no_graphics, worker_id=args.worker_id)
+        build_path = os.path.join('C:\\', 'Users', 'rapsealk', 'Desktop', 'NavOpsGrpc', 'NavOps.exe')
+        print('build:', build_path)
+        self._env = gym.make(environment, build_path=build_path)
         self._buffer = ReplayBuffer(args.buffer_size)
         self._target_model = models_impl.MultiHeadLstmActorCriticModel(
             self._env.observation_space.shape[0] * sequence_length,
@@ -89,7 +88,10 @@ class Learner:
         self._id = f'{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}-{environment}'
         if not no_logging:
             self._writer = SummaryWriter(f'runs/{self._id}')
-            self._plotly = WinRateBoard()
+            self._plotly = ReportingBoard()
+            database = MongoDatabase()
+            self._result_db = database.ref("result")
+            self._session_db = database.ref(self.session_id)
 
         if not args.no_logging:
             with open(os.path.join(os.path.dirname(__file__), f'{self._id}.log'), 'w') as f:
@@ -126,7 +128,6 @@ class Learner:
         result_draws = []
         result_loses = []
 
-        ratings = (1200, 1200)
         training_step = 0
         for episode in count(1):
             rewards = []
@@ -150,6 +151,9 @@ class Learner:
 
             done = False
 
+            episode_id = ('0' * 10 + str(episode))[-10:]
+            ref = self._session_db.ref(episode_id)
+
             while not done:
                 batch = []
                 for t in range(rollout):
@@ -171,39 +175,64 @@ class Learner:
 
                     next_obs, reward, done, info = self._env.step(action)
 
-                    rewards.append(reward[0])
+                    rewards.append(reward)
+                    # print(f'[main] obs: {observations[0]}\nreward: {reward}')
 
                     next_observations = [
                         np.concatenate((observation[observation_shape:], next_observation))
                         for observation, next_observation in zip(observations, next_obs)
                     ]
+                    # print(f'[main] obs.shape: {observations.shape}, next_obs.shape: {next_observations.shape}')
                     # next_obs1 = np.concatenate((obs1[observation_shape:], next_obs[0]))
                     # next_obs2 = np.concatenate((obs2[observation_shape:], next_obs[1]))
 
                     if args.framework == 'tensorflow':
-                        # batch.append((obs1, action[0], reward[0], next_obs1, (prob1_m, prob1_a), not done))
-                        batch.append((observations[0], action[0], reward[0], next_observations[0], (prob1_m, prob1_a), not done))
+                        batch.append((observations[0], action, reward, next_observations[0], (prob1_m, prob1_a), not done))
                     elif args.framework == 'pytorch':
-                        # batch.append((obs1, action[0], reward[0], next_obs1, (prob1_m, prob1_a), h_in[0], h_out[0], not done))
-                        batch.append((observations[0], action[0], reward[0], next_observations[0], (prob1_m, prob1_a), h_in[0], h_out[0], not done))
+                        batch.append((observations[0], action, reward, next_observations[0], (prob1_m, prob1_a), h_in[0], h_out[0], not done))
+
+                    value = {
+                        "hp": info['obs'].fleets[0].hp,
+                        "position": [
+                            info['obs'].fleets[0].position.x,
+                            info['obs'].fleets[0].position.y
+                        ],
+                        "rotation": [
+                            info['obs'].fleets[0].rotation.cos,
+                            info['obs'].fleets[0].rotation.sin
+                        ],
+                        "opponent": {
+                            "hp": info['obs'].fleets[1].hp,
+                            "position": [
+                                info['obs'].fleets[1].position.x,
+                                info['obs'].fleets[1].position.y
+                            ],
+                            "rotation": [
+                                info['obs'].fleets[1].rotation.cos,
+                                info['obs'].fleets[1].rotation.sin
+                            ]
+                        },
+                        "action": action,
+                        "reward": reward
+                    }
+                    # print(f'[main] value: {value}')
+                    _ = ref.put(**value)
 
                     if done:
-                        # print(f'[{datetime.now().isoformat()}] Done! ({obs1[field_hitpoint]}, {obs2[field_hitpoint]}) -> {info.get("win", None)}')
-                        print(f'[{datetime.now().isoformat()}] Done! ({",".join(list(map(lambda x: str(x[field_hitpoint]), observations)))}) -> {info.get("win", None)}')
+                        print(f'[{datetime.now().isoformat()}] Episode #{episode} Done! -> {info.get("win", False)}')
 
-                        result_wins.append(info.get('win', -1) == 0)
-                        result_loses.append(info.get('win', -1) == 1)
-                        result_draws.append(info.get('win', -1) == -1)
+                        result_wins.append(info.get('win', False) is True)
+                        result_loses.append(info.get('win', False) is False)
+                        # result_draws.append(info.get('win', False) is False)
+                        result_draws.append(False)
 
-                        ratings = EloRating.calc(ratings[0], ratings[1], info.get('win', -1) == 0)
                         if not no_logging:
                             self._writer.add_scalar('r/rewards', np.sum(rewards), episode)
-                            self._writer.add_scalar('r/rating', ratings[0], episode)
-                            self._writer.add_scalar('logging/hitpoint', observations[0][field_hitpoint], episode)
+                            self._writer.add_scalar('logging/hitpoint', info['obs'].fleets[0].hp, episode)
                             # self._writer.add_scalar('logging/hitpoint_gap', obs1[field_hitpoint] - obs2[field_hitpoint], episode)
                             # self._writer.add_scalar('logging/damage', 1 - obs2[field_hitpoint], episode)
-                            self._writer.add_scalar('logging/ammo_usage', 1 - observations[0][field_ammo], episode)
-                            self._writer.add_scalar('logging/fuel_usage', 1 - observations[0][field_fuel], episode)
+                            self._writer.add_scalar('logging/ammo_usage', 1 - info['obs'].ammo, episode)
+                            self._writer.add_scalar('logging/fuel_usage', 1 - info['obs'].fleets[0].fuel, episode)
                             if episode % 100 == 0:
                                 result_wins_dq.append(np.sum(result_wins))
                                 result_draws_dq.append(np.sum(result_draws))
@@ -212,9 +241,13 @@ class Learner:
                                 result_wins = []
                                 result_draws = []
                                 result_loses = []
-                                data = [tuple(result_wins_dq), tuple(result_draws_dq), tuple(result_loses_dq)]
-                                self._plotly.plot(tuple(result_episodes_dq), data)
-                                self._plotly.plot_scatter(data)
+                                # data = [tuple(result_wins_dq), tuple(result_draws_dq), tuple(result_loses_dq)]
+                                #self._plotly.plot(tuple(result_episodes_dq), data)
+                                #self._plotly.plot_scatter(data)
+                                wins = tuple(result_wins_dq)
+                                draws = tuple(result_draws_dq)
+                                loses = tuple(result_loses_dq)
+                                self._plotly.plot_winning_rate(wins, draws, loses)
                                 # self._writer.add_scalar('r/wins', np.mean(result_wins), episode)
                                 # self._writer.add_scalar('r/loses', np.mean(result_loses), episode)
                                 # self._writer.add_scalar('r/draws', np.mean(result_draws), episode)
@@ -233,6 +266,20 @@ class Learner:
                     print(f'[{datetime.now().isoformat()}] Loss: {loss} (batch: {len(self._buffer)})')
                     if not no_logging:
                         self._writer.add_scalar('loss', loss, training_step)
+
+                    if done and not no_logging:
+                        self._result_db.put(**{
+                            "session": self.session_id,
+                            "episode": episode_id,
+                            "result": info.get('win', False),
+                            "performance": {
+                                "hp": info['obs'].fleets[0].hp,
+                                "fuel": info['obs'].fleets[0].fuel,
+                                "ammo": info['obs'].ammo
+                            },
+                            "reward": np.sum(rewards),
+                            "loss": loss
+                        })
 
         for thread in threads:
             thread.join()
@@ -290,12 +337,12 @@ class Worker(Thread):
 
                     next_obs, reward, done, info = self._env.step(action)
 
-                    rewards.append(reward[0])
+                    rewards.append(reward)
 
                     next_obs1 = np.concatenate((obs1[observation_shape:], next_obs[0]))
                     next_obs2 = np.concatenate((obs2[observation_shape:], next_obs[1]))
 
-                    batch.append((obs1, action[0], reward[0], next_obs1, prob1, h_in[0], h_out[0], not done))
+                    batch.append((obs1, action[0], reward, next_obs1, prob1, h_in[0], h_out[0], not done))
 
                     if done:
                         break
