@@ -2,11 +2,13 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
+import json
 
 import pika
 
 
 def callback(channel, method, properties, body):
+    body = json.loads(body)
     print(f'[x] Received: {body}')
 
 

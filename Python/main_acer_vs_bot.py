@@ -20,8 +20,8 @@ from torch.utils.tensorboard import SummaryWriter
 from memory import ReplayBuffer
 # from utils import SlackNotification, Atomic
 from rating import EloRating
-from plotboard import WinRateBoard
-from database import MongoDatabase
+from utils.board import ReportingBoard
+from utils.database import MongoDatabase
 
 
 def generate_id():
@@ -102,7 +102,7 @@ class Learner:
         self._id = f'{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}-{environment}'
         if not no_logging:
             self._writer = SummaryWriter(f'runs/{self._id}')
-            self._plotly = WinRateBoard()
+            self._board = ReportingBoard()
             database = MongoDatabase()
             self._result_db = database.ref("result")
             self._session_db = database.ref(self.session_id)
@@ -247,7 +247,7 @@ class Learner:
                                 result_draws = []
                                 result_loses = []
                                 data = [tuple(result_wins_dq), tuple(result_draws_dq), tuple(result_loses_dq)]
-                                self._plotly.plot(tuple(result_episodes_dq), data)
+                                self._board.plot_winning_rate(*data)
                                 # self._writer.add_scalar('r/wins', np.mean(result_wins), episode)
                                 # self._writer.add_scalar('r/loses', np.mean(result_loses), episode)
                                 # self._writer.add_scalar('r/draws', np.mean(result_draws), episode)

@@ -8,9 +8,9 @@ from copy import copy
 import numpy as np
 import pymongo
 
-from utils import generate_id
+from __init__ import generate_id
 
-with open(os.path.join(os.path.dirname(__file__), 'config.json'), 'r') as f:
+with open(os.path.join(os.path.dirname(__file__), '..', 'config.json'), 'r') as f:
     config = ''.join(f.readlines())
     config = json.loads(config)
     MONGO_USERNAME = config["mongo"]["username"]
@@ -43,6 +43,9 @@ class MongoDatabase:
         value = self._encode(**value)
         result = self._collection.insert_one(value)
         return result.inserted_id
+
+    def put_dict(self, dict_):
+        return self.put(**dict_)
 
     def get(self, key=None):
         result = self._collection.find({})
