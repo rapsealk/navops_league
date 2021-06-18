@@ -8,7 +8,7 @@ from copy import copy
 import numpy as np
 import pymongo
 
-from __init__ import generate_id
+from .common import generate_id
 
 with open(os.path.join(os.path.dirname(__file__), '..', 'config.json'), 'r') as f:
     config = ''.join(f.readlines())

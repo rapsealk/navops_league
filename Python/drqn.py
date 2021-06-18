@@ -171,6 +171,16 @@ def train(q_net=None, target_q_net=None, episode_memory=None,
     return loss.item()
 
 
+def hard_update(model, target_model):
+    for param, target_param in zip(model.parameters(), target_model.parameters()):
+        target_param.data.copy_(param.data)
+
+
+def soft_update(model, target_model, tau=args.tau):
+    for param, target_param in zip(model.parameters(), target_model.parameters()):
+        target_param.data.copy_(target_param.data * tau + param.data * (1 - tau))
+
+
 def main():
     env = gym.make('MountainCar-v0')
 
@@ -228,6 +238,7 @@ def main():
                 # print(f'Loss: {loss}')
                 if (train_step := train_step + 1) % 20 == 0:
                     target_model.load_state_dict(model.state_dict())
+                # hard_update(model, target_model)
 
             if done:
                 t_ = time.time() - time_

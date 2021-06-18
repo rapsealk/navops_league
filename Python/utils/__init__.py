@@ -5,15 +5,12 @@ import socket
 import traceback
 from itertools import count
 from threading import Lock
-from uuid import uuid4
 
 import numpy as np
 from slack import WebClient
 from slack.errors import SlackApiError
 
-
-def generate_id(k=16):
-    return str(uuid4()).replace('-', '')[:k]
+from .common import generate_id
 
 
 class Atomic:
