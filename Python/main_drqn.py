@@ -177,7 +177,7 @@ class Learner:
                                              batch_size=args.batch_size)
                     if not args.no_logging:
                         self._writer.add_scalar('loss', loss, train_step)
-                        self._loss_db.put({
+                        self._loss_db.put(**{
                             "step": train_step,
                             "loss": loss
                         })
