@@ -231,7 +231,10 @@ class Learner:
                             self._plotly.plot_winning_rate(wins, draws, loses)
                             print(f'[{datetime.now().isoformat()}] Rate: {np.sum(wins)}% ({episode} Episodes)')
 
-                            self._target_agent.save(os.path.join(os.path.dirname(__file__), 'checkpoints', f'{args.env}-drqn-{episode}.ckpt'), episode=episode)
+                            self._agent.save(
+                                os.path.join(os.path.dirname(__file__), 'checkpoints', f'{args.env}-drqn-{episode}.ckpt'),
+                                episode=episode,
+                                epsilon=self._epsilon)
                     break
 
         self._env.close()
