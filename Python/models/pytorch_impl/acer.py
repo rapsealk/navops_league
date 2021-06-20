@@ -34,13 +34,14 @@ def convert_to_tensor(device, *args):
 
 class MultiHeadLstmActorCriticModel(nn.Module):
 
-    def __init__(self, input_size, output_sizes, hidden_size=1024):
+    def __init__(self, input_size, output_sizes, hidden_size=1024, rnn_num_layers=4):
         super(MultiHeadLstmActorCriticModel, self).__init__()
         self._rnn_input_size = 512
         self._rnn_output_size = 256
+        self._rnn_num_layers = rnn_num_layers
 
         self.encoder = nn.Linear(input_size, self._rnn_input_size)
-        self.rnn = nn.LSTM(self._rnn_input_size, self._rnn_output_size, num_layers=4)
+        self.rnn = nn.LSTM(self._rnn_input_size, self._rnn_output_size, num_layers=rnn_num_layers)
         self.flatten = nn.Flatten()
         self.linear = nn.Linear(self._rnn_output_size, hidden_size)
         self.linear2 = nn.Linear(hidden_size, hidden_size)
@@ -133,9 +134,18 @@ class MultiHeadLstmActorCriticModel(nn.Module):
 
         return value_movement, value_attack
 
+    def reset_hidden_state(self, batch_size=1):
+        hidden_states = (torch.zeros(self.rnn_num_layers, batch_size, self.rnn_hidden_size),
+                         torch.zeros(self.rnn_num_layers, batch_size, self.rnn_hidden_size))
+        return tuple(map(lambda x: x.to(self.device), hidden_states))
+
     @property
     def rnn_output_size(self):
         return self._rnn_output_size
+
+    @property
+    def rnn_num_layers(self):
+        return self._rnn_num_layers
 
     def to(self, device):
         self.mask = self.mask.to(device)
@@ -353,6 +363,9 @@ class MultiHeadAcerAgent:
         self._optim.step()
 
         return loss_value
+
+    def reset_hidden_state(self, batch_size=1):
+        return self._model.reset_hidden_state(batch_size=batch_size)
 
     def state_dict(self):
         return self._model.state_dict()
