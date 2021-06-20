@@ -131,23 +131,10 @@ class Learner:
         training_step = 0
         for episode in count(1):
             rewards = []
-            new_observations = self._env.reset()
-            # new_obs1, new_obs2 = self._env.reset()
-
-            observations = [
-                np.concatenate([new_observation] * sequence_length)
-                for new_observation in new_observations
-            ]
-            # obs1 = np.concatenate([new_obs1] * sequence_length)
-            # obs2 = np.concatenate([new_obs2] * sequence_length)
+            observations = self._env.reset()
 
             if args.framework == 'pytorch':
-                rnn_output_size = self._target_agent.rnn_output_size
-                rnn_num_layers = 4
-                h_out = [(torch.zeros([rnn_num_layers, 1, rnn_output_size], dtype=torch.float),
-                          torch.zeros([rnn_num_layers, 1, rnn_output_size], dtype=torch.float)),
-                         (torch.zeros([rnn_num_layers, 1, rnn_output_size], dtype=torch.float),
-                          torch.zeros([rnn_num_layers, 1, rnn_output_size], dtype=torch.float))]
+                h_out = self._target_agent.reset_hidden_state(batch_size=1)
 
             done = False
 
@@ -158,33 +145,15 @@ class Learner:
                 batch = []
                 for t in range(rollout):
                     if args.framework == 'tensorflow':
-                        # (action1_m, prob1_m), (action1_a, prob1_a) = self._target_agent.get_action(obs1)
                         (action1_m, prob1_m), (action1_a, prob1_a) = self._target_agent.get_action(observations[0])
                     elif args.framework == 'pytorch':
                         h_in = h_out.copy()
-                        # (action1_m, prob1_m), (action1_a, prob1_a), h_out[0] = self._target_agent.get_action(obs1, h_in[0])
                         (action1_m, prob1_m), (action1_a, prob1_a), h_out[0] = self._target_agent.get_action(observations[0], h_in[0])
-                    """
-                    action2 = np.concatenate([
-                        np.random.randint(0, self._env.action_space.nvec[0], size=(2, 1)),
-                        np.random.randint(0, self._env.action_space.nvec[1], size=(2, 1))
-                    ], axis=1)[1]
-                    action = np.array([[action1_m, action1_a], action2], dtype=np.uint8)
-                    """
                     action = np.array([[[action1_m, action1_a]] * args.n]).squeeze()
 
-                    next_obs, reward, done, info = self._env.step(action)
+                    next_observations, reward, done, info = self._env.step(action)
 
                     rewards.append(reward)
-                    # print(f'[main] obs: {observations[0]}\nreward: {reward}')
-
-                    next_observations = [
-                        np.concatenate((observation[observation_shape:], next_observation))
-                        for observation, next_observation in zip(observations, next_obs)
-                    ]
-                    # print(f'[main] obs.shape: {observations.shape}, next_obs.shape: {next_observations.shape}')
-                    # next_obs1 = np.concatenate((obs1[observation_shape:], next_obs[0]))
-                    # next_obs2 = np.concatenate((obs2[observation_shape:], next_obs[1]))
 
                     if args.framework == 'tensorflow':
                         batch.append((observations[0], action, reward, next_observations[0], (prob1_m, prob1_a), not done))
