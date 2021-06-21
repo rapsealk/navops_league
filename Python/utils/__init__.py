@@ -11,6 +11,7 @@ from slack import WebClient
 from slack.errors import SlackApiError
 
 from .common import generate_id
+from .port import get_free_port
 
 
 class Atomic:
