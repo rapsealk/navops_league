@@ -13,7 +13,6 @@ from threading import Lock
 import gym
 import gym_navops   # noqa: F401
 import numpy as np
-import torch
 from torch.utils.tensorboard import SummaryWriter
 
 from utils import generate_id   # SlackNotification, Atomic
@@ -70,7 +69,7 @@ class Learner:
                                      max_epi_len=args.time_horizon,
                                      batch_size=args.batch_size,
                                      lookup_step=args.sequence_length,
-                                     random_update=True)
+                                     random_update=False)
         self._epsilon = 1.0
         self._epsilon_decay = 0.99
         self._epsilon_min = 0.01
@@ -103,8 +102,6 @@ class Learner:
                 f.write(json.dumps(experiment_settings))
 
     def run(self):
-        observation_shape = self._env.observation_space.shape[0]
-
         result_wins_dq = deque(maxlen=10)
         result_draws_dq = deque(maxlen=10)
         result_loses_dq = deque(maxlen=10)
@@ -135,6 +132,7 @@ class Learner:
 
                 next_state, reward, done, info = self._env.step(actions)
                 episode_buffer.put(state, actions, reward, next_state, done)
+                rewards.append(reward)
 
                 # print(f'Ep:{episode}:{t} state: {state}, action: {action} reward: {reward}, next_state: {next_state}, done: {done}')
                 # print(f'Ep:{episode}:{t} state: {state}')
@@ -168,7 +166,6 @@ class Learner:
                     _ = ref.put(**value)
 
                 state = next_state
-                rewards.append(reward)
 
                 if len(self._memory) >= args.batch_size:
                     loss = self._agent.train(episode_memory=self._memory,

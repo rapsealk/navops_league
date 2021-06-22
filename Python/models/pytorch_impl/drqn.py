@@ -168,7 +168,6 @@ class DRQNAgent:
         # seq_len = observations.shape[0] // args.batch_size
 
         observations = torch.FloatTensor(observations.reshape(batch_size, sequence_length, -1)).to(self.device)
-        # actions = torch.LongTensor(actions.reshape(batch_size, sequence_length, -1)).to(self.device)
         actions_m = torch.LongTensor(actions[:, 0].reshape(batch_size, sequence_length, -1)).to(self.device)
         actions_a = torch.LongTensor(actions[:, 1].reshape(batch_size, sequence_length, -1)).to(self.device)
         rewards = torch.FloatTensor(rewards.reshape(batch_size, sequence_length, -1)).to(self.device)
