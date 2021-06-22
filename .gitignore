@@ -1,6 +1,8 @@
 .DS_Store
 *.log
 *.csv
+reportings/
+*.png
 
 # Python
 *.pyc

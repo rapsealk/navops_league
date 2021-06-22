@@ -204,6 +204,8 @@ class MultiHeadLSTMActorCriticAgent:
         for param, target_param in zip(grad_agent.model.parameters(), self.model.parameters()):
             target_param._grad = param.grad.to(self.device)
 
+        torch.nn.utils.clip_grad_norm_(self.model.parameters(), 40.0)
+
         self.optim.step()
 
     def reset_hidden_state(self, batch_size=1):

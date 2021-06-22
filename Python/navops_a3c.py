@@ -45,6 +45,10 @@ def discount_rewards(rewards, gamma=0.98):
     return rewards_[::-1]
 
 
+def gae():
+    pass
+
+
 class Trainer:
 
     def __init__(self):
@@ -74,7 +78,7 @@ class Trainer:
             # self._loss_db = self._session_db.ref("loss")
 
     def start(self, n=PROCESS_CPU_COUNT):
-        processes = [Worker(self.agent, self.event_queue, 'Worker-{i}', self.supported_ports[i])
+        processes = [Worker(self.agent, self.event_queue, f'Worker-{i}', self.supported_ports[i])
                      for i in range(n)]
         for process in processes:
             process.start()
@@ -92,6 +96,7 @@ class Trainer:
         results = [deque(maxlen=10) for _ in range(3)]
         results_total = [[] for _ in range(3)]
         tmp_results = [[] for _ in range(3)]
+        time_ = time.time()
         while True:
             try:
                 dict_ = self.event_queue.get_nowait()
@@ -99,10 +104,11 @@ class Trainer:
                 time.sleep(1.0)
                 continue
             episode += 1
-            print(f'[Trainer] Episode #{episode} Loss: {dict_["Loss"]}, Reward: {dict_["Reward"]}')
-            tmp_results[0].append(dict_["Win"])
-            tmp_results[1].append(False)
-            tmp_results[2].append(not dict_["Win"])
+            t_ = time.time() - time_
+            print(f'[{datetime.now().isoformat()}] ({int(t_//3600):02d}h {int(t_%3600//60):02d}m {(t_%3600)%60:02.2f}s) Episode:{episode} -> Reward: {dict_["Reward"]:.3f} Loss={dict_["Loss"]:.3f}')
+            tmp_results[0].append(dict_["Win"] == 1)
+            tmp_results[1].append(dict_["Win"] == 0)
+            tmp_results[2].append(dict_["Win"] == -1)
 
             if not args.no_logging:
                 self._writer.add_scalar('loss', dict_["Loss"], episode)
@@ -111,7 +117,7 @@ class Trainer:
             if episode % 100 == 0:
                 for _ in range(3):
                     results[_].append(np.sum(tmp_results[_][-100:]))
-                    results_total[_].append(int(np.sum(tmp_results[_] / episode * 100)))
+                    results_total[_].append(int(np.sum(tmp_results[_]) / episode * 100))
                 if not args.no_logging:
                     self._plotly.plot_winning_rate(*results)
                     self._plotly.plot_winning_rate(*results_total)
@@ -157,7 +163,7 @@ class Worker(threading.Thread):
                                                    rnn_hidden_size=64,
                                                    rnn_num_layers=1,
                                                    learning_rate=3e-5,
-                                                   cuda=True)
+                                                   cuda=False)
         self.queue = queue
 
     def run(self):
@@ -194,15 +200,23 @@ class Worker(threading.Thread):
                     # hidden_ins = np.array(hidden_ins)
 
                     with GLOBAL_LOCK:
+                        device_ = self.agent.device
+                        self.agent = self.agent.to(self.global_agent.device)
+                        print(f'[Main] {self.name}: Device is {device_} -> {self.agent.device}')
+
                         loss = self.agent.loss(observations, actions, rewards)
                         self.global_agent.apply_gradients(self.agent, loss)
+
                         if episode % GLOBAL_UPDATE_INTERVAL == 0:
                             self.agent.set_state_dict(self.global_agent.state_dict())
+
+                        self.agent = self.agent.to(device_)
+
                     self.queue.put({
                         # "Episode": episode,
-                        "Loss": loss,
+                        "Loss": loss.item(),
                         "Reward": np.sum(rewards),
-                        "Win": info['win']
+                        "Win": reward // 10
                     })
                     break
 
