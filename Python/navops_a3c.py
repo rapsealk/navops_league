@@ -13,6 +13,7 @@ import numpy as np
 import torch.multiprocessing as mp
 import gym
 import gym_navops   # noqa: F401
+from gym_navops import EnvironmentConfig
 from torch.utils.tensorboard import SummaryWriter
 
 from models.pytorch_impl import MultiHeadLSTMActorCriticAgent
@@ -48,10 +49,8 @@ class Trainer:
 
     def __init__(self):
         self.supported_ports = [get_free_port(args.port+i) for i in range(PROCESS_CPU_COUNT)]
-        env = gym.make(args.env, build_path=ENVPATH, port=self.supported_ports[0])
-        input_size = env.observation_space.shape[0]
-        output_sizes = env.action_space.nvec
-        env.close()
+        input_size = EnvironmentConfig["NavOpsMultiDiscrete"]["observation_space"]["shape"][0]
+        output_sizes = EnvironmentConfig["NavOpsMultiDiscrete"]["action_space"]["nvec"]
 
         self.agent = MultiHeadLSTMActorCriticAgent(input_size,
                                                 output_sizes,
