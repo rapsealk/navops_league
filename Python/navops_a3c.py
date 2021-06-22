@@ -5,21 +5,27 @@ import argparse
 import threading
 import queue
 import time
+from collections import deque
+from datetime import datetime
 from itertools import count
 
 import numpy as np
 import torch.multiprocessing as mp
 import gym
 import gym_navops   # noqa: F401
+from torch.utils.tensorboard import SummaryWriter
 
 from models.pytorch_impl import MultiHeadLSTMActorCriticAgent
-from utils import get_free_port
+from utils import get_free_port, generate_id
+from utils.board import ReportingBoard
+from utils.database import MongoDatabase
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--env', type=str, default='NavOpsMultiDiscrete-v0')
 parser.add_argument('--n', type=int, default=4)
 parser.add_argument('-p', '--port', type=int, default=9090)
 parser.add_argument('--gamma', type=float, default=0.98)
+parser.add_argument('--no-logging', type=bool, default=False)
 args = parser.parse_args()
 
 ENVPATH = os.path.join('C:\\', 'Users', 'rapsealk', 'Desktop', 'NavOps', 'NavOps.exe')
@@ -58,6 +64,16 @@ class Trainer:
         # self.event_queue = mp.Queue()
         self.event_queue = queue.Queue()
 
+        self._id = f'{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}-{args.env}'
+        self.session_id = generate_id()
+        if not args.no_logging:
+            self._writer = SummaryWriter(f'runs/{self._id}')
+            self._plotly = ReportingBoard()
+            # database = MongoDatabase()
+            # self._result_db = database.ref("result")
+            # self._session_db = database.ref(self.session_id)
+            # self._loss_db = self._session_db.ref("loss")
+
     def start(self, n=PROCESS_CPU_COUNT):
         processes = [Worker(self.agent, self.event_queue, 'Worker-{i}', self.supported_ports[i])
                      for i in range(n)]
@@ -74,6 +90,9 @@ class Trainer:
 
     def digest_queue(self):
         episode = 0
+        results = [deque(maxlen=10) for _ in range(3)]
+        results_total = [[] for _ in range(3)]
+        tmp_results = [[] for _ in range(3)]
         while True:
             try:
                 dict_ = self.event_queue.get_nowait()
@@ -82,6 +101,21 @@ class Trainer:
                 continue
             episode += 1
             print(f'[Trainer] Episode #{episode} Loss: {dict_["Loss"]}, Reward: {dict_["Reward"]}')
+            tmp_results[0].append(dict_["Win"])
+            tmp_results[1].append(False)
+            tmp_results[2].append(not dict_["Win"])
+
+            if not args.no_logging:
+                self._writer.add_scalar('loss', dict_["Loss"], episode)
+                self._writer.add_scalar('rewards', dict_["Reward"], episode)
+
+            if episode % 100 == 0:
+                for _ in range(3):
+                    results[_].append(np.sum(tmp_results[_][-100:]))
+                    results_total[_].append(int(np.sum(tmp_results[_] / episode * 100)))
+                if not args.no_logging:
+                    self._plotly.plot_winning_rate(*results)
+                    self._plotly.plot_winning_rate(*results_total)
 
     """
     def train(self, n=4, base_port=9090):
@@ -143,6 +177,8 @@ class Worker(threading.Thread):
                 # action = self.env.action_space.sample()
                 action = [action_m, action_a]
                 obs, reward, done, info = self.env.step(action)
+                if abs(reward) == 1.0 and done:
+                    reward *= 10.0
 
                 observations.append(obs)
                 actions.append(action)
@@ -161,12 +197,13 @@ class Worker(threading.Thread):
                     with GLOBAL_LOCK:
                         loss = self.agent.loss(observations, actions, rewards)
                         self.global_agent.apply_gradients(self.agent, loss)
-                        if t % GLOBAL_UPDATE_INTERVAL == 0:
+                        if episode % GLOBAL_UPDATE_INTERVAL == 0:
                             self.agent.set_state_dict(self.global_agent.state_dict())
                     self.queue.put({
                         # "Episode": episode,
                         "Loss": loss,
-                        "Reward": np.sum(rewards)
+                        "Reward": np.sum(rewards),
+                        "Win": info['win']
                     })
                     break
 
