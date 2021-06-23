@@ -46,6 +46,18 @@ def discount_rewards(rewards, gamma=0.98):
     return rewards_[::-1]
 
 
+def td_discount_rewards(rewards, gamma=0.98, time_horizon=32):
+    rewards_ = np.zeros_like(rewards)
+    i = 0
+    while i < len(rewards):
+        tmp = list(reversed(rewards[i:i+time_horizon]))
+        for j in range(1, len(tmp)):
+            tmp[j] += gamma * tmp[j-1]
+        rewards_[i:i+len(tmp)] = list(reversed(tmp))
+        i += len(tmp)
+    return rewards_
+
+
 def gae():
     pass
 
