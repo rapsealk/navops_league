@@ -135,16 +135,25 @@ class MultiHeadLSTMActorCriticAgent:
         cuda=True
     ):
         if cuda:
-            self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         else:
-            self._device = torch.device("cpu")
+            device = torch.device("cpu")
 
         self._model = MultiHeadLSTMActorCriticModel(input_size,
                                                     output_sizes,
                                                     hidden_size=hidden_size,
                                                     rnn_hidden_size=rnn_hidden_size,
                                                     rnn_num_layers=rnn_num_layers)
-        self._model = self._model.to(self.device)
+        self._target_model = MultiHeadLSTMActorCriticModel(input_size,
+                                                    output_sizes,
+                                                    hidden_size=hidden_size,
+                                                    rnn_hidden_size=rnn_hidden_size,
+                                                    rnn_num_layers=rnn_num_layers)
+        self._model = self.model.to(device)
+        self._target_model = self.target_model.to(device)
+        self.target_model.load_state_dict(self.model.state_dict())
+        self.target_model.eval()
+
         # self._optim = optim.SAdam(self._model.parameters(), lr=learning_rate)
         self._optim = SharedAdam(self._model.parameters(), lr=learning_rate)
 
@@ -181,6 +190,11 @@ class MultiHeadLSTMActorCriticAgent:
         td_a = values[1] - rewards
         critic_loss = td_m.pow(2) + td_a.pow(2)
 
+        # Target Model
+        _, values, _ = self.target_model(states, h_ins)
+        td_m = values[0] - rewards
+        td_a = values[1] - rewards
+
         prob_m = F.softmax(logits[0], dim=-1)
         action_m = Categorical(prob_m)
         # action_m = prob_m.gather(-1, actions[:, 0])
@@ -192,11 +206,12 @@ class MultiHeadLSTMActorCriticAgent:
         exp_v = action_a.log_prob(actions[:, 1]) * td_a.detach().squeeze()
         actor_loss_a = -exp_v
 
-        total_loss = (critic_loss + actor_loss_m + actor_loss_a).mean()
+        total_loss = 0.5 * critic_loss.mean() + actor_loss_m.mean() + actor_loss_a.mean()
 
         return total_loss
 
     def apply_gradients(self, grad_agent, loss):
+        print(f'[A3C] Source device: {grad_agent.device}, Target device: {self.device} ...')
         self.optim.zero_grad()
         grad_agent.optim.zero_grad()
         loss.backward()
@@ -209,7 +224,15 @@ class MultiHeadLSTMActorCriticAgent:
         self.optim.step()
 
     def reset_hidden_state(self, batch_size=1):
-        return self._model.reset_hidden_state(batch_size=batch_size)
+        return self.model.reset_hidden_state(batch_size=batch_size)
+
+    def hard_update(self):
+        for param, target_param in zip(self.model.parameters(), self.target_model.parameters()):
+            target_param.data.copy_(param.data)
+
+    def soft_update(self, tau=1e-2):
+        for param, target_param in zip(self.model.parameters(), self.target_model.parameters()):
+            target_param.data.copy_(target_param.data * tau + param.data * (1 - tau))
 
     def state_dict(self):
         return self._model.state_dict()
@@ -235,6 +258,11 @@ class MultiHeadLSTMActorCriticAgent:
         # self._optim.load(state_dict["optim"])
         return state_dict.get("episode", 0)
 
+    def to(self, device):
+        self._model = self.model.to(device)
+        self._target_model = self.target_model.to(device)
+        return self
+
     def share_memory(self):
         self.model.share_memory()
         # self.optim.share_memory()
@@ -244,12 +272,16 @@ class MultiHeadLSTMActorCriticAgent:
         return self._model
 
     @property
+    def target_model(self):
+        return self._target_model
+
+    @property
     def optim(self):
         return self._optim
 
     @property
     def device(self):
-        return self._device
+        return self.model.device
 
 
 if __name__ == "__main__":

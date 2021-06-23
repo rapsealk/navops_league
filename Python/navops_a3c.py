@@ -26,12 +26,13 @@ parser.add_argument('--env', type=str, default='NavOpsMultiDiscrete-v0')
 parser.add_argument('--n', type=int, default=4)
 parser.add_argument('-p', '--port', type=int, default=9090)
 parser.add_argument('--gamma', type=float, default=0.98)
+parser.add_argument('--target-update-period', type=int, default=4)
 parser.add_argument('--no-logging', type=bool, default=False)
 args = parser.parse_args()
 
 ENVPATH = os.path.join('C:\\', 'Users', 'rapsealk', 'Desktop', 'NavOps', 'NavOps.exe')
 # GLOBAL_LOCK = mp.Lock()
-GLOBAL_LOCK = threading.Lock()
+# GLOBAL_LOCK = threading.Lock()
 GLOBAL_UPDATE_INTERVAL = 4
 
 PROCESS_CPU_COUNT = args.n or mp.cpu_count()
@@ -66,6 +67,7 @@ class Trainer:
         self.agent.share_memory()
         # self.event_queue = mp.Queue()
         self.event_queue = queue.Queue()
+        self.lock = threading.Lock()
 
         self._id = f'{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}-{args.env}'
         self.session_id = generate_id()
@@ -78,7 +80,7 @@ class Trainer:
             # self._loss_db = self._session_db.ref("loss")
 
     def start(self, n=PROCESS_CPU_COUNT):
-        processes = [Worker(self.agent, self.event_queue, f'Worker-{i}', self.supported_ports[i])
+        processes = [Worker(self.agent, self.event_queue, self.lock, f'Worker-{i}', self.supported_ports[i])
                      for i in range(n)]
         for process in processes:
             process.start()
@@ -105,14 +107,16 @@ class Trainer:
                 continue
             episode += 1
             t_ = time.time() - time_
-            print(f'[{datetime.now().isoformat()}] ({int(t_//3600):02d}h {int(t_%3600//60):02d}m {(t_%3600)%60:02.2f}s) Episode:{episode} -> Reward: {dict_["Reward"]:.3f} Loss={dict_["Loss"]:.3f}')
-            tmp_results[0].append(dict_["Win"] == 1)
+            flag = 'W' if (dict_["Win"] > 0) else 'L' if (dict_["Win"] < 0) else 'D'
+            print(f'[{datetime.now().isoformat()}] ({int(t_//3600):02d}h {int(t_%3600//60):02d}m {(t_%3600)%60:02.2f}s) Episode:{episode} -> {flag} Reward: {dict_["Reward"]["Mean"]:.3f} Loss={dict_["Loss"]:.3f}')
+            tmp_results[0].append(dict_["Win"] > 0)
             tmp_results[1].append(dict_["Win"] == 0)
-            tmp_results[2].append(dict_["Win"] == -1)
+            tmp_results[2].append(dict_["Win"] < 0)
 
             if not args.no_logging:
                 self._writer.add_scalar('loss', dict_["Loss"], episode)
-                self._writer.add_scalar('rewards', dict_["Reward"], episode)
+                self._writer.add_scalar('rewards/sum', dict_["Reward"]["Sum"], episode)
+                self._writer.add_scalar('rewards/mean', dict_["Reward"]["Mean"], episode)
 
             if episode % 100 == 0:
                 for _ in range(3):
@@ -151,7 +155,7 @@ class Trainer:
 # class Worker(mp.Process):
 class Worker(threading.Thread):
 
-    def __init__(self, global_agent, queue, name, port):
+    def __init__(self, global_agent, queue, lock, name, port):
         super(Worker, self).__init__()
         self.name = name
 
@@ -165,6 +169,7 @@ class Worker(threading.Thread):
                                                    learning_rate=3e-5,
                                                    cuda=False)
         self.queue = queue
+        self.lock = lock
 
     def run(self):
         for episode in count(1):
@@ -182,8 +187,8 @@ class Worker(threading.Thread):
                 # action = self.env.action_space.sample()
                 action = [action_m, action_a]
                 obs, reward, done, info = self.env.step(action)
-                if abs(reward) == 1.0 and done:
-                    reward *= 10.0
+                # if abs(reward) == 1.0 and done:
+                #     reward *= 10.0
 
                 observations.append(obs)
                 actions.append(action)
@@ -193,31 +198,40 @@ class Worker(threading.Thread):
                 h_in = h_out
 
                 if done:
-                    rewards = discount_rewards(rewards, gamma=args.gamma)
+                    rewards_ = discount_rewards(rewards, gamma=args.gamma)
+                    # print(f'[Reward] {self.name}\nRaw: {rewards}\nDiscounted: {rewards_}\nSum: {np.sum(rewards)} -> {np.sum(rewards_)}\nMean: {np.mean(rewards)} -> {np.mean(rewards_)}')
                     observations = np.array(observations)
                     actions = np.array(actions)
-                    rewards = np.array(rewards)
+                    rewards = np.array(rewards_)
                     # hidden_ins = np.array(hidden_ins)
 
-                    with GLOBAL_LOCK:
+                    # with GLOBAL_LOCK:
+                    with self.lock:
                         device_ = self.agent.device
                         self.agent = self.agent.to(self.global_agent.device)
                         print(f'[Main] {self.name}: Device is {device_} -> {self.agent.device}')
 
                         loss = self.agent.loss(observations, actions, rewards)
                         self.global_agent.apply_gradients(self.agent, loss)
+                        self.global_agent.soft_update(tau=1e-2)
 
                         if episode % GLOBAL_UPDATE_INTERVAL == 0:
-                            self.agent.set_state_dict(self.global_agent.state_dict())
+                            # self.agent.set_state_dict(self.global_agent.state_dict())
+                            self.agent.model.load_state_dict(self.global_agent.model.state_dict())
+                            self.agent.target_model.load_state_dict(self.global_agent.target_model.state_dict())
 
                         self.agent = self.agent.to(device_)
 
                     self.queue.put({
                         # "Episode": episode,
                         "Loss": loss.item(),
-                        "Reward": np.sum(rewards),
-                        "Win": reward // 10
+                        "Reward": {"Sum": np.sum(rewards), "Mean": np.mean(rewards)},
+                        "Win": reward
                     })
+
+                    # self.agent.soft_update(tau=1e-2)
+                    # if episode % args.target_update_period == 0:
+                    #     self.agent.hard_update()
                     break
 
 
