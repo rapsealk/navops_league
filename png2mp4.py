@@ -8,8 +8,9 @@ from PIL import Image
 
 
 def main():
-    dirname = os.path.join('C:\\', 'Users', 'rapsealk', 'Desktop', 'Screenshots')
+    dirname = os.path.join('/', 'Users', 'rapsealk', 'Desktop', 'Screenshots')
     files = os.listdir(dirname)
+    files = sorted(files)
     print(files)
 
     # fourcc = cv2.VideoWriter_fourcc(*'DIVX')
