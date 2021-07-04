@@ -27,6 +27,7 @@ parser.add_argument('--n', type=int, default=4)
 parser.add_argument('-p', '--port', type=int, default=9090)
 parser.add_argument('--gamma', type=float, default=0.98)
 parser.add_argument('--target-update-period', type=int, default=4)
+parser.add_argument('--time-horizon', type=int, default=32)
 parser.add_argument('--no-logging', type=bool, default=False)
 args = parser.parse_args()
 
@@ -34,6 +35,7 @@ ENVPATH = os.path.join('C:\\', 'Users', 'rapsealk', 'Desktop', 'NavOps', 'NavOps
 # GLOBAL_LOCK = mp.Lock()
 # GLOBAL_LOCK = threading.Lock()
 GLOBAL_UPDATE_INTERVAL = 4
+GLOBAL_EPISODE = 0
 
 PROCESS_CPU_COUNT = args.n or mp.cpu_count()
 
@@ -46,7 +48,7 @@ def discount_rewards(rewards, gamma=0.98):
     return rewards_[::-1]
 
 
-def td_discount_rewards(rewards, gamma=0.98, time_horizon=32):
+def td_discount_rewards(rewards, gamma=0.98, time_horizon=args.time_horizon):
     rewards_ = np.zeros_like(rewards)
     i = 0
     while i < len(rewards):
@@ -127,6 +129,8 @@ class Trainer:
 
             if not args.no_logging:
                 self._writer.add_scalar('loss', dict_["Loss"], episode)
+                self._writer.add_scalar('performance/prob/maneuver', dict_["Performance"]["Prob"]["Maneuver"], episode)
+                self._writer.add_scalar('performance/prob/attack', dict_["Performance"]["Prob"]["Attack"], episode)
                 self._writer.add_scalar('rewards/sum', dict_["Reward"]["Sum"], episode)
                 self._writer.add_scalar('rewards/mean', dict_["Reward"]["Mean"], episode)
 
@@ -189,6 +193,7 @@ class Worker(threading.Thread):
             # hidden_ins = []
             rewards = []
             actions = []
+            probs = {"maneuver": [], "attack": []}
 
             done = False
             obs = self.env.reset()
@@ -196,6 +201,8 @@ class Worker(threading.Thread):
 
             for t in count(1):
                 (action_m, prob_m), (action_a, prob_a), h_out = self.agent.get_action(obs, h_in)
+                probs["maneuver"].append(np.max(prob_m.detach().cpu().squeeze().numpy(), axis=-1))
+                probs["attack"].append(np.max(prob_a.detach().cpu().squeeze().numpy(), axis=-1))
                 # action = self.env.action_space.sample()
                 action = [action_m, action_a]
                 obs, reward, done, info = self.env.step(action)
@@ -210,7 +217,7 @@ class Worker(threading.Thread):
                 h_in = h_out
 
                 if done:
-                    rewards_ = discount_rewards(rewards, gamma=args.gamma)
+                    rewards_ = td_discount_rewards(rewards, gamma=args.gamma)
                     # print(f'[Reward] {self.name}\nRaw: {rewards}\nDiscounted: {rewards_}\nSum: {np.sum(rewards)} -> {np.sum(rewards_)}\nMean: {np.mean(rewards)} -> {np.mean(rewards_)}')
                     observations = np.array(observations)
                     actions = np.array(actions)
@@ -234,10 +241,17 @@ class Worker(threading.Thread):
 
                         self.agent = self.agent.to(device_)
 
+                        global GLOBAL_EPISODE
+                        if (GLOBAL_EPISODE := GLOBAL_EPISODE + 1) % 100 == 0:
+                            self.global_agent.save(
+                                path=os.path.join(os.path.dirname(__file__), 'checkpoints', f'{args.env}-a3c-{GLOBAL_EPISODE}.ckpt'),
+                                episode=GLOBAL_EPISODE)
+
                     self.queue.put({
                         # "Episode": episode,
                         "Loss": loss.item(),
                         "Reward": {"Sum": np.sum(rewards), "Mean": np.mean(rewards)},
+                        "Performance": {"Prob": {"Maneuver": np.mean(probs["maneuver"]), "Attack": np.mean(probs["attack"])}},
                         "Win": reward
                     })
 
