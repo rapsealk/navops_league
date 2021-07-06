@@ -261,12 +261,43 @@ class Worker(threading.Thread):
                     break
 
 
-class Tester:
-    pass
+class Runner:
+
+    def __init__(self, checkpoint, port=9090):
+        self.env = gym.make(args.env, build_path=None, port=port)
+        self.agent = MultiHeadLSTMActorCriticAgent(self.env.observation_space.shape[0],
+                                                   self.env.action_space.nvec,
+                                                   hidden_size=512,
+                                                   rnn_hidden_size=64,
+                                                   rnn_num_layers=1,
+                                                   learning_rate=3e-5,
+                                                   cuda=False)
+        self.agent.load(checkpoint)
+
+    def start(self):
+        for episode in count(1):
+            done = False
+            obs = self.env.reset()
+            h_in = self.agent.reset_hidden_state(batch_size=1)
+
+            for t in count(1):
+                (action_m, prob_m), (action_a, prob_a), h_out = self.agent.get_action(obs, h_in)
+                action = [action_m, action_a]
+                obs, reward, done, info = self.env.step(action)
+
+                h_in = h_out
+
+                if done:
+                    break
 
 
 def main():
-    Trainer().start()
+    # Trainer().start()
+    checkpoint = os.path.join(os.path.dirname(__file__), 'checkpoints', 'NavOpsMultiDiscrete-v0-a3c-6500.ckpt')
+    # checkpoint = os.path.join(os.path.dirname(__file__), 'checkpoints', 'NavOpsMultiDiscrete-v0-a3c-8900.ckpt')
+    # checkpoint = os.path.join(os.path.dirname(__file__), 'checkpoints', 'NavOpsMultiDiscrete-v0-a3c-12700.ckpt')
+    checkpoint = os.path.join(os.path.dirname(__file__), 'checkpoints', 'NavOpsMultiDiscrete-v0-a3c-14000.ckpt')
+    Runner(checkpoint=checkpoint, port=args.port).start()
 
 
 if __name__ == "__main__":
